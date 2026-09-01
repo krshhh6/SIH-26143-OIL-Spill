@@ -611,11 +611,13 @@
                 <button class="base-btn" id="btn-base-dark" onclick="setBaseLayer('dark')">Dark</button>
               </div>
 
-              <!-- 3D Camera Controls (Visible in 3D mode) -->
+              <!-- 3D Globe Satellite & Camera Controls (Visible in 3D mode) -->
               <div class="map-base-selector" id="controls-3d" style="display:none;">
+                <button class="base-btn active" id="btn-3d-google" onclick="setCesiumBaseLayer('google')" title="Google Earth Photorealistic Satellite">Google Earth 3D</button>
+                <button class="base-btn" id="btn-3d-esri" onclick="setCesiumBaseLayer('esri')" title="Esri High-Res Satellite">MSN/Esri Satellite</button>
                 <button class="base-btn" onclick="flyCesiumPreset('nadir')" title="Top-down perpendicular view">Nadir</button>
                 <button class="base-btn active" id="btn-cam-tactical" onclick="flyCesiumPreset('tactical')" title="Tactical 45° perspective tilt">45° Tilt</button>
-                <button class="base-btn" onclick="flyCesiumPreset('orbit')" title="High-altitude regional orbit view">Orbit</button>
+                <button class="base-btn" onclick="flyCesiumPreset('orbit')" title="Regional Indian Ocean orbit view">Orbit</button>
               </div>
 
               <!-- OpenSeaMap Nautical Seamarks Overlay Toggle -->
@@ -1764,11 +1766,15 @@
     try {
       Cesium.Ion.defaultAccessToken = ''; // Zero-token free mode
 
+      // Primary 3D Photorealistic Satellite Globe Provider (Google Earth Satellite)
+      const googleSatelliteProvider = new Cesium.UrlTemplateImageryProvider({
+        url: 'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+        subdomains: ['0', '1', '2', '3'],
+        maximumLevel: 20
+      });
+
       cesiumViewer = new Cesium.Viewer('cesium-container', {
-        imageryProvider: new Cesium.UrlTemplateImageryProvider({
-          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          maximumLevel: 19
-        }),
+        imageryProvider: googleSatelliteProvider,
         baseLayerPicker: false,
         geocoder: false,
         homeButton: false,
@@ -1781,7 +1787,7 @@
         fullscreenButton: false
       });
 
-      // Add OpenSeaMap Nautical Seamarks overlay to 3D globe
+      // Overlay OpenSeaMap Nautical Seamarks directly on top of 3D Satellite Earth
       cesiumViewer.imageryLayers.addImageryProvider(
         new Cesium.UrlTemplateImageryProvider({
           url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
@@ -1931,6 +1937,44 @@
 
     // Fly camera to tactical 45° perspective
     flyCesiumPreset('tactical');
+  }
+
+
+  function setCesiumBaseLayer(type) {
+    if (!cesiumViewer) return;
+    const btnGoogle = document.getElementById('btn-3d-google');
+    const btnEsri = document.getElementById('btn-3d-esri');
+
+    cesiumViewer.imageryLayers.removeAll();
+
+    if (type === 'esri') {
+      btnGoogle.classList.remove('active');
+      btnEsri.classList.add('active');
+      cesiumViewer.imageryLayers.addImageryProvider(
+        new Cesium.UrlTemplateImageryProvider({
+          url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          maximumLevel: 19
+        })
+      );
+    } else {
+      btnEsri.classList.remove('active');
+      btnGoogle.classList.add('active');
+      cesiumViewer.imageryLayers.addImageryProvider(
+        new Cesium.UrlTemplateImageryProvider({
+          url: 'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+          subdomains: ['0', '1', '2', '3'],
+          maximumLevel: 20
+        })
+      );
+    }
+
+    // Re-add OpenSeaMap Nautical Seamarks overlay
+    cesiumViewer.imageryLayers.addImageryProvider(
+      new Cesium.UrlTemplateImageryProvider({
+        url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+        maximumLevel: 18
+      })
+    );
   }
 
   function flyCesiumPreset(preset) {
