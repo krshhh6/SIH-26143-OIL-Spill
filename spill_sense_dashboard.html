@@ -94,7 +94,16 @@
       --accent-bright:   #1D4ED8;
       --accent-glow:     rgba(37, 99, 235, 0.08);
 
-      --slick-color:     #0891B2;
+      --slick-color:     #B45309;
+      /* ── MARPOL / NOAA Marine Oil Classification Palette ── */
+      --oil-diesel:      #EAB308;
+      --oil-diesel-fill: rgba(234, 179, 8, 0.40);
+      --oil-crude:       #B45309;
+      --oil-crude-fill:  rgba(180, 83, 9, 0.45);
+      --oil-bunker:      #0D0D11;
+      --oil-bunker-fill: rgba(13, 13, 17, 0.70);
+      --oil-bilge:       #38BDF8;
+      --oil-bilge-fill:  rgba(56, 189, 248, 0.40);
       --slick-fill:      rgba(8, 145, 178, 0.25);
       --drift-color:     #D97706;
       --vessel-color:    #EA580C;
@@ -413,9 +422,10 @@
     <div class="scenario-selector">
       <span style="font-size:11px;font-weight:600;color:var(--text-muted);">INCIDENT:</span>
       <select id="scenario-dropdown" class="scenario-select" onchange="switchScenario(this.value)">
-        <option value="INC-001">INC-2026-001: Mumbai High Offshore (Crude Oil Tanker Attribution)</option>
-        <option value="INC-002">INC-2026-002: Chennai–Ennore Corridor (Heavy Bunker Fuel Collision)</option>
-        <option value="INC-003">INC-2026-003: Andaman Sea SL-7 (Dark Vessel AIS Blackout)</option>
+        <option value="INC-001">INC-2026-001: Mumbai High (Crude Oil #B45309)</option>
+        <option value="INC-002">INC-2026-002: Chennai–Ennore (Heavy Bunker Fuel #0D0D11)</option>
+        <option value="INC-003">INC-2026-003: Andaman SL-7 (Oil Bilge Water #38BDF8)</option>
+        <option value="INC-004">INC-2026-004: Goa Coast (Diesel / Marine Gas Oil #EAB308)</option>
       </select>
     </div>
 
@@ -599,11 +609,20 @@
           <!-- Tactical HUD Legend Overlay -->
           <div class="map-overlay-hud">
             <div class="hud-title">Tactical Layer Overlays</div>
-            <div class="hud-row"><div class="lswatch ls-slick"></div><span>Detected Slick (SAR)</span></div>
+            <div class="hud-row"><div class="lswatch ls-slick" id="legend-slick-swatch" style="background:#B45309;"></div><span id="legend-slick-label">Slick: Crude Oil</span></div>
             <div class="hud-row"><div class="lswatch ls-drift"></div><span>50/75/90% Origin Envelope</span></div>
             <div class="hud-row"><div class="lswatch ls-vessel"></div><span>AIS Vessel Track</span></div>
             <div class="hud-row"><div class="lswatch ls-gap"></div><span>AIS Silence Gap</span></div>
             <div class="hud-row"><div class="lswatch ls-seamark"></div><span>OpenSeaMap Buoys &amp; TSS</span></div>
+            <div style="border-top:1px solid var(--border-default);margin:6px 0 4px;padding-top:4px;">
+              <div class="hud-title" style="margin-bottom:4px;">Oil Classification</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;">
+                <div class="flex items-center gap-1"><div style="width:8px;height:8px;border-radius:2px;background:#B45309;"></div><span>Crude</span></div>
+                <div class="flex items-center gap-1"><div style="width:8px;height:8px;border-radius:2px;background:#0D0D11;border:1px solid #64748B;"></div><span>Bunker</span></div>
+                <div class="flex items-center gap-1"><div style="width:8px;height:8px;border-radius:2px;background:#EAB308;"></div><span>Diesel</span></div>
+                <div class="flex items-center gap-1"><div style="width:8px;height:8px;border-radius:2px;background:#38BDF8;"></div><span>Bilge</span></div>
+              </div>
+            </div>
           </div>
 
           <!-- 4D SPATIOTEMPORAL TIME SCRUBBER -->
@@ -1226,6 +1245,9 @@
       title: 'Mumbai High Offshore Basin',
       sub: 'Mumbai High Offshore Basin · Arabian Sea EEZ · 18.743°N, 71.218°E',
       lat: 18.743, lng: 71.218,
+      oilType: 'Crude Oil',
+      oilColor: '#B45309',
+      oilFill: 'rgba(180, 83, 9, 0.45)',
       sev: 'CRITICAL SEVERITY', sevClass: 'chip-c',
       area: '4.82 km²',
       topVessel: 'CRUDE ATLAS',
@@ -1238,6 +1260,9 @@
       title: 'Chennai–Ennore Coastal Corridor',
       sub: 'Chennai–Ennore Coastal Corridor · Bay of Bengal · 13.234°N, 80.345°E',
       lat: 13.234, lng: 80.345,
+      oilType: 'Heavy Bunker Fuel',
+      oilColor: '#0D0D11',
+      oilFill: 'rgba(13, 13, 17, 0.70)',
       sev: 'HIGH SEVERITY', sevClass: 'chip-h',
       area: '3.15 km²',
       topVessel: 'PACIFIC GLORY',
@@ -1250,12 +1275,30 @@
       title: 'Andaman Sea Shipping Lane 7',
       sub: 'Andaman Sea SL-7 · Malacca Route Approach · 10.456°N, 93.123°E',
       lat: 10.456, lng: 93.123,
+      oilType: 'Oil Bilge Water',
+      oilColor: '#38BDF8',
+      oilFill: 'rgba(56, 189, 248, 0.45)',
       sev: 'MEDIUM SEVERITY', sevClass: 'chip-m',
       area: '1.94 km²',
       topVessel: 'UNKNOWN (DARK VESSEL)',
       diagVessel: 'TRANSPONDER BLACKOUT · SAR IDENTIFIED',
       diagDetails: 'Metallic SAR return detected in slick centroid with NO matching AIS transmission',
       scores: [0.74, 0.42, 0.19]
+    },
+    'INC-004': {
+      id: 'INC-2026-004',
+      title: 'Goa Coastal Waters (Bunkering Leak)',
+      sub: 'Goa Coastal Waters · 15.421°N, 73.682°E · Coastal Fisheries Zone',
+      lat: 15.421, lng: 73.682,
+      oilType: 'Diesel / Marine Gas Oil',
+      oilColor: '#EAB308',
+      oilFill: 'rgba(234, 179, 8, 0.45)',
+      sev: 'LOW SEVERITY', sevClass: 'chip-l',
+      area: '0.85 km²',
+      topVessel: 'SEA PEARL',
+      diagVessel: 'SEA PEARL · MMSI 419003322',
+      diagDetails: 'Marine Gas Oil sheen from bunkering hose failure · Continuous AIS broadcast',
+      scores: [0.55, 0.38, 0.21]
     }
   };
 
@@ -1386,12 +1429,20 @@
       [centerLat + 0.01, centerLng + 0.05],
       [centerLat - 0.03, centerLng + 0.02]
     ];
+    const slickColor = s.oilColor || '#B45309';
+    const slickFill = s.oilFill || 'rgba(180, 83, 9, 0.45)';
     const slickPoly = L.polygon(slickCoords, {
-      color: '#00E5FF',
-      weight: 2.5,
-      fillColor: '#0891B2',
-      fillOpacity: 0.40
-    }).bindPopup(`<b>${s.id} Detected Slick</b><br>Area: ${s.area}<br>Backscatter drop: -8.4 dB<br>Confidence: 82%`);
+      color: slickColor,
+      weight: 3.0,
+      fillColor: slickFill,
+      fillOpacity: 0.55
+    }).bindPopup(`<b>${s.id} Detected Slick</b><br><b>Classification: ${s.oilType || 'Mineral Oil'}</b><br>Color Code: <code>${slickColor}</code><br>Area: ${s.area}<br>Backscatter drop: -8.4 dB`);
+    
+    // Update Legend Swatch
+    const swatchEl = document.getElementById('legend-slick-swatch');
+    const labelEl = document.getElementById('legend-slick-label');
+    if (swatchEl) swatchEl.style.backgroundColor = slickColor;
+    if (labelEl) labelEl.textContent = `Slick: ${s.oilType || 'Detected'}`;
     mapLayersGroup.addLayer(slickPoly);
 
     // 2. Backward Drift Probability Envelopes
