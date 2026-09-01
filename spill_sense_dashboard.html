@@ -13,6 +13,11 @@
   <!-- Google Material Symbols CDN -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
+    <!-- CesiumJS 3D Virtual Globe Engine CDN -->
+  <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Widgets/widgets.css" />
+  <script>window.CESIUM_BASE_URL = 'https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/';</script>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Cesium.js"></script>
+
   <!-- Leaflet GIS Engine CDN -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -586,13 +591,31 @@
               Tactical Maritime GIS Map (100% Free &amp; Unwatermarked)
             </span>
             
-            <!-- Base Layer Switcher -->
+            <!-- 2D / 3D Mode & Base Layer Switcher -->
             <div class="flex items-center gap-2">
-              <div class="map-base-selector">
-                <button class="base-btn active" id="btn-base-opensea" onclick="setBaseLayer('opensea')">OpenSeaMap Nautical</button>
-                <button class="base-btn" id="btn-base-msn" onclick="setBaseLayer('msn')">MSN Satellite</button>
-                <button class="base-btn" id="btn-base-day" onclick="setBaseLayer('day')">ECDIS Hydrographic</button>
-                <button class="base-btn" id="btn-base-dark" onclick="setBaseLayer('dark')">Tactical Dark</button>
+              <!-- 2D / 3D Globe Mode Switcher -->
+              <div class="map-base-selector" style="background:rgba(37,99,235,0.08);border-color:var(--accent);">
+                <button class="base-btn active" id="btn-mode-2d" onclick="setDimensionMode('2D')" title="2D Tactical Chart View">
+                  <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">map</span> 2D ECDIS
+                </button>
+                <button class="base-btn" id="btn-mode-3d" onclick="setDimensionMode('3D')" title="3D Tactical Virtual Globe View">
+                  <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">public</span> 3D Globe
+                </button>
+              </div>
+
+              <!-- 2D Base Layers (Visible in 2D mode) -->
+              <div class="map-base-selector" id="layer-selector-2d">
+                <button class="base-btn active" id="btn-base-opensea" onclick="setBaseLayer('opensea')">OpenSeaMap</button>
+                <button class="base-btn" id="btn-base-msn" onclick="setBaseLayer('msn')">MSN Aerial</button>
+                <button class="base-btn" id="btn-base-day" onclick="setBaseLayer('day')">Hydrographic</button>
+                <button class="base-btn" id="btn-base-dark" onclick="setBaseLayer('dark')">Dark</button>
+              </div>
+
+              <!-- 3D Camera Controls (Visible in 3D mode) -->
+              <div class="map-base-selector" id="controls-3d" style="display:none;">
+                <button class="base-btn" onclick="flyCesiumPreset('nadir')" title="Top-down perpendicular view">Nadir</button>
+                <button class="base-btn active" id="btn-cam-tactical" onclick="flyCesiumPreset('tactical')" title="Tactical 45° perspective tilt">45° Tilt</button>
+                <button class="base-btn" onclick="flyCesiumPreset('orbit')" title="High-altitude regional orbit view">Orbit</button>
               </div>
 
               <!-- OpenSeaMap Nautical Seamarks Overlay Toggle -->
@@ -603,8 +626,10 @@
             </div>
           </div>
 
-          <!-- Leaflet Slippy Map Canvas -->
-          <div id="leaflet-map"></div>
+          <!-- Leaflet Slippy Map Canvas (2D) -->
+          <div id="leaflet-map" style="flex:1;width:100%;min-height:480px;"></div>
+          <!-- CesiumJS 3D Virtual Globe Canvas (3D) -->
+          <div id="cesium-container" style="display:none;flex:1;width:100%;min-height:480px;position:relative;background:#050B14;"></div>
 
           <!-- Tactical HUD Legend Overlay -->
           <div class="map-overlay-hud">
@@ -1696,6 +1721,244 @@
       closeForensicModal();
     }
   });
+
+
+  // ── CESIUMJS 3D VIRTUAL GLOBE ENGINE ──
+  let cesiumViewer = null;
+  let currentDimensionMode = '2D';
+
+  function setDimensionMode(mode) {
+    currentDimensionMode = mode;
+    const btn2D = document.getElementById('btn-mode-2d');
+    const btn3D = document.getElementById('btn-mode-3d');
+    const leafEl = document.getElementById('leaflet-map');
+    const cesEl = document.getElementById('cesium-container');
+    const sel2D = document.getElementById('layer-selector-2d');
+    const ctrl3D = document.getElementById('controls-3d');
+
+    if (mode === '3D') {
+      btn2D.classList.remove('active');
+      btn3D.classList.add('active');
+      leafEl.style.display = 'none';
+      cesEl.style.display = 'block';
+      sel2D.style.display = 'none';
+      ctrl3D.style.display = 'flex';
+
+      if (!cesiumViewer) {
+        initCesiumGlobe();
+      } else {
+        renderCesiumScenario(SCENARIOS[currentScenarioKey]);
+      }
+    } else {
+      btn3D.classList.remove('active');
+      btn2D.classList.add('active');
+      cesEl.style.display = 'none';
+      leafEl.style.display = 'block';
+      ctrl3D.style.display = 'none';
+      sel2D.style.display = 'flex';
+      if (window.mapInstance) window.mapInstance.invalidateSize();
+    }
+  }
+
+  function initCesiumGlobe() {
+    try {
+      Cesium.Ion.defaultAccessToken = ''; // Zero-token free mode
+
+      cesiumViewer = new Cesium.Viewer('cesium-container', {
+        imageryProvider: new Cesium.UrlTemplateImageryProvider({
+          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          maximumLevel: 19
+        }),
+        baseLayerPicker: false,
+        geocoder: false,
+        homeButton: false,
+        infoBox: true,
+        selectionIndicator: false,
+        timeline: false,
+        animation: false,
+        sceneModePicker: false,
+        navigationHelpButton: false,
+        fullscreenButton: false
+      });
+
+      // Add OpenSeaMap Nautical Seamarks overlay to 3D globe
+      cesiumViewer.imageryLayers.addImageryProvider(
+        new Cesium.UrlTemplateImageryProvider({
+          url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+          maximumLevel: 18
+        })
+      );
+
+      cesiumViewer.scene.globe.enableLighting = true;
+      cesiumViewer.scene.globe.depthTestAgainstTerrain = false;
+
+      renderCesiumScenario(SCENARIOS[currentScenarioKey]);
+    } catch (e) {
+      console.error('CesiumJS initialization error:', e);
+    }
+  }
+
+  function renderCesiumScenario(s) {
+    if (!cesiumViewer) return;
+    cesiumViewer.entities.removeAll();
+
+    const centerLat = s.lat;
+    const centerLng = s.lng;
+    const oilColorHex = s.oilColor || '#B45309';
+    const oilCesiumColor = Cesium.Color.fromCssColorString(oilColorHex);
+
+    // 1. Draped 3D Oil Slick Polygon on curved globe surface
+    cesiumViewer.entities.add({
+      name: `${s.id} Detected Slick (${s.oilType})`,
+      polygon: {
+        hierarchy: Cesium.Cartesian3.fromDegreesArray([
+          centerLng - 0.05, centerLat - 0.03,
+          centerLng - 0.04, centerLat + 0.02,
+          centerLng + 0.01, centerLat + 0.04,
+          centerLng + 0.05, centerLat + 0.01,
+          centerLng + 0.02, centerLat - 0.03
+        ]),
+        material: oilCesiumColor.withAlpha(0.65),
+        outline: true,
+        outlineColor: oilCesiumColor,
+        outlineWidth: 3,
+        height: 0
+      },
+      description: `<b>Incident:</b> ${s.id}<br><b>Type:</b> ${s.oilType}<br><b>Area:</b> ${s.area}<br><b>Damping:</b> -8.4 dB`
+    });
+
+    // 2. 3D Origin Probability Envelopes (50%, 75%, 90% rings)
+    const originLat = centerLat + 0.18;
+    const originLng = centerLng - 0.15;
+    const amberColor = Cesium.Color.fromCssColorString('#D97706');
+
+    // 90% Ring
+    cesiumViewer.entities.add({
+      name: '90% Origin Probability Envelope',
+      ellipse: {
+        semiMinorAxis: 18000.0,
+        semiMajorAxis: 18000.0,
+        material: amberColor.withAlpha(0.12),
+        outline: true,
+        outlineColor: amberColor,
+        outlineWidth: 1,
+        height: 5
+      },
+      position: Cesium.Cartesian3.fromDegrees(originLng, originLat)
+    });
+
+    // 50% Core Ring
+    cesiumViewer.entities.add({
+      name: '50% Core Origin Probability Envelope',
+      ellipse: {
+        semiMinorAxis: 5500.0,
+        semiMajorAxis: 5500.0,
+        material: amberColor.withAlpha(0.45),
+        outline: true,
+        outlineColor: amberColor,
+        outlineWidth: 2,
+        height: 10
+      },
+      position: Cesium.Cartesian3.fromDegrees(originLng, originLat)
+    });
+
+    // 3. 3D Vessel Track
+    cesiumViewer.entities.add({
+      name: `${s.topVessel} AIS Trajectory`,
+      polyline: {
+        positions: Cesium.Cartesian3.fromDegreesArray([
+          originLng - 0.25, originLat - 0.35,
+          originLng - 0.08, originLat - 0.10,
+          originLng + 0.01, originLat + 0.02,
+          originLng + 0.15, originLat + 0.20,
+          originLng + 0.30, originLat + 0.40
+        ]),
+        width: 3,
+        material: Cesium.Color.fromCssColorString('#EA580C')
+      }
+    });
+
+    // 4. AIS Gap Segment (Red glowing 3D polyline)
+    cesiumViewer.entities.add({
+      name: `${s.topVessel} AIS Gap (Transponder Blackout)`,
+      polyline: {
+        positions: Cesium.Cartesian3.fromDegreesArray([
+          originLng - 0.08, originLat - 0.10,
+          originLng + 0.01, originLat + 0.02
+        ]),
+        width: 5,
+        material: Cesium.Color.RED
+      }
+    });
+
+    // 5. 3D Sentinel-1 Satellite in Low Earth Orbit (Altitude: 693 km)
+    const satPos = Cesium.Cartesian3.fromDegrees(centerLng - 0.45, centerLat + 1.15, 693000);
+    cesiumViewer.entities.add({
+      name: 'Sentinel-1A SAR Satellite',
+      position: satPos,
+      point: {
+        pixelSize: 10,
+        color: Cesium.Color.fromCssColorString('#38BDF8'),
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2
+      },
+      label: {
+        text: 'Sentinel-1A (Altitude: 693 km · C-Band SAR)',
+        font: '11px JetBrains Mono',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -12)
+      }
+    });
+
+    // 3D Radar Conical Swath Beam to ocean surface
+    cesiumViewer.entities.add({
+      name: 'Radar Swath Line',
+      polyline: {
+        positions: [
+          satPos,
+          Cesium.Cartesian3.fromDegrees(centerLng, centerLat, 0)
+        ],
+        width: 2,
+        material: new Cesium.PolylineDashMaterialProperty({
+          color: Cesium.Color.fromCssColorString('#38BDF8').withAlpha(0.6)
+        })
+      }
+    });
+
+    // Fly camera to tactical 45° perspective
+    flyCesiumPreset('tactical');
+  }
+
+  function flyCesiumPreset(preset) {
+    if (!cesiumViewer) return;
+    const s = SCENARIOS[currentScenarioKey];
+    const centerLat = s.lat;
+    const centerLng = s.lng;
+
+    if (preset === 'nadir') {
+      cesiumViewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(centerLng, centerLat, 120000),
+        orientation: { heading: 0.0, pitch: Cesium.Math.toRadians(-90.0), roll: 0.0 },
+        duration: 1.5
+      });
+    } else if (preset === 'tactical') {
+      cesiumViewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(centerLng - 0.4, centerLat - 0.6, 95000),
+        orientation: { heading: Cesium.Math.toRadians(28.0), pitch: Cesium.Math.toRadians(-42.0), roll: 0.0 },
+        duration: 1.8
+      });
+    } else if (preset === 'orbit') {
+      cesiumViewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(centerLng, centerLat, 1800000),
+        orientation: { heading: 0.0, pitch: Cesium.Math.toRadians(-75.0), roll: 0.0 },
+        duration: 2.0
+      });
+    }
+  }
 
   // ── WINDOW ONLOAD INITIALIZATION ──
   window.addEventListener('load', () => {
