@@ -1,0 +1,35 @@
+# Environment & Secrets
+.env
+*.env.local
+*.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Node & Frontend
+node_modules/
+.next/
+out/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Large Geospatial & Raw Satellite Rasters
+*.SAFE/
+*.zip
+*.tar.gz
+*.nc
+*.nc4
