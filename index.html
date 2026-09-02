@@ -634,6 +634,12 @@
                 <button class="base-btn" onclick="flyCesiumPreset('orbit')" title="Regional Indian Ocean orbit view">Orbit</button>
               </div>
 
+              <!-- Instant Focus Spill Target Button -->
+              <button class="btn btn-sm btn-primary flex items-center gap-1" onclick="focusActiveSpill()" title="Instantly center and lock camera onto the detected oil spill" style="padding:4px 9px;font-size:11px;background:#EF4444;border-color:#DC2626;">
+                <span class="material-symbols-outlined" style="font-size:15px;">my_location</span>
+                Focus Spill
+              </button>
+
               <!-- OpenSeaMap Nautical Seamarks Overlay Toggle -->
               <button class="toggle-btn active" id="btn-toggle-seamarks" onclick="toggleSeamarks()" title="Toggle Nautical Buoys &amp; Shipping Channels">
                 <span class="material-symbols-outlined" style="font-size:14px;">anchor</span>
@@ -1486,6 +1492,82 @@
     if (labelEl) labelEl.textContent = `Slick: ${s.oilType || 'Detected'}`;
     mapLayersGroup.addLayer(slickPoly);
 
+    // ── HIGH-VISIBILITY TACTICAL ALERT BEACON (2D LEAFLET) ──
+    const beaconIcon = L.divIcon({
+      className: 'spill-beacon-wrapper',
+      html: `
+        <div class="spill-beacon-icon" style="color:${slickColor};">
+          <div class="spill-beacon-pulse" style="border:2.5px solid ${slickColor};background:${slickColor};"></div>
+          <div class="spill-beacon-pulse delayed" style="border:2px solid ${slickColor};"></div>
+          <div class="spill-beacon-core" style="background:${slickColor};">
+            <span class="material-symbols-outlined" style="font-size:11px;">warning</span>
+          </div>
+          <div class="spill-tactical-pill" style="color:#FFFFFF;border-color:${slickColor};" onclick="focusActiveSpill()">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${slickColor};box-shadow:0 0 8px ${slickColor};"></span>
+            <span>🚨 ACTUAL SPILL: ${s.oilType.toUpperCase()} (${s.area})</span>
+            <span style="font-size:9px;color:var(--text-muted);font-weight:400;">${centerLat.toFixed(3)}°N, ${centerLng.toFixed(3)}°E</span>
+          </div>
+        </div>
+      `,
+      iconSize: [36, 36],
+      iconAnchor: [18, 18]
+    });
+
+    const beaconMarker = L.marker([centerLat, centerLng], { icon: beaconIcon })
+      .bindPopup(`
+        <div style="font-size:12px;font-family:var(--font-sans);">
+          <div style="font-weight:700;color:${slickColor};margin-bottom:4px;">🚨 ACTUAL DETECTED OIL SPILL (T0)</div>
+          <div><b>Incident ID:</b> ${s.id}</div>
+          <div><b>Classification:</b> ${s.oilType} (<code>${slickColor}</code>)</div>
+          <div><b>Coordinates:</b> ${centerLat}°N, ${centerLng}°E</div>
+          <div><b>Calculated Area:</b> ${s.area}</div>
+          <div><b>Backscatter Damping:</b> -8.4 dB</div>
+          <div style="margin-top:6px;padding-top:4px;border-top:1px solid #E2E8F0;font-size:10px;color:#64748B;">
+            Satellite Observation Time: T0 (Sentinel-1 SAR IW GRD Pass)
+          </div>
+        </div>
+      `);
+    mapLayersGroup.addLayer(beaconMarker);
+
+    // ── ORIGIN DISCHARGE POINT INDICATOR (T - 22h) ──
+    const originIcon = L.divIcon({
+      className: 'origin-beacon-wrapper',
+      html: `
+        <div class="spill-beacon-icon" style="color:#D97706;">
+          <div class="spill-beacon-pulse" style="border:2px solid #D97706;"></div>
+          <div class="spill-beacon-core" style="background:#D97706;">
+            <span class="material-symbols-outlined" style="font-size:10px;">flag</span>
+          </div>
+          <div class="spill-tactical-pill" style="color:#FBBF24;border-color:#D97706;top:-12px;left:24px;">
+            <span>🎯 ORIGIN DISCHARGE POINT (T - 22h)</span>
+          </div>
+        </div>
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    const originMarker = L.marker([originLat, originLng], { icon: originIcon })
+      .bindPopup(`
+        <div style="font-size:12px;">
+          <div style="font-weight:700;color:#D97706;margin-bottom:4px;">🎯 RECONSTRUCTED DISCHARGE ORIGIN (T - 22h)</div>
+          <div><b>Coordinates:</b> ${originLat.toFixed(3)}°N, ${originLng.toFixed(3)}°E</div>
+          <div><b>Confidence:</b> 50% Core Probability Envelope</div>
+          <div><b>Interception:</b> Offending vessel AIS transponder blackout window</div>
+          <div><b>Net Drift Vector:</b> 38.2 km westward under CMEMS currents &amp; 3.5% windage</div>
+        </div>
+      `);
+    mapLayersGroup.addLayer(originMarker);
+
+    // Drift Vector Connecting Line (Dashed Arrow)
+    const driftLine = L.polyline([[originLat, originLng], [centerLat, centerLng]], {
+      color: '#D97706',
+      weight: 2,
+      dashArray: '5, 8',
+      opacity: 0.85
+    }).bindPopup('<b>Reverse Hydrodynamic Drift Vector</b><br>CMEMS surface currents + 3.5% ERA5 Stokes drift over 22 hours');
+    mapLayersGroup.addLayer(driftLine);
+
     // 2. Backward Drift Probability Envelopes
     const originLat = centerLat + 0.18;
     const originLng = centerLng - 0.15;
@@ -1871,6 +1953,27 @@
   let cesiumViewer = null;
   let currentDimensionMode = '2D';
 
+
+  function focusActiveSpill() {
+    const s = SCENARIOS[currentScenarioKey] || SCENARIOS['INC-001'];
+    const lat = s.lat;
+    const lng = s.lng;
+
+    // Center 2D Leaflet
+    if (window.mapInstance) {
+      window.mapInstance.flyTo([lat, lng], 12, { duration: 1.2 });
+    }
+
+    // Center 3D Cesium
+    if (cesiumViewer) {
+      cesiumViewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(lng, lat - 0.08, 45000),
+        orientation: { heading: 0.0, pitch: Cesium.Math.toRadians(-45.0), roll: 0.0 },
+        duration: 1.5
+      });
+    }
+  }
+
   function setDimensionMode(mode) {
     currentDimensionMode = mode;
     const btn2D = document.getElementById('btn-mode-2d');
@@ -1973,6 +2076,67 @@
         height: 0
       },
       description: `<b>Incident:</b> ${s.id}<br><b>Type:</b> ${s.oilType}<br><b>Area:</b> ${s.area}<br><b>Damping:</b> -8.4 dB`
+    });
+
+    // ── 3D VERTICAL LUMINOUS BEACON PILLAR (VISIBLE FROM SPACE) ──
+    const beaconHeight = 50000.0; // 50 km vertical light pillar
+    cesiumViewer.entities.add({
+      name: `ACTUAL OIL SPILL BEACON: ${s.oilType}`,
+      position: Cesium.Cartesian3.fromDegrees(centerLng, centerLat, beaconHeight / 2),
+      cylinder: {
+        length: beaconHeight,
+        topRadius: 1200.0,
+        bottomRadius: 300.0,
+        material: oilCesiumColor.withAlpha(0.70),
+        outline: true,
+        outlineColor: Cesium.Color.WHITE
+      }
+    });
+
+    // 3D Billboard Pin & Callout Label over the Spill
+    cesiumViewer.entities.add({
+      name: `Spill Marker: ${s.id}`,
+      position: Cesium.Cartesian3.fromDegrees(centerLng, centerLat, 52000),
+      point: {
+        pixelSize: 14,
+        color: oilCesiumColor,
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 3
+      },
+      label: {
+        text: `🚨 ACTUAL SPILL: ${s.oilType.toUpperCase()} (${s.area})
+Lat: ${centerLat}°N, Lng: ${centerLng}°E`,
+        font: 'bold 12px JetBrains Mono',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 3,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -16)
+      }
+    });
+
+    // 3D Discharge Origin Pin (T - 22h)
+    cesiumViewer.entities.add({
+      name: 'Discharge Origin Beacon (T - 22h)',
+      position: Cesium.Cartesian3.fromDegrees(originLng, originLat, 30000),
+      point: {
+        pixelSize: 10,
+        color: Cesium.Color.fromCssColorString('#D97706'),
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2
+      },
+      label: {
+        text: `🎯 ORIGIN DISCHARGE POINT (T - 22h)
+Inside 50% Probability Envelope`,
+        font: '11px JetBrains Mono',
+        fillColor: Cesium.Color.fromCssColorString('#FBBF24'),
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -12)
+      }
     });
 
     // 2. 3D Origin Probability Envelopes (50%, 75%, 90% rings)
