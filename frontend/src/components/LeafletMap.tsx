@@ -162,8 +162,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
     // ── 2. LEGIT PICTURE: AUTHENTIC SENTINEL SATELLITE IMAGERY OVERLAY ──
     const imageryBounds: [[number, number], [number, number]] = [
-      [centerLat - 0.065, centerLng - 0.085],
-      [centerLat + 0.065, centerLng + 0.085],
+      [centerLat - 0.085, centerLng - 0.115],
+      [centerLat + 0.085, centerLng + 0.115],
     ];
 
     let imageryFile = '/imagery/sar_vv_damping.png';
@@ -185,8 +185,9 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     }
 
     const satelliteDrape = L.imageOverlay(imageryFile, imageryBounds, {
-      opacity: Math.min(layerOpacity, 0.92),
+      opacity: Math.min(layerOpacity, 0.95),
       interactive: true,
+      className: 'crisp-sar-overlay',
       attribution: '© ESA Copernicus Sentinel Data Space Ecosystem',
     }).bindPopup(`
       <div class="gis-popup-card">
@@ -230,20 +231,22 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       `);
       group.addLayer(slickPoly);
 
-      // Centroid callout chip
-      const [cLat, cLng] = poly.slick_centroid;
-      const centroidIcon = L.divIcon({
-        className: 'gis-centroid-chip',
-        html: `
-          <div class="gis-slick-chip" style="border-color:${slickColor};background:rgba(10,15,29,0.92);color:#FFFFFF;">
-            <span class="gis-chip-dot" style="background:${slickColor};box-shadow:0 0 8px ${slickColor};"></span>
-            <span>${poly.area_km2} km² · Δσ0 ${poly.mean_damping_db} dB</span>
-          </div>
-        `,
-        iconSize: [0, 0],
-        iconAnchor: [0, 0],
-      });
-      group.addLayer(L.marker([cLat, cLng], { icon: centroidIcon }));
+      // Only add centroid callout chip for secondary satellite sheens (idx > 0) to avoid center collision
+      if (idx > 0) {
+        const [cLat, cLng] = poly.slick_centroid;
+        const centroidIcon = L.divIcon({
+          className: 'gis-centroid-chip',
+          html: `
+            <div class="gis-slick-chip" style="border-color:#38BDF8;background:rgba(10,15,29,0.92);color:#FFFFFF;">
+              <span class="gis-chip-dot" style="background:#38BDF8;box-shadow:0 0 8px #38BDF8;"></span>
+              <span>Sheen: ${poly.area_km2} km² · Δσ0 ${poly.mean_damping_db} dB</span>
+            </div>
+          `,
+          iconSize: [0, 0],
+          iconAnchor: [-10, -15],
+        });
+        group.addLayer(L.marker([cLat, cLng], { icon: centroidIcon }));
+      }
     });
 
     // ── 4. GEODETIC DIMENSION LINES (MAJOR & MINOR AXIS WITH LENGTH LABELS) ──
@@ -256,12 +259,14 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     }).bindPopup('<b>Major Dispersion Axis: 4.65 km</b><br>Bearing: 248° WSW (Driven by CMEMS ocean current &amp; 3.5% wind drift)');
     group.addLayer(majLine);
 
-    // Major Axis Distance Badge
-    const majBadge = L.marker([(majStart[0] + majEnd[0]) / 2, (majStart[1] + majEnd[1]) / 2], {
+    // Major Axis Distance Badge (Offset toward WSW extremity along line)
+    const majOffsetLat = centerLat + (majEnd[0] - centerLat) * 0.70;
+    const majOffsetLng = centerLng + (majEnd[1] - centerLng) * 0.70;
+    const majBadge = L.marker([majOffsetLat, majOffsetLng], {
       icon: L.divIcon({
-        className: 'dim-badge',
-        html: '<div style="background:rgba(0,229,255,0.92);color:#0A0F1D;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);">↔ 4.65 km (Length)</div>',
-        iconAnchor: [55, 12],
+        className: 'dim-badge-major',
+        html: '<div style="background:rgba(0,229,255,0.95);color:#0A0F1D;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.6);border:1px solid #FFFFFF;">↔ 4.65 km Major Length</div>',
+        iconAnchor: [60, -10],
       }),
     });
     group.addLayer(majBadge);
@@ -276,11 +281,14 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     }).bindPopup('<b>Minor Cross-Dispersion Axis: 1.78 km</b><br>Lateral spreading caused by oceanic turbulent diffusion');
     group.addLayer(minLine);
 
-    const minBadge = L.marker([(minStart[0] + minEnd[0]) / 2, (minStart[1] + minEnd[1]) / 2], {
+    // Minor Axis Distance Badge (Offset toward SSE tip along line)
+    const minOffsetLat = centerLat + (minStart[0] - centerLat) * 0.75;
+    const minOffsetLng = centerLng + (minStart[1] - centerLng) * 0.75;
+    const minBadge = L.marker([minOffsetLat, minOffsetLng], {
       icon: L.divIcon({
-        className: 'dim-badge',
-        html: '<div style="background:rgba(16,185,129,0.92);color:#0A0F1D;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);">↕ 1.78 km (Width)</div>',
-        iconAnchor: [45, 12],
+        className: 'dim-badge-minor',
+        html: '<div style="background:rgba(16,185,129,0.95);color:#0A0F1D;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.6);border:1px solid #FFFFFF;">↕ 1.78 km Minor Width</div>',
+        iconAnchor: [-10, 15],
       }),
     });
     group.addLayer(minBadge);
@@ -422,8 +430,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           <div style="position:absolute;top:50%;left:-20px;right:-20px;height:1px;background:${slickColor};opacity:0.7;"></div>
           <div style="position:absolute;top:-20px;bottom:-20px;left:50%;width:1px;background:${slickColor};opacity:0.7;"></div>
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;background:${slickColor};border:2px solid #FFFFFF;box-shadow:0 0 12px ${slickColor};"></div>
-          <div style="position:absolute;top:-42px;left:50%;transform:translateX(-50%);background:rgba(10,15,29,0.95);border:2px solid ${slickColor};border-radius:5px;padding:3px 8px;color:#FFFFFF;font-family:monospace;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 4px 18px rgba(0,0,0,0.8);pointer-events:auto;cursor:pointer;">
-            🚨 ACTUAL OIL SPILL: ${scenario.oilType.toUpperCase()} (4.82 km²)
+          <div style="position:absolute;top:-72px;left:50%;transform:translateX(-50%);background:rgba(10,15,29,0.96);border:2px solid ${slickColor};border-radius:5px;padding:4px 10px;color:#FFFFFF;font-family:monospace;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.85);pointer-events:auto;cursor:pointer;">
+            🚨 TARGET SPILL: ${scenario.oilType.toUpperCase()} · 4.82 km² (Δσ0 -8.4 dB)
           </div>
         </div>
       `,
