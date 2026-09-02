@@ -1109,3 +1109,18 @@ svg { display: block; flex-shrink: 0; }
 @media (max-width: 600px) {
   .stat-grid { grid-template-columns: 1fr; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   CRISP SATELLITE OVERLAY & NON-COLLIDING BADGES
+───────────────────────────────────────────────────────────── */
+.crisp-sar-overlay {
+  image-rendering: -webkit-optimize-contrast !important;
+  image-rendering: crisp-edges !important;
+  filter: contrast(112%) brightness(102%);
+}
+
+.dim-badge-major, .dim-badge-minor {
+  pointer-events: auto;
+  user-select: none;
+}
+
