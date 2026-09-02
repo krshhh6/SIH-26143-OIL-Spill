@@ -265,7 +265,7 @@
     .stat-delta.up { color: var(--sev-low); }
 
     /* CONTENT AREA */
-    .content-area { display: grid; grid-template-columns: 1fr 380px; gap: var(--sp-4); padding: 0 var(--sp-6) var(--sp-6); flex: 1; min-height: 0; }
+    .content-area { display: flex; flex-direction: column; gap: var(--sp-4); padding: 0 var(--sp-6) var(--sp-6); flex: 1; min-height: 0; width: 100%; }
 
     /* MAP PANEL & LEAFLET INTEGRATION */
     .map-panel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); display: flex; flex-direction: column; overflow: hidden; min-height: 600px; box-shadow: var(--card-shadow); position: relative; }
@@ -553,48 +553,7 @@
         </div>
       </div>
 
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="flex justify-between items-center">
-            <span class="stat-label">Active Incidents</span>
-            <div class="stat-icon" style="background:rgba(220,38,38,.10);">
-              <span class="material-symbols-rounded" style="color:#DC2626;font-size:19px;">warning</span>
-            </div>
-          </div>
-          <div class="stat-value" id="kpi-incidents">3</div>
-          <div class="stat-sub">2 critical · 1 high &nbsp;<span class="stat-delta up">↑2 this week</span></div>
-        </div>
-        <div class="stat-card">
-          <div class="flex justify-between items-center">
-            <span class="stat-label">SAR Slick Area</span>
-            <div class="stat-icon" style="background:rgba(8,145,178,.10);">
-              <span class="material-symbols-rounded" style="color:var(--slick-color);font-size:19px;">water_drop</span>
-            </div>
-          </div>
-          <div class="stat-value" id="kpi-area">4.82 km²</div>
-          <div class="stat-sub">Estimated ~14.2 MT crude film</div>
-        </div>
-        <div class="stat-card">
-          <div class="flex justify-between items-center">
-            <span class="stat-label">Candidate Vessels</span>
-            <div class="stat-icon" style="background:rgba(234,88,12,.10);">
-              <span class="material-symbols-rounded" style="color:#EA580C;font-size:19px;">directions_boat</span>
-            </div>
-          </div>
-          <div class="stat-value" id="kpi-vessels">3</div>
-          <div class="stat-sub">1 high-risk transponder gap</div>
-        </div>
-        <div class="stat-card">
-          <div class="flex justify-between items-center">
-            <span class="stat-label">Time to Attribution</span>
-            <div class="stat-icon" style="background:rgba(22,163,74,.10);">
-              <span class="material-symbols-rounded" style="color:#16A34A;font-size:19px;">schedule</span>
-            </div>
-          </div>
-          <div class="stat-value">11m 47s</div>
-          <div class="stat-sub"><span class="stat-delta up">↓99.7%</span> vs. 3-day manual baseline</div>
-        </div>
-      </div>
+
 
       <div class="content-area">
         <!-- TACTICAL LEAFLET / MSN MAP PANEL -->
@@ -609,20 +568,20 @@
             <div class="flex items-center gap-2">
               <!-- 2D / 3D Globe Mode Switcher -->
               <div class="map-base-selector" style="background:rgba(37,99,235,0.08);border-color:var(--accent);">
-                <button class="base-btn active" id="btn-mode-2d" onclick="setDimensionMode('2D')" title="2D Tactical Chart View">
-                  <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">map</span> 2D ECDIS
+                <button class="base-btn active" id="btn-mode-2d" onclick="setDimensionMode('2D')" title="Sentinel-1 SAR Radar Surveillance Map">
+                  <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">radar</span> SAR-1 Map
                 </button>
                 <button class="base-btn" id="btn-mode-3d" onclick="setDimensionMode('3D')" title="3D Tactical Virtual Globe View">
                   <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">public</span> 3D Globe
                 </button>
               </div>
 
-              <!-- 2D Base Layers (Visible in 2D mode) -->
+              <!-- SAR-1 Base Layers (Visible in SAR-1 mode) -->
               <div class="map-base-selector" id="layer-selector-2d">
-                <button class="base-btn active" id="btn-base-opensea" onclick="setBaseLayer('opensea')">OpenSeaMap</button>
-                <button class="base-btn" id="btn-base-msn" onclick="setBaseLayer('msn')">MSN Aerial</button>
+                <button class="base-btn active" id="btn-base-msn" onclick="setBaseLayer('msn')" title="Sentinel-1 C-SAR IW GRD Calibrated Radar (VV dB)">SAR-1 (VV dB)</button>
+                <button class="base-btn" id="btn-base-dark" onclick="setBaseLayer('dark')" title="SAR Cross-Pol VH (Metallic Vessel Bragg Return)">SAR (VH Pol)</button>
+                <button class="base-btn" id="btn-base-opensea" onclick="setBaseLayer('opensea')">OpenSeaMap</button>
                 <button class="base-btn" id="btn-base-day" onclick="setBaseLayer('day')">Hydrographic</button>
-                <button class="base-btn" id="btn-base-dark" onclick="setBaseLayer('dark')">Dark</button>
               </div>
 
               <!-- 3D Globe Satellite & Camera Controls (Visible in 3D mode) -->
@@ -693,58 +652,7 @@
           </div>
         </div>
 
-        <!-- RIGHT PANELS -->
-        <div class="right-panels">
-          <div class="panel">
-            <div class="panel-header">
-              <span class="panel-title">
-                <span class="material-symbols-outlined" style="font-size:16px;">emergency</span>
-                Monitored Maritime Incidents
-              </span>
-              <span style="font-size:11px;color:var(--text-muted)">3 active</span>
-            </div>
-            <div class="panel-body">
-              <div class="incident-list">
-                <div class="inc-card sc active" id="inc-card-1" onclick="switchScenario('INC-001')">
-                  <div class="inc-top"><span class="inc-id">INC-2026-001</span><span class="chip chip-c">CRITICAL</span></div>
-                  <div class="inc-name">Mumbai High Offshore — Arabian Sea</div>
-                  <div class="inc-meta"><span>Sentinel-1 IW GRD</span><span class="md"></span><span>S = 0.82 CRUDE ATLAS</span></div>
-                  <div class="progress-bar"><div class="progress-fill done" style="width:100%"></div></div>
-                </div>
-                <div class="inc-card sh" id="inc-card-2" onclick="switchScenario('INC-002')">
-                  <div class="inc-top"><span class="inc-id">INC-2026-002</span><span class="chip chip-h">HIGH</span></div>
-                  <div class="inc-name">Chennai–Ennore Coastal Corridor</div>
-                  <div class="inc-meta"><span>EOS-04 ScanSAR</span><span class="md"></span><span>S = 0.68 PACIFIC GLORY</span></div>
-                  <div class="progress-bar"><div class="progress-fill" style="width:85%"></div></div>
-                </div>
-                <div class="inc-card sm" id="inc-card-3" onclick="switchScenario('INC-003')">
-                  <div class="inc-top"><span class="inc-id">INC-2026-003</span><span class="chip chip-m">MEDIUM</span></div>
-                  <div class="inc-name">Andaman Sea — Shipping Lane 7</div>
-                  <div class="inc-meta"><span>Sentinel-1 IW GRD</span><span class="md"></span><span>Dark Vessel AIS Blackout</span></div>
-                  <div class="progress-bar"><div class="progress-fill" style="width:45%"></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div class="panel">
-            <div class="panel-header">
-              <span class="panel-title">
-                <span class="material-symbols-outlined" style="font-size:16px;">sensors_off</span>
-                Dark Vessel Signal Diagnostic
-              </span>
-              <span class="chip chip-c" style="font-size:9px;">SUSPICIOUS</span>
-            </div>
-            <div class="panel-body" style="padding-top:var(--sp-2);padding-bottom:var(--sp-2);">
-              <div class="gap-row">
-                <div class="gap-info">
-                  <div class="gap-vessel fw-600" id="diag-vessel">CRUDE ATLAS · MMSI 419001234</div>
-                  <div class="gap-dur" id="diag-details">Transponder Silent: 04:17–08:52 UTC (4h 35m) · Speed drop: 13.2kn → 4.1kn in origin envelope</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 

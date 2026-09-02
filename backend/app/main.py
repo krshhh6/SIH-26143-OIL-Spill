@@ -41,3 +41,8 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 from app.api.v1.sentinelhub_router import router as sh_router
 app.include_router(sh_router, prefix=settings.API_V1_STR)
+
+from app.api.v1.detect_router import router as detect_router
+app.include_router(detect_router, prefix=settings.API_V1_STR)
+app.include_router(detect_router, prefix="/api")
+
