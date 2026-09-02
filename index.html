@@ -471,9 +471,9 @@
         <span class="nav-badge" id="badge-count">3</span>
       </li>
       <li class="nav-item" onclick="go('investigation')">
-        <span class="material-symbols-outlined">travel_explore</span>
-        SAR Investigation
-        <span class="nav-badge blue">1</span>
+        <span class="material-symbols-outlined">satellite_alt</span>
+        Copernicus Satellite Studio
+        <span class="nav-badge blue">ESA CDSE</span>
       </li>
       <li class="nav-item" onclick="go('drift')">
         <span class="material-symbols-outlined">air</span>
@@ -1724,6 +1724,134 @@
     }
   });
 
+
+  
+  // ── COPERNICUS BROWSER MULTI-MISSION ENGINE ──
+  let activeCopernicusMission = 'S1';
+  let activeCopernicusLayer = 'sar-vv';
+
+  const COPERNICUS_LAYERS_DATA = {
+    'S1': [
+      { id: 'sar-vv', label: 'SAR Backscatter (VV dB)', badge: 'Capillary Damping', desc: 'Primary detection channel. Measures surface tension depression (Δσ0 = -8.4 dB).' },
+      { id: 'sar-vh', label: 'SAR Cross-Pol (VH dB)', badge: 'Vessel Scattering', desc: 'Cross-polarization for vessel hull metallic Bragg reflections.' },
+      { id: 'sar-wind', label: 'Sentinel-1 OCN (In-Situ Wind)', badge: 'In-Situ 4.2 m/s', desc: 'Instantaneous 10m neutral ocean wind speed (3.0–12.0 m/s validity window).' },
+      { id: 'swir', label: 'SWIR Hydrocarbon Index', badge: 'Emulsified Oil', desc: 'Identifies heavy hydrocarbon absorption overtones at 1610nm & 2190nm.' },
+      { id: 'fai', label: 'Floating Algae Index (FAI)', badge: 'Look-Alike Filter', desc: 'Floating Algae Index to reject biogenic phytoplankton and Sargassum.' }
+    ],
+    'S2': [
+      { id: 's2-rgb', label: 'True Color (RGB B4, B3, B2)', badge: '10m Optical', desc: 'Natural color visualization of surface sheen and coastal waters.' },
+      { id: 's2-false', label: 'False Color Infrared (B8, B4, B3)', badge: '10m NIR', desc: 'Near-Infrared band separates organic vegetation from mineral oil films.' },
+      { id: 'swir', label: 'SWIR Hydrocarbon Emulsion', badge: 'Hydrocarbon Bands', desc: 'High contrast for weathered crude and "chocolate mousse" emulsions.' },
+      { id: 'fai', label: 'Floating Algae Index (FAI)', badge: 'Biogenic Rejection', desc: 'FAI thresholding (> 0.04) discards false algae look-alikes.' }
+    ],
+    'S3': [
+      { id: 's3-chl', label: 'OLCI Chlorophyll-a (CHL_NN)', badge: '300m Resolution', desc: 'Detects large-scale dinoflagellate and red tide blooms.' },
+      { id: 's3-sst', label: 'SLSTR Sea Surface Temp (SST)', badge: '0.1K Radiometry', desc: 'Maps cold thermal upwelling ocean fronts that trap natural surfactants.' }
+    ],
+    'S6': [
+      { id: 's6-alt', label: 'Poseidon-4 Radar Altimetry', badge: 'Geostrophic Current', desc: 'Validates surface geostrophic current vectors (ug, vg) for drift modeling.' }
+    ]
+  };
+
+  function setCopernicusMission(mission) {
+    activeCopernicusMission = mission;
+    const missions = ['S1', 'S2', 'S3', 'S6'];
+    missions.forEach(m => {
+      const btn = document.getElementById('btn-msn-' + m.toLowerCase());
+      if (btn) {
+        if (m === mission) btn.classList.add('active');
+        else btn.classList.remove('active');
+      }
+    });
+
+    const badge = document.getElementById('copernicus-active-mission-badge');
+    const cloudBox = document.getElementById('cloud-filter-box');
+    const telemChip = document.getElementById('copernicus-telemetry-chip');
+
+    if (mission === 'S1') {
+      if (badge) badge.textContent = 'SENTINEL-1 C-SAR';
+      if (cloudBox) cloudBox.style.display = 'none';
+      if (telemChip) telemChip.textContent = 'Sentinel-1A IW GRD · C-SAR 5.4 GHz · Descending Orbit · 10m Res';
+    } else if (mission === 'S2') {
+      if (badge) badge.textContent = 'SENTINEL-2 MSI OPTICAL';
+      if (cloudBox) cloudBox.style.display = 'flex';
+      if (telemChip) telemChip.textContent = 'Sentinel-2B MSI L2A · 13 Spectral Bands · BOA Reflectance · 10m Res';
+    } else if (mission === 'S3') {
+      if (badge) badge.textContent = 'SENTINEL-3 OLCI / SLSTR';
+      if (cloudBox) cloudBox.style.display = 'flex';
+      if (telemChip) telemChip.textContent = 'Sentinel-3A OLCI/SLSTR · 300m Ocean Colour · Daily Marine Revisit';
+    } else if (mission === 'S6') {
+      if (badge) badge.textContent = 'SENTINEL-6 MICHAEL FREILICH';
+      if (cloudBox) cloudBox.style.display = 'none';
+      if (telemChip) telemChip.textContent = 'Sentinel-6 Poseidon-4 · High-Res SAR Altimeter · Geostrophic Currents';
+    }
+
+    renderCopernicusLayerButtons(mission);
+  }
+
+  function renderCopernicusLayerButtons(mission) {
+    const container = document.getElementById('copernicus-layers-bar');
+    if (!container) return;
+    const layers = COPERNICUS_LAYERS_DATA[mission] || COPERNICUS_LAYERS_DATA['S1'];
+    
+    container.innerHTML = layers.map((lyr, idx) => `
+      <button class="toggle-btn ${idx === 0 ? 'active' : ''}" id="btn-lyr-${lyr.id}" onclick="setCopernicusLayer('${lyr.id}')" title="${lyr.desc}">
+        <span style="width:7px;height:7px;border-radius:50%;background:#06B6D4;display:inline-block;"></span>
+        ${lyr.label}
+      </button>
+    `).join('');
+
+    setCopernicusLayer(layers[0].id);
+  }
+
+  function setCopernicusLayer(layerId) {
+    activeCopernicusLayer = layerId;
+    const buttons = document.querySelectorAll('#copernicus-layers-bar .toggle-btn');
+    buttons.forEach(b => {
+      if (b.id === 'btn-lyr-' + layerId) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+
+    const leftLbl = document.querySelector('.split-label.left-lbl');
+    const rightLbl = document.querySelector('.split-label.right-lbl');
+
+    if (layerId === 'sar-vv') {
+      if (rightLbl) rightLbl.textContent = 'Sentinel-1 SAR Backscatter (σ0 VV)';
+      if (leftLbl) leftLbl.textContent = 'AI Detection Mask + Look-Alike Filter';
+    } else if (layerId === 'swir') {
+      if (rightLbl) rightLbl.textContent = 'Sentinel-2 SWIR Hydrocarbon Index (B12/B8A/B4)';
+      if (leftLbl) leftLbl.textContent = 'Emulsified Crude Detection Profile';
+    } else if (layerId === 'fai') {
+      if (rightLbl) rightLbl.textContent = 'Floating Algae Index (FAI) Look-Alike Screen';
+      if (leftLbl) leftLbl.textContent = 'Biogenic Surfactant Rejection Mask';
+    } else if (layerId === 'sar-wind') {
+      if (rightLbl) rightLbl.textContent = 'Sentinel-1 OCN In-Situ 10m Wind Speed (4.2 m/s)';
+      if (leftLbl) leftLbl.textContent = 'Valid Bragg Scattering Window [3.0 - 12.0 m/s]';
+    } else if (layerId === 's2-rgb') {
+      if (rightLbl) rightLbl.textContent = 'Sentinel-2 True Color (RGB 4-3-2)';
+      if (leftLbl) leftLbl.textContent = 'Visual Slick Sheen Inspection';
+    } else if (layerId === 's3-chl') {
+      if (rightLbl) rightLbl.textContent = 'Sentinel-3 OLCI Chlorophyll-a (CHL_NN)';
+      if (leftLbl) leftLbl.textContent = 'Algal Bloom Threshold (< 2.5 mg/m³)';
+    } else if (layerId === 's3-sst') {
+      if (rightLbl) rightLbl.textContent = 'Sentinel-3 SLSTR Sea Surface Temperature';
+      if (leftLbl) leftLbl.textContent = 'Thermal Upwelling Ocean Fronts';
+    }
+  }
+
+  function updateCloudLabel(val) {
+    const el = document.getElementById('cloud-val');
+    if (el) el.textContent = val + '%';
+  }
+
+  function launchCopernicusBrowserWeb() {
+    const s = SCENARIOS[currentScenarioKey] || SCENARIOS['INC-001'];
+    const lat = s.lat;
+    const lng = s.lng;
+    // Deep-link URL into Copernicus Browser pointing directly to the incident's coordinates
+    const url = `https://browser.dataspace.copernicus.eu/?zoom=12&lat=${lat}&lng=${lng}&themeId=DEFAULT-THEME&datasetId=S1_GRD_CDAS&fromTime=2024-11-10T00:00:00.000Z&toTime=2024-11-15T23:59:59.999Z`;
+    window.open(url, '_blank');
+  }
 
   // ── CESIUMJS 3D VIRTUAL GLOBE ENGINE ──
   let cesiumViewer = null;
