@@ -1,0 +1,29 @@
+# Spill Sense (SIH26143) — Defined Tech Stack (tech_stack.md)
+# REST API & Validation (P0)
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+
+# Database & Spatial ORM (P0)
+sqlalchemy[asyncio]>=2.0.28
+asyncpg>=0.29.0
+geoalchemy2>=0.14.3
+shapely>=2.0.3
+
+# Asynchronous Task Queue & Cache (P0)
+celery>=5.3.6
+redis>=5.0.3
+
+# Geospatial & SAR Processing (P0)
+numpy>=1.26.0
+scipy>=1.12.0
+requests>=2.31.0
+httpx>=0.27.0
+
+# Security & Legal Evidence (P0)
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Environmental & Marine APIs (P0)
+copernicusmarine>=1.0.0

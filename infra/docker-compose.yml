@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # Primary Operational Spatial Database (tech_stack.md §3)
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: spill_sense_postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-spill_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spill_pass_26143}
+      POSTGRES_DB: ${POSTGRES_DB:-spill_sense}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spill_user -d spill_sense"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Queue Broker, Cache & Job-Status Store (tech_stack.md §2 & §10)
+  redis:
+    image: redis:7-alpine
+    container_name: spill_sense_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # S3-Compatible Object Storage for Rasters & PDFs (tech_stack.md §3)
+  minio:
+    image: minio/minio:latest
+    container_name: spill_sense_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-spill_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-spill_secret_26143}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  postgis_data:
+  redis_data:
+  minio_data:
