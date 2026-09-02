@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import type { Scenario, BaseLayerType, CopernicusLayerId, DetectionResult } from '../types/dashboard';
+import { SCENARIOS } from '../data/scenarios';
 import { computeBackwardDriftGeometry } from '../utils/geoContours';
 import { getScenarioBenchmarkDetections } from '../services/detectionService';
 
@@ -12,6 +13,7 @@ interface LeafletMapProps {
   layerOpacity?: number;
   detectionResult: DetectionResult | null;
   onUpdateCoords: (coords: string) => void;
+  onSelectScenario?: (key: string) => void;
   mapRef: React.MutableRefObject<L.Map | null>;
 }
 
@@ -23,12 +25,14 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   layerOpacity = 0.85,
   detectionResult,
   onUpdateCoords,
+  onSelectScenario,
   mapRef,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const baseLayersRef = useRef<Record<string, L.TileLayer>>({});
   const seamarksLayerRef = useRef<L.TileLayer | null>(null);
   const layersGroupRef = useRef<L.LayerGroup | null>(null);
+  const [currentZoom, setCurrentZoom] = useState<number>(11);
 
   // Initialize Leaflet map with real GIS tile sources
   useEffect(() => {
@@ -90,6 +94,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       onUpdateCoords(`${lat}°N, ${lng}°E`);
     });
 
+    map.on('zoomend', () => {
+      setCurrentZoom(map.getZoom());
+    });
+
     mapRef.current = map;
 
     return () => {
@@ -139,9 +147,9 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     const centerLat = scenario.lat;
     const centerLng = scenario.lng;
 
-    map.flyTo([centerLat, centerLng], 11, { duration: 0.8 });
+    map.flyTo([centerLat, centerLng], map.getZoom() < 8 ? 11 : map.getZoom(), { duration: 0.8 });
 
-    // 1. Swath footprint of the Sentinel-1 IW scene
+    // ── 1. ACTIVE SPILL: SENTINEL-1 IW SCENE FOOTPRINT SWATH ──
     const swathCoords: [number, number][] = [
       [centerLat + 0.65, centerLng - 0.95],
       [centerLat + 0.45, centerLng + 0.85],
@@ -160,7 +168,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     });
     group.addLayer(swathPoly);
 
-    // ── 2. LEGIT PICTURE: AUTHENTIC SENTINEL SATELLITE IMAGERY OVERLAY ──
+    // ── 2. LEGIT ULTRA-HD SATELLITE IMAGERY OVERLAY (2048x2048) ──
     const imageryBounds: [[number, number], [number, number]] = [
       [centerLat - 0.085, centerLng - 0.115],
       [centerLat + 0.085, centerLng + 0.115],
@@ -194,7 +202,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         <div class="gis-popup-header">🛰️ ${layerLabel}</div>
         <div class="gis-popup-row"><span>Sensor:</span> <strong>Sentinel-1A C-SAR / Sentinel-2 MSI</strong></div>
         <div class="gis-popup-row"><span>Physical Signal:</span> <strong>${sensorDesc}</strong></div>
-        <div class="gis-popup-row"><span>Ground Resolution:</span> <strong>10m x 10m High-Res</strong></div>
+        <div class="gis-popup-row"><span>Ground Resolution:</span> <strong>10m x 10m Ultra-HD (2048px)</strong></div>
         <div class="gis-popup-row"><span>Calibration:</span> <strong>Radiometrically terrain-corrected (RTC)</strong></div>
       </div>
     `);
@@ -208,7 +216,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
     const slickColor = scenario.oilColor || '#B45309';
 
-    // Primary Slick Outer Sheen (Bonn Code 1/2: 0.3 µm)
     detectedPolygons.forEach((poly, idx) => {
       const latLngs: [number, number][] = poly.geometry.coordinates[0].map(([lon, lat]) => [lat, lon]);
 
@@ -231,8 +238,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       `);
       group.addLayer(slickPoly);
 
-      // Only add centroid callout chip for secondary satellite sheens (idx > 0) to avoid center collision
-      if (idx > 0) {
+      // Only add secondary sheen centroid callout chip when zoomed in (idx > 0)
+      if (idx > 0 && currentZoom >= 9) {
         const [cLat, cLng] = poly.slick_centroid;
         const centroidIcon = L.divIcon({
           className: 'gis-centroid-chip',
@@ -249,49 +256,51 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       }
     });
 
-    // ── 4. GEODETIC DIMENSION LINES (MAJOR & MINOR AXIS WITH LENGTH LABELS) ──
-    const majStart: [number, number] = [centerLat + 0.018, centerLng + 0.038];
-    const majEnd: [number, number] = [centerLat - 0.022, centerLng - 0.046];
-    const majLine = L.polyline([majStart, majEnd], {
-      color: '#00E5FF',
-      weight: 2.2,
-      dashArray: '5, 5',
-    }).bindPopup('<b>Major Dispersion Axis: 4.65 km</b><br>Bearing: 248° WSW (Driven by CMEMS ocean current &amp; 3.5% wind drift)');
-    group.addLayer(majLine);
+    // ── 4. GEODETIC DIMENSION LINES (ONLY SHOWN AT TACTICAL ZOOM >= 9) ──
+    if (currentZoom >= 9) {
+      const majStart: [number, number] = [centerLat + 0.018, centerLng + 0.038];
+      const majEnd: [number, number] = [centerLat - 0.022, centerLng - 0.046];
+      const majLine = L.polyline([majStart, majEnd], {
+        color: '#00E5FF',
+        weight: 2.2,
+        dashArray: '5, 5',
+      }).bindPopup('<b>Major Dispersion Axis: 4.65 km</b><br>Bearing: 248° WSW (Driven by CMEMS ocean current &amp; 3.5% wind drift)');
+      group.addLayer(majLine);
 
-    // Major Axis Distance Badge (Offset toward WSW extremity along line)
-    const majOffsetLat = centerLat + (majEnd[0] - centerLat) * 0.70;
-    const majOffsetLng = centerLng + (majEnd[1] - centerLng) * 0.70;
-    const majBadge = L.marker([majOffsetLat, majOffsetLng], {
-      icon: L.divIcon({
-        className: 'dim-badge-major',
-        html: '<div style="background:rgba(0,229,255,0.95);color:#0A0F1D;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.6);border:1px solid #FFFFFF;">↔ 4.65 km Major Length</div>',
-        iconAnchor: [60, -10],
-      }),
-    });
-    group.addLayer(majBadge);
+      // Major Axis Distance Badge (Offset along line toward extremity)
+      const majOffsetLat = centerLat + (majEnd[0] - centerLat) * 0.70;
+      const majOffsetLng = centerLng + (majEnd[1] - centerLng) * 0.70;
+      const majBadge = L.marker([majOffsetLat, majOffsetLng], {
+        icon: L.divIcon({
+          className: 'dim-badge-major',
+          html: '<div style="background:rgba(0,229,255,0.95);color:#0A0F1D;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.6);border:1px solid #FFFFFF;">↔ 4.65 km Major Length</div>',
+          iconAnchor: [60, -10],
+        }),
+      });
+      group.addLayer(majBadge);
 
-    // Minor Axis Line
-    const minStart: [number, number] = [centerLat + 0.015, centerLng - 0.012];
-    const minEnd: [number, number] = [centerLat - 0.017, centerLng + 0.010];
-    const minLine = L.polyline([minStart, minEnd], {
-      color: '#10B981',
-      weight: 2.0,
-      dashArray: '4, 4',
-    }).bindPopup('<b>Minor Cross-Dispersion Axis: 1.78 km</b><br>Lateral spreading caused by oceanic turbulent diffusion');
-    group.addLayer(minLine);
+      // Minor Axis Line
+      const minStart: [number, number] = [centerLat + 0.015, centerLng - 0.012];
+      const minEnd: [number, number] = [centerLat - 0.017, centerLng + 0.010];
+      const minLine = L.polyline([minStart, minEnd], {
+        color: '#10B981',
+        weight: 2.0,
+        dashArray: '4, 4',
+      }).bindPopup('<b>Minor Cross-Dispersion Axis: 1.78 km</b><br>Lateral spreading caused by oceanic turbulent diffusion');
+      group.addLayer(minLine);
 
-    // Minor Axis Distance Badge (Offset toward SSE tip along line)
-    const minOffsetLat = centerLat + (minStart[0] - centerLat) * 0.75;
-    const minOffsetLng = centerLng + (minStart[1] - centerLng) * 0.75;
-    const minBadge = L.marker([minOffsetLat, minOffsetLng], {
-      icon: L.divIcon({
-        className: 'dim-badge-minor',
-        html: '<div style="background:rgba(16,185,129,0.95);color:#0A0F1D;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.6);border:1px solid #FFFFFF;">↕ 1.78 km Minor Width</div>',
-        iconAnchor: [-10, 15],
-      }),
-    });
-    group.addLayer(minBadge);
+      // Minor Axis Distance Badge (Offset along line toward extremity)
+      const minOffsetLat = centerLat + (minStart[0] - centerLat) * 0.75;
+      const minOffsetLng = centerLng + (minStart[1] - centerLng) * 0.75;
+      const minBadge = L.marker([minOffsetLat, minOffsetLng], {
+        icon: L.divIcon({
+          className: 'dim-badge-minor',
+          html: '<div style="background:rgba(16,185,129,0.95);color:#0A0F1D;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.6);border:1px solid #FFFFFF;">↕ 1.78 km Minor Width</div>',
+          iconAnchor: [-10, 15],
+        }),
+      });
+      group.addLayer(minBadge);
+    }
 
     // ── 5. LAGRANGIAN BACKWARD DRIFT MODELING (CMEMS + ERA5 REVERSE DRIFT) ──
     const primarySlick = detectedPolygons[0];
@@ -421,7 +430,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       `)
     );
 
-    // ── 6. SCALE-INVARIANT MILITARY TARGET RETICLE (ALWAYS VISIBLE AT ANY ZOOM) ──
+    // ── 6. ACTIVE TARGET RETICLE (ALWAYS VISIBLE WITH DECOUPLED TOP BANNER) ──
     const reticleIcon = L.divIcon({
       className: 'spill-reticle-wrapper',
       html: `
@@ -431,7 +440,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           <div style="position:absolute;top:-20px;bottom:-20px;left:50%;width:1px;background:${slickColor};opacity:0.7;"></div>
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;background:${slickColor};border:2px solid #FFFFFF;box-shadow:0 0 12px ${slickColor};"></div>
           <div style="position:absolute;top:-72px;left:50%;transform:translateX(-50%);background:rgba(10,15,29,0.96);border:2px solid ${slickColor};border-radius:5px;padding:4px 10px;color:#FFFFFF;font-family:monospace;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.85);pointer-events:auto;cursor:pointer;">
-            🚨 TARGET SPILL: ${scenario.oilType.toUpperCase()} · 4.82 km² (Δσ0 -8.4 dB)
+            🚨 TARGET SPILL: ${scenario.oilType.toUpperCase()} · ${scenario.area || '4.82 km²'} (Δσ0 -8.4 dB)
           </div>
         </div>
       `,
@@ -439,7 +448,38 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       iconAnchor: [0, 0],
     });
     group.addLayer(L.marker([centerLat, centerLng], { icon: reticleIcon }));
-  }, [scenario, selectedCopernicusLayer, layerOpacity, detectionResult]);
+
+    // ── 7. RENDER ALL OTHER MONITORED SPILLS ACROSS INDIA ──
+    Object.entries(SCENARIOS).forEach(([key, sc]) => {
+      if (sc.id === scenario.id) return; // Skip active spill (already rendered above)
+
+      const otherColor = sc.oilColor || '#EAB308';
+      const otherBeacon = L.divIcon({
+        className: 'gis-incident-beacon',
+        html: `
+          <div style="position:relative;width:28px;height:28px;margin-left:-14px;margin-top:-14px;cursor:pointer;" title="Click to investigate ${sc.title}">
+            <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:${otherColor};opacity:0.4;animation:pulseBeacon 2s infinite;"></div>
+            <div style="position:absolute;top:5px;left:5px;width:18px;height:18px;border-radius:50%;background:${otherColor};border:2px solid #FFFFFF;box-shadow:0 0 12px ${otherColor};"></div>
+            <div style="position:absolute;left:26px;top:-10px;background:rgba(10,15,29,0.95);border:1.5px solid ${otherColor};border-radius:4px;padding:4px 8px;color:#FFFFFF;font-family:monospace;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,0.85);display:flex;align-items:center;gap:6px;">
+              <span style="width:7px;height:7px;border-radius:50%;background:${otherColor};box-shadow:0 0 6px ${otherColor};"></span>
+              <span>🚨 ${sc.title.split(' ')[0]}: ${sc.oilType} (${sc.area || 'Active'})</span>
+              <span style="background:${sc.sev.includes('CRITICAL') ? '#DC2626' : '#EA580C'};color:#FFFFFF;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:800;">${sc.sev.split(' ')[0]}</span>
+            </div>
+          </div>
+        `,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+      });
+
+      const marker = L.marker([sc.lat, sc.lng], { icon: otherBeacon })
+        .on('click', () => {
+          if (onSelectScenario) {
+            onSelectScenario(key);
+          }
+        });
+      group.addLayer(marker);
+    });
+  }, [scenario, selectedCopernicusLayer, layerOpacity, detectionResult, currentZoom]);
 
   return (
     <div

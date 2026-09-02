@@ -96,6 +96,7 @@ export const App: React.FC = () => {
             onSelectTab={setActiveTab}
             onOpenForensicModal={() => setIsForensicOpen(true)}
             onUpdateCoords={setCoordinates}
+            onSelectScenario={handleSelectScenario}
           />
         )}
 

@@ -7,6 +7,7 @@ interface DashboardViewProps {
   onSelectTab: (tab: TabType) => void;
   onOpenForensicModal: () => void;
   onUpdateCoords: (coords: string) => void;
+  onSelectScenario?: (key: string) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -14,6 +15,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectTab,
   onOpenForensicModal,
   onUpdateCoords,
+  onSelectScenario,
 }) => {
   const statusColor = currentScenario.sev.includes('CRITICAL')
     ? '#EF4444'
@@ -132,7 +134,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* FULL-WIDTH TACTICAL MAP PANEL */}
       <div className="content-area" style={{ display: 'flex', flexDirection: 'column', width: '100%', flex: 1, padding: '8px 16px 12px', minHeight: 0 }}>
-        <MapPanel scenario={currentScenario} onUpdateCoords={onUpdateCoords} />
+        <MapPanel scenario={currentScenario} onUpdateCoords={onUpdateCoords} onSelectScenario={onSelectScenario} />
       </div>
     </div>
   );
