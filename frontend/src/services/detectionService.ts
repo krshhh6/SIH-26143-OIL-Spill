@@ -38,32 +38,80 @@ function generateHydrodynamicRing(
 }
 
 export function getScenarioBenchmarkDetections(lat: number, lng: number): DetectedPolygon[] {
-  // Primary Slick (Core Emulsion + Outer Boundary)
-  const primaryRing = generateHydrodynamicRing(lat, lng, 0.024, 0.052, 3.8);
-  
-  // Secondary Satellite Sheen
-  const sheenRing = generateHydrodynamicRing(lat + 0.012, lng - 0.028, 0.012, 0.025, 3.7);
+  const isChennai = lng > 79.5 && lng < 82.0;
+  const isGoa = lng > 73.0 && lng < 74.0 && lat < 16.0;
+  const isAndaman = lng > 90.0;
+
+  if (isChennai) {
+    // Chennai-Ennore: Bay of Bengal offshore anchorage.
+    // Coastal current runs 020° NNE parallel to shoreline. Narrow East-West profile stays 100% in sea.
+    const primaryRing = generateHydrodynamicRing(lat, lng, 0.035, 0.014, 0.35);
+    const sheenRing = generateHydrodynamicRing(lat - 0.022, lng + 0.004, 0.016, 0.008, 0.35);
+    return [
+      {
+        geometry: { type: 'Polygon', coordinates: [primaryRing] },
+        confidence: 0.912,
+        area_km2: 2.40,
+        mean_damping_db: -10.20,
+        slick_centroid: [lat, lng],
+      },
+      {
+        geometry: { type: 'Polygon', coordinates: [sheenRing] },
+        confidence: 0.785,
+        area_km2: 0.65,
+        mean_damping_db: -7.40,
+        slick_centroid: [lat - 0.022, lng + 0.004],
+      },
+    ];
+  }
+
+  if (isGoa) {
+    // Goa: Arabian Sea offshore anchorage.
+    // Coastal current runs 160° SSE parallel to Konkan coast. Narrow profile stays strictly in water.
+    const primaryRing = generateHydrodynamicRing(lat, lng, 0.028, 0.013, 2.85);
+    return [
+      {
+        geometry: { type: 'Polygon', coordinates: [primaryRing] },
+        confidence: 0.835,
+        area_km2: 1.75,
+        mean_damping_db: -5.50,
+        slick_centroid: [lat, lng],
+      },
+    ];
+  }
+
+  if (isAndaman) {
+    // Andaman Sea: Shipping Lane 7
+    const primaryRing = generateHydrodynamicRing(lat, lng, 0.016, 0.030, 4.35);
+    return [
+      {
+        geometry: { type: 'Polygon', coordinates: [primaryRing] },
+        confidence: 0.810,
+        area_km2: 0.95,
+        mean_damping_db: -6.80,
+        slick_centroid: [lat, lng],
+      },
+    ];
+  }
+
+  // Mumbai High: Deep Arabian Sea open water
+  const primaryRing = generateHydrodynamicRing(lat, lng, 0.024, 0.048, 3.8);
+  const sheenRing = generateHydrodynamicRing(lat + 0.012, lng - 0.026, 0.012, 0.022, 3.7);
 
   return [
     {
-      geometry: {
-        type: 'Polygon',
-        coordinates: [primaryRing],
-      },
+      geometry: { type: 'Polygon', coordinates: [primaryRing] },
       confidence: 0.884,
       area_km2: 4.82,
       mean_damping_db: -8.40,
       slick_centroid: [lat, lng],
     },
     {
-      geometry: {
-        type: 'Polygon',
-        coordinates: [sheenRing],
-      },
+      geometry: { type: 'Polygon', coordinates: [sheenRing] },
       confidence: 0.762,
       area_km2: 1.15,
       mean_damping_db: -6.10,
-      slick_centroid: [lat + 0.012, lng - 0.028],
+      slick_centroid: [lat + 0.012, lng - 0.026],
     },
   ];
 }
