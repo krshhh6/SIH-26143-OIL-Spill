@@ -1,0 +1,12 @@
+{
+  "name": "sih-26143-oil-spill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Spill Sense — Maritime Intelligence C2 Platform (SIH26143)",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint",
+    "preview": "npm --prefix frontend run preview"
+  }
+}
