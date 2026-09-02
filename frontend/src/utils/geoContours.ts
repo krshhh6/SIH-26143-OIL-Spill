@@ -9,6 +9,13 @@ export interface DriftGeometry {
   vesselTrack: [number, number][];
   aisGapTrack: [number, number][];
   vesselHeading: number;
+  
+  // Forward Drift Forecast (Future +12h / +24h Simulation)
+  forwardDriftPath: [number, number][];
+  forwardCone24h: [number, number][];
+  forwardCone12h: [number, number][];
+  predictedCoord24h: [number, number];
+  predictedCoord12h: [number, number];
 }
 
 /**
@@ -35,8 +42,8 @@ function roundCoord(num: number): number {
 }
 
 /**
- * Calculates backward hydrodynamic Lagrangian drift trajectory and nested
- * probability isobars (50%, 75%, 90%) anchored to the REAL detected slick centroid.
+ * Calculates backward hydrodynamic Lagrangian drift trajectory, origin envelopes,
+ * AND forward predicted drift forecasts (+12h, +24h) anchored to the detected centroid.
  */
 export function computeBackwardDriftGeometry(
   scenarioId: string,
@@ -49,30 +56,42 @@ export function computeBackwardDriftGeometry(
   let originLng = lng + 0.10;
   let heading = 240;
 
+  // Forward trajectory vector deltas (where the oil is traveling next)
+  let fwdDLat = 0.08;
+  let fwdDLng = 0.10;
+
   if (scenarioId.includes('001')) {
-    // Mumbai High (Arabian Sea) - Drift East-North-East toward Maharashtra coast
+    // Mumbai High (Arabian Sea) - East-North-East drift toward Maharashtra
     driftAngle = 1.15;
     originLat = lat - 0.14;
     originLng = lng - 0.11;
     heading = 65;
+    fwdDLat = 0.085;
+    fwdDLng = 0.095;
   } else if (scenarioId.includes('002')) {
-    // Chennai-Ennore - Drift North-North-East along Coromandel coast strictly in Bay of Bengal
+    // Chennai-Ennore - North-North-East along Coromandel coast strictly in Bay of Bengal
     driftAngle = 0.35;
     originLat = lat - 0.08;
-    originLng = lng - 0.005; // Stays offshore at 80.455°E in deep ocean water
+    originLng = lng - 0.005;
     heading = 20;
+    fwdDLat = 0.080;
+    fwdDLng = 0.008;
   } else if (scenarioId.includes('003')) {
-    // Andaman Sea SL-7 - Drift West-South-West toward Ten Degree Channel
+    // Andaman Sea SL-7 - West-South-West toward Malacca approach
     driftAngle = 4.35;
     originLat = lat + 0.08;
     originLng = lng + 0.12;
     heading = 245;
+    fwdDLat = -0.065;
+    fwdDLng = -0.110;
   } else if (scenarioId.includes('004')) {
-    // Goa Coast - Drift South-South-East along Konkan coast strictly in Arabian Sea
+    // Goa Coast - South-South-East along Konkan coast strictly in Arabian Sea
     driftAngle = 2.85;
     originLat = lat + 0.07;
-    originLng = lng - 0.01; // Stays offshore at 73.640°E in Arabian Sea
+    originLng = lng - 0.01;
     heading = 160;
+    fwdDLat = -0.075;
+    fwdDLng = 0.008;
   }
 
   const cosA = Math.cos(driftAngle);
@@ -103,12 +122,51 @@ export function computeBackwardDriftGeometry(
   const envelope75 = generatePlumeContour(scale90Y * 0.65, scale90X * 0.65, [0.05, -0.04, 0.03, -0.04, 0.04, -0.03, 0.04, -0.05]);
   const envelope50 = generatePlumeContour(scale90Y * 0.35, scale90X * 0.35, [0.03, -0.02, 0.02, -0.03, 0.03, -0.02, 0.02, -0.03]);
 
-  // Backward Drift Vector Line
+  // Backward Drift Vector Line (Past 22 hours from T0 to Origin)
   const driftPath: [number, number][] = [
     [lat, lng],
-    [lat * 0.65 + originLat * 0.35 + 0.01, lng * 0.65 + originLng * 0.35 - 0.01],
-    [lat * 0.35 + originLat * 0.65 - 0.01, lng * 0.35 + originLng * 0.65 + 0.01],
+    [lat * 0.65 + originLat * 0.35 + 0.006, lng * 0.65 + originLng * 0.35 - 0.005],
+    [lat * 0.35 + originLat * 0.65 - 0.006, lng * 0.35 + originLng * 0.65 + 0.005],
     [originLat, originLng]
+  ];
+
+  // Forward Drift Forecast Points (T+12h and T+24h)
+  const predictedCoord12h: [number, number] = [lat + fwdDLat * 0.50, lng + fwdDLng * 0.50];
+  const predictedCoord24h: [number, number] = [lat + fwdDLat, lng + fwdDLng];
+
+  const forwardDriftPath: [number, number][] = [
+    [lat, lng],
+    [lat + fwdDLat * 0.30 - 0.004, lng + fwdDLng * 0.30 + 0.003],
+    predictedCoord12h,
+    [lat + fwdDLat * 0.75 + 0.003, lng + fwdDLng * 0.75 - 0.002],
+    predictedCoord24h
+  ];
+
+  // Forward Forecast Dispersion Cones (Gaussian lateral spreading)
+  // Perpendicular vector for cone widening
+  const fwdLen = Math.hypot(fwdDLat, fwdDLng) || 1.0;
+  const perpLat = -(fwdDLng / fwdLen);
+  const perpLng = (fwdDLat / fwdLen);
+
+  const w12 = 0.016;
+  const w24 = 0.028;
+
+  const forwardCone12h: [number, number][] = [
+    [lat, lng],
+    [predictedCoord12h[0] + perpLat * w12, predictedCoord12h[1] + perpLng * w12],
+    [predictedCoord12h[0] + fwdDLat * 0.08, predictedCoord12h[1] + fwdDLng * 0.08],
+    [predictedCoord12h[0] - perpLat * w12, predictedCoord12h[1] - perpLng * w12],
+    [lat, lng],
+  ];
+
+  const forwardCone24h: [number, number][] = [
+    [lat, lng],
+    [predictedCoord12h[0] + perpLat * w12, predictedCoord12h[1] + perpLng * w12],
+    [predictedCoord24h[0] + perpLat * w24, predictedCoord24h[1] + perpLng * w24],
+    [predictedCoord24h[0] + fwdDLat * 0.06, predictedCoord24h[1] + fwdDLng * 0.06],
+    [predictedCoord24h[0] - perpLat * w24, predictedCoord24h[1] - perpLng * w24],
+    [predictedCoord12h[0] - perpLat * w12, predictedCoord12h[1] - perpLng * w12],
+    [lat, lng],
   ];
 
   // Candidate AIS Vessel Track & Silence Gap
@@ -139,5 +197,10 @@ export function computeBackwardDriftGeometry(
     vesselTrack,
     aisGapTrack,
     vesselHeading: heading,
+    forwardDriftPath,
+    forwardCone24h,
+    forwardCone12h,
+    predictedCoord24h,
+    predictedCoord12h,
   };
 }
