@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import type { Scenario, BaseLayerType, CopernicusLayerId, DetectionResult } from '../types/dashboard';
 import { SCENARIOS } from '../data/scenarios';
@@ -32,7 +32,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const baseLayersRef = useRef<Record<string, L.TileLayer>>({});
   const seamarksLayerRef = useRef<L.TileLayer | null>(null);
   const layersGroupRef = useRef<L.LayerGroup | null>(null);
-  const [currentZoom, setCurrentZoom] = useState<number>(11);
 
   // Initialize Leaflet map with real GIS tile sources
   useEffect(() => {
@@ -94,9 +93,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       onUpdateCoords(`${lat}°N, ${lng}°E`);
     });
 
-    map.on('zoomend', () => {
-      setCurrentZoom(map.getZoom());
-    });
 
     mapRef.current = map;
 
@@ -136,6 +132,18 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   }, [showSeamarks]);
 
+  // Camera navigation: ONLY fly to coordinates when user switches scenario
+  const prevScenarioIdRef = useRef<string>(scenario.id);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (prevScenarioIdRef.current !== scenario.id) {
+      prevScenarioIdRef.current = scenario.id;
+      map.flyTo([scenario.lat, scenario.lng], 11, { duration: 1.0 });
+    }
+  }, [scenario.id, scenario.lat, scenario.lng]);
+
   // Render REAL satellite imagery picture, ML-predicted oil spill, and drift trajectory
   useEffect(() => {
     const map = mapRef.current;
@@ -146,8 +154,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
     const centerLat = scenario.lat;
     const centerLng = scenario.lng;
-
-    map.flyTo([centerLat, centerLng], map.getZoom() < 8 ? 11 : map.getZoom(), { duration: 0.8 });
 
     // ── 1. ACTIVE SPILL: SENTINEL-1 IW SCENE FOOTPRINT SWATH ──
     const swathCoords: [number, number][] = [
@@ -239,8 +245,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       group.addLayer(slickPoly);
     });
 
-    // ── 4. GEODETIC DIMENSION LINES (ONLY SHOWN AT TACTICAL ZOOM >= 9) ──
-    if (currentZoom >= 9) {
+    // ── 4. GEODETIC DIMENSION LINES ──
       const majStart: [number, number] = [centerLat + 0.018, centerLng + 0.038];
       const majEnd: [number, number] = [centerLat - 0.022, centerLng - 0.046];
       const majLine = L.polyline([majStart, majEnd], {
@@ -259,7 +264,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         dashArray: '4, 4',
       }).bindPopup('<b>Minor Cross-Dispersion Axis: 1.78 km</b><br>Lateral spreading caused by oceanic turbulent diffusion');
       group.addLayer(minLine);
-    }
 
     // ── 5. LAGRANGIAN BACKWARD DRIFT MODELING (CMEMS + ERA5 REVERSE DRIFT) ──
     const primarySlick = detectedPolygons[0];
@@ -431,7 +435,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         });
       group.addLayer(marker);
     });
-  }, [scenario, selectedCopernicusLayer, layerOpacity, detectionResult, currentZoom]);
+  }, [scenario, selectedCopernicusLayer, layerOpacity, detectionResult]);
 
   return (
     <div
