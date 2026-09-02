@@ -237,23 +237,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         </div>
       `);
       group.addLayer(slickPoly);
-
-      // Only add secondary sheen centroid callout chip when zoomed in (idx > 0)
-      if (idx > 0 && currentZoom >= 9) {
-        const [cLat, cLng] = poly.slick_centroid;
-        const centroidIcon = L.divIcon({
-          className: 'gis-centroid-chip',
-          html: `
-            <div class="gis-slick-chip" style="border-color:#38BDF8;background:rgba(10,15,29,0.92);color:#FFFFFF;">
-              <span class="gis-chip-dot" style="background:#38BDF8;box-shadow:0 0 8px #38BDF8;"></span>
-              <span>Sheen: ${poly.area_km2} km² · Δσ0 ${poly.mean_damping_db} dB</span>
-            </div>
-          `,
-          iconSize: [0, 0],
-          iconAnchor: [-10, -15],
-        });
-        group.addLayer(L.marker([cLat, cLng], { icon: centroidIcon }));
-      }
     });
 
     // ── 4. GEODETIC DIMENSION LINES (ONLY SHOWN AT TACTICAL ZOOM >= 9) ──
@@ -267,18 +250,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       }).bindPopup('<b>Major Dispersion Axis: 4.65 km</b><br>Bearing: 248° WSW (Driven by CMEMS ocean current &amp; 3.5% wind drift)');
       group.addLayer(majLine);
 
-      // Major Axis Distance Badge (Offset along line toward extremity)
-      const majOffsetLat = centerLat + (majEnd[0] - centerLat) * 0.70;
-      const majOffsetLng = centerLng + (majEnd[1] - centerLng) * 0.70;
-      const majBadge = L.marker([majOffsetLat, majOffsetLng], {
-        icon: L.divIcon({
-          className: 'dim-badge-major',
-          html: '<div style="background:rgba(0,229,255,0.95);color:#0A0F1D;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.6);border:1px solid #FFFFFF;">↔ 4.65 km Major Length</div>',
-          iconAnchor: [60, -10],
-        }),
-      });
-      group.addLayer(majBadge);
-
       // Minor Axis Line
       const minStart: [number, number] = [centerLat + 0.015, centerLng - 0.012];
       const minEnd: [number, number] = [centerLat - 0.017, centerLng + 0.010];
@@ -288,18 +259,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         dashArray: '4, 4',
       }).bindPopup('<b>Minor Cross-Dispersion Axis: 1.78 km</b><br>Lateral spreading caused by oceanic turbulent diffusion');
       group.addLayer(minLine);
-
-      // Minor Axis Distance Badge (Offset along line toward extremity)
-      const minOffsetLat = centerLat + (minStart[0] - centerLat) * 0.75;
-      const minOffsetLng = centerLng + (minStart[1] - centerLng) * 0.75;
-      const minBadge = L.marker([minOffsetLat, minOffsetLng], {
-        icon: L.divIcon({
-          className: 'dim-badge-minor',
-          html: '<div style="background:rgba(16,185,129,0.95);color:#0A0F1D;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.6);border:1px solid #FFFFFF;">↕ 1.78 km Minor Width</div>',
-          iconAnchor: [-10, 15],
-        }),
-      });
-      group.addLayer(minBadge);
     }
 
     // ── 5. LAGRANGIAN BACKWARD DRIFT MODELING (CMEMS + ERA5 REVERSE DRIFT) ──
@@ -362,9 +321,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         <div style="position:relative;width:24px;height:24px;margin-left:-12px;margin-top:-12px;">
           <div style="position:absolute;width:100%;height:100%;border-radius:50%;border:2px solid #D97706;animation:reticle-pulse 1.8s infinite;"></div>
           <div style="position:absolute;top:5px;left:5px;width:14px;height:14px;border-radius:50%;background:#D97706;border:2px solid #FFFFFF;box-shadow:0 0 10px #D97706;"></div>
-          <div style="position:absolute;left:20px;top:-10px;background:rgba(10,15,29,0.92);border:1px solid #D97706;color:#FBBF24;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:10px;font-weight:700;white-space:nowrap;">
-            🎯 RECONSTRUCTED DISCHARGE ORIGIN (T-22h)
-          </div>
         </div>
       `,
       iconSize: [0, 0],
@@ -439,9 +395,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           <div style="position:absolute;top:50%;left:-20px;right:-20px;height:1px;background:${slickColor};opacity:0.7;"></div>
           <div style="position:absolute;top:-20px;bottom:-20px;left:50%;width:1px;background:${slickColor};opacity:0.7;"></div>
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;background:${slickColor};border:2px solid #FFFFFF;box-shadow:0 0 12px ${slickColor};"></div>
-          <div style="position:absolute;top:-72px;left:50%;transform:translateX(-50%);background:rgba(10,15,29,0.96);border:2px solid ${slickColor};border-radius:5px;padding:4px 10px;color:#FFFFFF;font-family:monospace;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.85);pointer-events:auto;cursor:pointer;">
-            🚨 TARGET SPILL: ${scenario.oilType.toUpperCase()} · ${scenario.area || '4.82 km²'} (Δσ0 -8.4 dB)
-          </div>
         </div>
       `,
       iconSize: [0, 0],
@@ -457,14 +410,9 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       const otherBeacon = L.divIcon({
         className: 'gis-incident-beacon',
         html: `
-          <div style="position:relative;width:28px;height:28px;margin-left:-14px;margin-top:-14px;cursor:pointer;" title="Click to investigate ${sc.title}">
+          <div style="position:relative;width:24px;height:24px;margin-left:-12px;margin-top:-12px;cursor:pointer;">
             <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:${otherColor};opacity:0.4;animation:pulseBeacon 2s infinite;"></div>
-            <div style="position:absolute;top:5px;left:5px;width:18px;height:18px;border-radius:50%;background:${otherColor};border:2px solid #FFFFFF;box-shadow:0 0 12px ${otherColor};"></div>
-            <div style="position:absolute;left:26px;top:-10px;background:rgba(10,15,29,0.95);border:1.5px solid ${otherColor};border-radius:4px;padding:4px 8px;color:#FFFFFF;font-family:monospace;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,0.85);display:flex;align-items:center;gap:6px;">
-              <span style="width:7px;height:7px;border-radius:50%;background:${otherColor};box-shadow:0 0 6px ${otherColor};"></span>
-              <span>🚨 ${sc.title.split(' ')[0]}: ${sc.oilType} (${sc.area || 'Active'})</span>
-              <span style="background:${sc.sev.includes('CRITICAL') ? '#DC2626' : '#EA580C'};color:#FFFFFF;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:800;">${sc.sev.split(' ')[0]}</span>
-            </div>
+            <div style="position:absolute;top:4px;left:4px;width:16px;height:16px;border-radius:50%;background:${otherColor};border:2px solid #FFFFFF;box-shadow:0 0 10px ${otherColor};"></div>
           </div>
         `,
         iconSize: [0, 0],
@@ -472,6 +420,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       });
 
       const marker = L.marker([sc.lat, sc.lng], { icon: otherBeacon })
+        .bindTooltip(`<b>🚨 ${sc.title}</b><br>${sc.oilType} · ${sc.area || ''} (${sc.sev})<br><span style="color:#38BDF8;">Click to investigate</span>`, {
+          sticky: true,
+          className: 'gis-custom-tooltip',
+        })
         .on('click', () => {
           if (onSelectScenario) {
             onSelectScenario(key);
