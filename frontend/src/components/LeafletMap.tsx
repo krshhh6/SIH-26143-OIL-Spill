@@ -175,9 +175,12 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     group.addLayer(swathPoly);
 
     // ── 2. LEGIT ULTRA-HD SATELLITE IMAGERY OVERLAY (2048x2048) ──
+    const isCoastline = (centerLng > 79.5 && centerLng < 82.0) || (centerLng > 73.0 && centerLng < 74.0);
+    const deltaLng = isCoastline ? 0.055 : 0.095;
+    const deltaLat = isCoastline ? 0.065 : 0.085;
     const imageryBounds: [[number, number], [number, number]] = [
-      [centerLat - 0.085, centerLng - 0.115],
-      [centerLat + 0.085, centerLng + 0.115],
+      [centerLat - deltaLat, centerLng - deltaLng],
+      [centerLat + deltaLat, centerLng + deltaLng],
     ];
 
     let imageryFile = '/imagery/sar_vv_damping.png';

@@ -56,11 +56,11 @@ export function computeBackwardDriftGeometry(
     originLng = lng - 0.11;
     heading = 65;
   } else if (scenarioId.includes('002')) {
-    // Chennai-Ennore - Drift North-North-East along Coromandel coast
-    driftAngle = 0.45;
-    originLat = lat - 0.11;
-    originLng = lng - 0.05;
-    heading = 25;
+    // Chennai-Ennore - Drift North-North-East along Coromandel coast strictly in Bay of Bengal
+    driftAngle = 0.35;
+    originLat = lat - 0.08;
+    originLng = lng - 0.005; // Stays offshore at 80.455°E in deep ocean water
+    heading = 20;
   } else if (scenarioId.includes('003')) {
     // Andaman Sea SL-7 - Drift West-South-West toward Ten Degree Channel
     driftAngle = 4.35;
@@ -68,10 +68,10 @@ export function computeBackwardDriftGeometry(
     originLng = lng + 0.12;
     heading = 245;
   } else if (scenarioId.includes('004')) {
-    // Goa Coast - Drift South-South-East along Konkan coast
+    // Goa Coast - Drift South-South-East along Konkan coast strictly in Arabian Sea
     driftAngle = 2.85;
-    originLat = lat + 0.10;
-    originLng = lng - 0.08;
+    originLat = lat + 0.07;
+    originLng = lng - 0.01; // Stays offshore at 73.640°E in Arabian Sea
     heading = 160;
   }
 
@@ -91,13 +91,17 @@ export function computeBackwardDriftGeometry(
       const dx = Math.cos(rad) * scaleX * r;
       const rx = dx * cosA - dy * sinA;
       const ry = dx * sinA + dy * cosA;
-      return [originLat + ry, originLng + rx * 1.2];
+      return [originLat + ry, originLng + rx];
     });
   }
 
-  const envelope90 = generatePlumeContour(0.085, 0.055, [0.08, -0.06, 0.04, -0.05, 0.07, -0.04, 0.05, -0.07]);
-  const envelope75 = generatePlumeContour(0.055, 0.035, [0.05, -0.04, 0.03, -0.04, 0.04, -0.03, 0.04, -0.05]);
-  const envelope50 = generatePlumeContour(0.030, 0.019, [0.03, -0.02, 0.02, -0.03, 0.03, -0.02, 0.02, -0.03]);
+  const isCoastline = scenarioId.includes('002') || scenarioId.includes('004');
+  const scale90Y = isCoastline ? 0.055 : 0.085;
+  const scale90X = isCoastline ? 0.018 : 0.055;
+
+  const envelope90 = generatePlumeContour(scale90Y, scale90X, [0.08, -0.06, 0.04, -0.05, 0.07, -0.04, 0.05, -0.07]);
+  const envelope75 = generatePlumeContour(scale90Y * 0.65, scale90X * 0.65, [0.05, -0.04, 0.03, -0.04, 0.04, -0.03, 0.04, -0.05]);
+  const envelope50 = generatePlumeContour(scale90Y * 0.35, scale90X * 0.35, [0.03, -0.02, 0.02, -0.03, 0.03, -0.02, 0.02, -0.03]);
 
   // Backward Drift Vector Line
   const driftPath: [number, number][] = [
