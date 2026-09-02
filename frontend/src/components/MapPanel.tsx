@@ -392,45 +392,32 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
         />
 
         {/* Cartographic Legend */}
-        <div className="map-overlay-hud" style={{ right: 14, left: 'auto', top: 14 }}>
+        <div className="map-overlay-hud" style={{ right: 14, left: 'auto', top: 14, minWidth: 220 }}>
           <div className="hud-title">Maritime Surveillance Layers</div>
           
           <div className="hud-row">
-            <div
-              className="lswatch"
-              style={{
-                background:
-                  selectedCopernicusLayer === 'sar-vv'
-                    ? '#0891B2'
-                    : selectedCopernicusLayer === 'swir-oil'
-                    ? '#B45309'
-                    : '#0369A1',
-                borderRadius: 2,
-              }}
-            ></div>
-            <span>
-              {detectionResult?.status === 'detected'
-                ? `Active Spill (${scenario.area || '4.82 km²'})`
-                : 'No Slick Detected'}
-            </span>
+            <div className="lswatch" style={{ background: '#00E5FF', borderRadius: 2 }}></div>
+            <span><strong>📍 Current Spill (T0)</strong>: {scenario.area || '4.82 km²'}</span>
           </div>
 
           <div className="hud-row">
-            <div className="lswatch" style={{ background: '#92400E', borderRadius: 2 }}></div>
-            <span>50% Core Origin Envelope</span>
-          </div>
-          <div className="hud-row">
-            <div className="lswatch" style={{ background: 'rgba(180, 83, 9, 0.25)', border: '1px dashed #B45309', borderRadius: 2 }}></div>
-            <span>75% / 90% Probability Isobars</span>
-          </div>
-          <div className="hud-row">
-            <div className="lswatch" style={{ background: '#D97706', borderRadius: 2 }}></div>
-            <span>Reverse Drift Trajectory</span>
+            <div className="lswatch" style={{ background: '#10B981', border: '1px dashed #10B981', borderRadius: 2 }}></div>
+            <span><strong>⏩ Predicted Drift (T+24h)</strong>: Forecast</span>
           </div>
 
           <div className="hud-row">
-            <div className="lswatch" style={{ background: '#64748B', borderRadius: 2 }}></div>
-            <span>AIS Vessel Track</span>
+            <div className="lswatch" style={{ background: '#F59E0B', borderRadius: 2 }}></div>
+            <span><strong>🎯 Discharge Origin (T-22h)</strong>: Source</span>
+          </div>
+
+          <div className="hud-row">
+            <div className="lswatch" style={{ background: '#D97706', border: '1px dashed #D97706', borderRadius: 2 }}></div>
+            <span><strong>⏪ Reverse Drift Track</strong>: Past 22h</span>
+          </div>
+
+          <div className="hud-row">
+            <div className="lswatch" style={{ background: '#DC2626', border: '1px dashed #DC2626', borderRadius: 2 }}></div>
+            <span><strong>🚢 Suspect AIS Silence</strong>: Gap Segment</span>
           </div>
 
           <div style={{ borderTop: '1px solid var(--border-default)', margin: '6px 0 4px', paddingTop: 4 }}>
