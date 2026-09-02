@@ -1369,8 +1369,12 @@
     if (key === 'INC-002') document.getElementById('inc-card-2').classList.add('active');
     if (key === 'INC-003') document.getElementById('inc-card-3').classList.add('active');
 
+    // Dynamically update coordinates in topbar readout
+    const coordEl = document.getElementById('coord-readout');
+    if (coordEl) coordEl.textContent = `${s.lat.toFixed(4)}°N, ${s.lng.toFixed(4)}°E`;
+
     if (window.mapInstance) {
-      window.mapInstance.flyTo([s.lat, s.lng], 9, { duration: 1.2 });
+      window.mapInstance.flyTo([s.lat, s.lng], 11, { duration: 1.2 });
       renderScenarioOnMap(s);
     }
   }
@@ -1405,7 +1409,7 @@
   function initLeafletMap() {
     window.mapInstance = L.map('leaflet-map', {
       center: [18.743, 71.218],
-      zoom: 9,
+      zoom: 11,
       zoomControl: true,
       attributionControl: false
     });
@@ -1492,26 +1496,31 @@
     if (labelEl) labelEl.textContent = `Slick: ${s.oilType || 'Detected'}`;
     mapLayersGroup.addLayer(slickPoly);
 
-    // ── HIGH-VISIBILITY TACTICAL ALERT BEACON (2D LEAFLET) ──
+    // ── MILITARY TARGET RETICLE & SCALE-INVARIANT BEACON (2D LEAFLET) ──
     const beaconIcon = L.divIcon({
-      className: 'spill-beacon-wrapper',
+      className: 'spill-reticle-wrapper',
       html: `
-        <div class="spill-beacon-icon" style="color:${slickColor};">
-          <div class="spill-beacon-pulse" style="border:2.5px solid ${slickColor};background:${slickColor};"></div>
-          <div class="spill-beacon-pulse delayed" style="border:2px solid ${slickColor};"></div>
-          <div class="spill-beacon-core" style="background:${slickColor};">
-            <span class="material-symbols-outlined" style="font-size:11px;">warning</span>
-          </div>
-          <div class="spill-tactical-pill" style="color:#FFFFFF;border-color:${slickColor};" onclick="focusActiveSpill()">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${slickColor};box-shadow:0 0 8px ${slickColor};"></span>
-            <span>🚨 ACTUAL SPILL: ${s.oilType.toUpperCase()} (${s.area})</span>
-            <span style="font-size:9px;color:var(--text-muted);font-weight:400;">${centerLat.toFixed(3)}°N, ${centerLng.toFixed(3)}°E</span>
+        <div class="spill-reticle-container" style="color:${slickColor};">
+          <div class="reticle-ring"></div>
+          <div class="reticle-crosshair-h"></div>
+          <div class="reticle-crosshair-v"></div>
+          <div class="reticle-core-dot"></div>
+          <div class="reticle-banner" style="border-color:${slickColor};" onclick="focusActiveSpill()" title="Click to zoom in directly to oil slick">
+            <span style="width:10px;height:10px;border-radius:50%;background:${slickColor};box-shadow:0 0 10px ${slickColor};"></span>
+            <span>🚨 ACTUAL OIL SPILL: ${s.oilType.toUpperCase()}</span>
+            <span style="background:${slickColor};color:#FFFFFF;padding:1px 6px;border-radius:3px;font-size:10px;">${s.area}</span>
           </div>
         </div>
       `,
-      iconSize: [36, 36],
-      iconAnchor: [18, 18]
+      iconSize: [0, 0],
+      iconAnchor: [0, 0]
     });
+
+    // Update Floating HUD texts
+    const hudTitle = document.getElementById('hud-spill-title');
+    const hudSub = document.getElementById('hud-spill-sub');
+    if (hudTitle) hudTitle.textContent = `🚨 TARGET: ${s.title.toUpperCase()}`;
+    if (hudSub) hudSub.textContent = `${centerLat.toFixed(4)}°N, ${centerLng.toFixed(4)}°E · ${s.area} · ${s.oilType} (${slickColor})`;
 
     const beaconMarker = L.marker([centerLat, centerLng], { icon: beaconIcon })
       .bindPopup(`
