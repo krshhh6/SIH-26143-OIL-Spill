@@ -3,7 +3,7 @@ import type { Scenario, TabType } from '../../types/dashboard';
 import { MapPanel } from '../MapPanel';
 
 interface DashboardViewProps {
-  currentScenario: Scenario;
+  currentScenario: Scenario | null;
   onSelectTab: (tab: TabType) => void;
   onOpenForensicModal: () => void;
   onUpdateCoords: (coords: string) => void;
@@ -17,14 +17,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onUpdateCoords,
   onSelectScenario,
 }) => {
-  const statusColor = currentScenario.sev.includes('CRITICAL')
+  const statusColor = !currentScenario
+    ? '#2563EB'
+    : currentScenario.sev.includes('CRITICAL')
     ? '#EF4444'
     : currentScenario.sev.includes('HIGH')
     ? '#F97316'
     : '#F59E0B';
 
   return (
-    <div id="tab-dashboard" className="tab-content visible" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+    <div
+      id="tab-dashboard"
+      className="tab-content visible"
+      style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0, overflow: 'hidden' }}
+    >
       {/* EXECUTIVE OPERATIONAL HEADER */}
       <div
         className="page-header"
@@ -32,7 +38,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '8px 16px',
+          padding: '6px 16px',
           borderBottom: '1px solid var(--border-subtle)',
           flexShrink: 0,
         }}
@@ -70,13 +76,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   boxShadow: `0 0 6px ${statusColor}`,
                 }}
               ></span>
-              {currentScenario.sev}
+              {currentScenario ? currentScenario.sev : '4 MONITORED SPILL INCIDENTS'}
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
             <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-              {currentScenario.title}
+              {currentScenario ? currentScenario.title : 'Indian Ocean & EEZ Maritime Surveillance Hub'}
             </h1>
             <span
               style={{
@@ -90,7 +96,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 color: 'var(--text-secondary)',
               }}
             >
-              {currentScenario.id}
+              {currentScenario ? currentScenario.id : 'ALL SECTORS'}
             </span>
             <span
               style={{
@@ -103,16 +109,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 border: '1px solid rgba(37, 99, 235, 0.25)',
               }}
             >
-              {currentScenario.oilType} · Live Sentinel-1 SAR Pipeline
+              {currentScenario
+                ? `${currentScenario.oilType} · Live Sentinel-1 SAR Pipeline`
+                : 'National Fleet Overview · Live Sentinel-1 SAR Pipeline'}
             </span>
           </div>
 
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-            {currentScenario.sub} · Candidate Intercept: <strong style={{ color: 'var(--text-primary)' }}>{currentScenario.topVessel}</strong> · Sensor: <strong>Sentinel-1A IW GRD / Sentinel-2 L2A</strong>
+            {currentScenario ? (
+              <>
+                {currentScenario.sub} · Candidate Intercept:{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>{currentScenario.topVessel}</strong> · Sensor:{' '}
+                <strong>Sentinel-1A IW GRD / Sentinel-2 L2A</strong>
+              </>
+            ) : (
+              'Click any marked incident beacon on the chart or select from the dropdown above to inspect calibrated SAR telemetry & drift trajectories.'
+            )}
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {currentScenario && onSelectScenario && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => onSelectScenario('')}
+              style={{ padding: '6px 12px', fontSize: 11, gap: 5 }}
+              title="Return to National Indian Ocean Overview"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>zoom_out_map</span>
+              Overview
+            </button>
+          )}
           <button
             className="btn btn-secondary"
             onClick={onOpenForensicModal}
@@ -133,7 +160,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* FULL-WIDTH TACTICAL MAP PANEL */}
-      <div className="content-area" style={{ display: 'flex', flexDirection: 'column', width: '100%', flex: 1, padding: '8px 16px 12px', minHeight: 0 }}>
+      <div
+        className="content-area"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          flex: 1,
+          padding: '4px 16px 8px',
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
         <MapPanel scenario={currentScenario} onUpdateCoords={onUpdateCoords} onSelectScenario={onSelectScenario} />
       </div>
     </div>

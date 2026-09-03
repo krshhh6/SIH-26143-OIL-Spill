@@ -14,13 +14,13 @@ import { SentinelHubModal } from './components/modals/SentinelHubModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [currentScenarioKey, setCurrentScenarioKey] = useState<string>('INC-001');
+  const [currentScenarioKey, setCurrentScenarioKey] = useState<string>('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [coordinates, setCoordinates] = useState<string>('18.7430°N, 71.2180°E');
+  const [coordinates, setCoordinates] = useState<string>('13.5000°N, 71.0000°E (National Overview)');
   const [isForensicOpen, setIsForensicOpen] = useState<boolean>(false);
   const [isSentinelHubOpen, setIsSentinelHubOpen] = useState<boolean>(false);
 
-  const scenario = SCENARIOS[currentScenarioKey] || SCENARIOS['INC-001'];
+  const scenario = currentScenarioKey ? SCENARIOS[currentScenarioKey] || null : null;
 
   // Apply theme to document element
   useEffect(() => {
@@ -32,10 +32,12 @@ export const App: React.FC = () => {
   };
 
   const handleSelectScenario = (key: string) => {
-    if (SCENARIOS[key]) {
-      setCurrentScenarioKey(key);
+    setCurrentScenarioKey(key);
+    if (key && SCENARIOS[key]) {
       const s = SCENARIOS[key];
       setCoordinates(`${s.lat.toFixed(4)}°N, ${s.lng.toFixed(4)}°E`);
+    } else {
+      setCoordinates('13.5000°N, 71.0000°E (National Overview)');
     }
   };
 
@@ -89,7 +91,13 @@ export const App: React.FC = () => {
       <Sidebar activeTab={activeTab} onSelectTab={setActiveTab} />
 
       {/* MAIN CONTAINER */}
-      <main className="main" id="main-content">
+      <main
+        className="main"
+        id="main-content"
+        style={{
+          overflow: activeTab === 'dashboard' ? 'hidden' : 'auto',
+        }}
+      >
         {activeTab === 'dashboard' && (
           <DashboardView
             currentScenario={scenario}
@@ -122,7 +130,7 @@ export const App: React.FC = () => {
       <ForensicModal
         isOpen={isForensicOpen}
         onClose={() => setIsForensicOpen(false)}
-        scenario={scenario}
+        scenario={scenario || SCENARIOS['INC-001']}
       />
 
       <SentinelHubModal

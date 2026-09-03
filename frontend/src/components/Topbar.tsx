@@ -3,7 +3,7 @@ import type { Scenario } from '../types/dashboard';
 import { SCENARIOS } from '../data/scenarios';
 
 interface TopbarProps {
-  currentScenario: Scenario;
+  currentScenario: Scenario | null;
   currentScenarioKey: string;
   onSelectScenario: (key: string) => void;
   coordinates: string;
@@ -33,7 +33,9 @@ export const Topbar: React.FC<TopbarProps> = ({
     }
   };
 
-  const statusColor = currentScenario.sev.includes('CRITICAL')
+  const statusColor = !currentScenario
+    ? '#0284C7'
+    : currentScenario.sev.includes('CRITICAL')
     ? '#EF4444'
     : currentScenario.sev.includes('HIGH')
     ? '#F97316'
@@ -59,7 +61,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         <span
           className="scenario-status-dot"
           style={{ backgroundColor: statusColor, color: statusColor }}
-          title={`Active Status: ${currentScenario.sev}`}
+          title={currentScenario ? `Active Status: ${currentScenario.sev}` : 'National EEZ Overview: 4 Monitored Spills'}
         ></span>
         <select
           id="scenario-dropdown"
@@ -68,6 +70,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           onChange={(e) => onSelectScenario(e.target.value)}
           title="Switch Active Maritime Spill Incident"
         >
+          <option value="">📍 Select spill location...</option>
           {Object.entries(SCENARIOS).map(([key, s]) => (
             <option key={key} value={key}>
               {s.id}: {s.title} ({s.oilType})

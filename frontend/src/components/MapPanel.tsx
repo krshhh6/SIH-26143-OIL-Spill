@@ -7,7 +7,7 @@ import { createAoiForScenario } from '../utils/geoContours';
 import L from 'leaflet';
 
 interface MapPanelProps {
-  scenario: Scenario;
+  scenario: Scenario | null;
   onUpdateCoords: (coords: string) => void;
   onSelectScenario?: (key: string) => void;
 }
@@ -87,6 +87,11 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
 
   // Run live Sentinel-1 SAR + U-Net inference on AOI
   const executeDetection = async () => {
+    if (!scenario) {
+      setDetectionResult(null);
+      setIsDetecting(false);
+      return;
+    }
     setIsDetecting(true);
     const aoi = createAoiForScenario(scenario.lat, scenario.lng);
     const result = await runSentinel1Detection(aoi, undefined, 0.35);
@@ -97,7 +102,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
   // Trigger real detection whenever active scenario changes
   useEffect(() => {
     executeDetection();
-  }, [scenario.id]);
+  }, [scenario?.id]);
 
   const handleSelectBasemap = (layer: BaseLayerType) => {
     setBaseLayer2D(layer);
@@ -114,7 +119,11 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
 
   const handleFocusSpill = () => {
     if (leafletMapRef.current) {
-      leafletMapRef.current.flyTo([scenario.lat, scenario.lng], 12, { duration: 0.8 });
+      if (scenario) {
+        leafletMapRef.current.flyTo([scenario.lat, scenario.lng], 12, { duration: 0.8 });
+      } else {
+        leafletMapRef.current.flyTo([13.5, 71.0], 3.75, { duration: 0.8 });
+      }
     }
   };
 
@@ -125,7 +134,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
   };
 
   return (
-    <div className="map-panel" style={{ flex: 1, width: '100%', minHeight: 460, height: '100%' }}>
+    <div className="map-panel" style={{ flex: 1, width: '100%', height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       {/* MAP HEADER CONTROLS (3D GLOBE REMOVED) */}
       <div className="map-header">
         <div className="flex items-center gap-2">
@@ -226,10 +235,10 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
       </div>
 
       {/* MAP CANVAS & COPERNICUS BROWSER PANEL */}
-      <div style={{ position: 'relative', flex: 1, display: 'flex', minHeight: 520, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', flex: 1, display: 'flex', minHeight: 0, height: '100%', overflow: 'hidden' }}>
         {/* COPERNICUS BROWSER SIDE LAYER PANEL */}
         <div className={`copernicus-side-panel ${isSideLayersOpen ? '' : 'collapsed'}`}>
-          <div className="copernicus-header">
+          <div className="copernicus-header" style={{ flexShrink: 0 }}>
             <div className="copernicus-brand">
               <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#38BDF8' }}>public</span>
               <div>
@@ -238,17 +247,16 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
               </div>
             </div>
             <button
-              className="btn-icon"
+              className="copernicus-collapse-btn"
               onClick={() => setIsSideLayersOpen(false)}
               title="Collapse Copernicus Layers"
-              style={{ color: '#FFFFFF', padding: 2, width: 26, height: 26 }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_left</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
             </button>
           </div>
 
           {/* Date Strip */}
-          <div style={{ padding: '8px 12px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ padding: '8px 12px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <button className="btn btn-secondary" onClick={() => handleStepDate(-1)} style={{ padding: '2px 6px', fontSize: 10 }}>◀</button>
@@ -275,7 +283,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
           </div>
 
           {/* Mission Configuration */}
-          <div className="copernicus-config">
+          <div className="copernicus-config" style={{ flexShrink: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
                 Mission:
@@ -309,7 +317,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
           </div>
 
           {/* Real Spectral Layers */}
-          <div className="copernicus-layers-list">
+          <div className="copernicus-layers-list" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             {COPERNICUS_LAYERS.map((layer) => {
               const isActive = selectedCopernicusLayer === layer.id;
               return (
@@ -348,8 +356,17 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
             })}
           </div>
 
-          {/* Layer Opacity Slider */}
-          <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border-default)', background: 'var(--bg-raised)' }}>
+          {/* Docked Layer Opacity Slider Footer */}
+          <div
+            className="copernicus-opacity-footer"
+            style={{
+              padding: '8px 12px',
+              borderTop: '1px solid var(--border-default)',
+              background: 'var(--bg-raised)',
+              flexShrink: 0,
+              marginTop: 'auto',
+            }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 600, marginBottom: 4 }}>
               <span style={{ color: 'var(--text-muted)' }}>Layer Opacity:</span>
               <span className="mono" style={{ color: 'var(--accent)' }}>{Math.round(layerOpacity * 100)}%</span>
@@ -361,7 +378,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
               step="0.05"
               value={layerOpacity}
               onChange={(e) => setLayerOpacity(parseFloat(e.target.value))}
-              style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer' }}
+              style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer', display: 'block' }}
             />
           </div>
         </div>
@@ -391,43 +408,42 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
           mapRef={leafletMapRef}
         />
 
-        {/* Cartographic Legend */}
-        <div className="map-overlay-hud" style={{ right: 14, left: 'auto', top: 14, minWidth: 220 }}>
-          <div className="hud-title">Maritime Surveillance Layers</div>
+        {/* Cartographic Legend (Superhuman Glassmorphic HUD at Bottom-Right) */}
+        <div className="map-overlay-hud">
+          <div className="hud-header">
+            <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#38BDF8' }}>layers</span>
+            <span className="hud-title">Maritime Surveillance Layers</span>
+          </div>
           
           <div className="hud-row">
-            <div className="lswatch" style={{ background: '#00E5FF', borderRadius: 2 }}></div>
-            <span><strong>📍 Current Spill (T0)</strong>: {scenario.area || '4.82 km²'}</span>
+            <div className="lswatch" style={{ background: '#00E5FF' }}></div>
+            <span><strong>Current Spill (T0)</strong>: <span style={{ color: '#38BDF8' }}>{scenario?.area || 'Monitored'}</span></span>
           </div>
 
           <div className="hud-row">
-            <div className="lswatch" style={{ background: '#10B981', border: '1px dashed #10B981', borderRadius: 2 }}></div>
-            <span><strong>⏩ Predicted Drift (T+24h)</strong>: Forecast</span>
+            <div className="lswatch" style={{ background: '#10B981', border: '1px dashed #10B981' }}></div>
+            <span><strong>Predicted Drift (T+24h)</strong>: Forecast</span>
           </div>
 
           <div className="hud-row">
-            <div className="lswatch" style={{ background: '#F59E0B', borderRadius: 2 }}></div>
-            <span><strong>🎯 Discharge Origin (T-22h)</strong>: Source</span>
+            <div className="lswatch" style={{ background: '#F59E0B' }}></div>
+            <span><strong>Discharge Origin (T-22h)</strong>: Source</span>
           </div>
 
           <div className="hud-row">
-            <div className="lswatch" style={{ background: '#D97706', border: '1px dashed #D97706', borderRadius: 2 }}></div>
-            <span><strong>⏪ Reverse Drift Track</strong>: Past 22h</span>
+            <div className="lswatch" style={{ background: '#D97706', border: '1px dashed #D97706' }}></div>
+            <span><strong>Reverse Drift Track</strong>: Past 22h</span>
           </div>
 
           <div className="hud-row">
-            <div className="lswatch" style={{ background: '#DC2626', border: '1px dashed #DC2626', borderRadius: 2 }}></div>
-            <span><strong>🚢 Suspect AIS Silence</strong>: Gap Segment</span>
+            <div className="lswatch" style={{ background: '#DC2626', border: '1px dashed #DC2626' }}></div>
+            <span><strong>Suspect AIS Silence</strong>: Gap Segment</span>
           </div>
 
-          <div style={{ borderTop: '1px solid var(--border-default)', margin: '6px 0 4px', paddingTop: 4 }}>
-            <div className="hud-title" style={{ marginBottom: 2 }}>Model Engine</div>
-            <div style={{ fontSize: 10, color: 'var(--text-primary)', fontWeight: 700 }}>
-              {detectionResult?.model_version || 'unet-s1-sar-sos-v2.4-cdse'}
-            </div>
-            <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-              SOS Benchmark (Krestenitis et al.)
-            </div>
+          <div className="hud-footer">
+            <span className="hud-status-dot"></span>
+            <span className="hud-model-tag">{detectionResult?.model_version || 'unet-s1-sar-sos-v2.4-cdse'}</span>
+            <span className="hud-model-sub">CDSE SAR Engine</span>
           </div>
         </div>
       </div>

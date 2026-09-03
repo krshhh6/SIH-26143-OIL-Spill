@@ -6,7 +6,7 @@ import { computeBackwardDriftGeometry } from '../utils/geoContours';
 import { getScenarioBenchmarkDetections } from '../services/detectionService';
 
 interface LeafletMapProps {
-  scenario: Scenario;
+  scenario: Scenario | null;
   baseLayer: BaseLayerType;
   showSeamarks: boolean;
   selectedCopernicusLayer?: CopernicusLayerId;
@@ -37,11 +37,18 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    const initialCenter: [number, number] = scenario ? [scenario.lat, scenario.lng] : [13.5, 71.0];
+    const initialZoom = scenario ? 11 : 3.75;
+
     const map = L.map(containerRef.current, {
-      center: [scenario.lat, scenario.lng],
-      zoom: 11,
+      center: initialCenter,
+      zoom: initialZoom,
+      minZoom: 3,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5,
       zoomControl: false,
       attributionControl: false,
+      keyboard: false,
     });
 
     L.control.zoom({ position: 'topright' }).addTo(map);
@@ -131,16 +138,21 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   }, [showSeamarks]);
 
   // Camera navigation: ONLY fly to coordinates when user switches scenario
-  const prevScenarioIdRef = useRef<string>(scenario.id);
+  const prevScenarioIdRef = useRef<string | undefined>(scenario?.id);
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    if (prevScenarioIdRef.current !== scenario.id) {
-      prevScenarioIdRef.current = scenario.id;
-      map.flyTo([scenario.lat, scenario.lng], 11, { duration: 1.0 });
+    const curId = scenario?.id;
+    if (prevScenarioIdRef.current !== curId) {
+      prevScenarioIdRef.current = curId;
+      if (scenario) {
+        map.flyTo([scenario.lat, scenario.lng], 11, { duration: 1.2 });
+      } else {
+        map.flyTo([13.5, 71.0], 3.75, { duration: 1.2 });
+      }
     }
-  }, [scenario.id, scenario.lat, scenario.lng]);
+  }, [scenario?.id, scenario?.lat, scenario?.lng]);
 
   // Render REAL satellite imagery picture, ML-predicted oil spill, past origin, and future drift forecast
   useEffect(() => {
@@ -149,6 +161,48 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     if (!map || !group) return;
 
     group.clearLayers();
+
+    // If NO scenario is selected (National Overview mode):
+    if (!scenario) {
+      Object.entries(SCENARIOS).forEach(([key, sc]) => {
+        const otherColor = sc.oilColor || '#EAB308';
+        const isWest = sc.id.includes('001') || sc.id.includes('004');
+        const placementClass = isWest ? 'placement-left' : 'placement-right';
+        let shortTitle = sc.title;
+        if (sc.id.includes('001')) shortTitle = 'Mumbai High Basin';
+        else if (sc.id.includes('002')) shortTitle = 'Chennai–Ennore';
+        else if (sc.id.includes('003')) shortTitle = 'Andaman Sea SL-7';
+        else if (sc.id.includes('004')) shortTitle = 'Goa Coastal Waters';
+
+        const beaconIcon = L.divIcon({
+          className: 'gis-glass-marker-wrap',
+          html: `
+            <div class="gis-glass-marker">
+              <div class="gis-glass-pulse" style="border-color: ${otherColor}; box-shadow: 0 0 10px ${otherColor}55;"></div>
+              <div class="gis-glass-dot" style="background: ${otherColor}; box-shadow: 0 0 8px ${otherColor};"></div>
+              <div class="gis-glass-capsule ${placementClass}">
+                <span class="gis-capsule-id">${sc.id}</span>
+                <span class="gis-capsule-title">${shortTitle}</span>
+                <span class="gis-capsule-pill" style="border-color: ${otherColor}44; color: ${otherColor}; background: ${otherColor}15;">
+                  ${sc.oilType}
+                </span>
+              </div>
+            </div>
+          `,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0],
+        });
+
+        const marker = L.marker([sc.lat, sc.lng], { icon: beaconIcon })
+          .on('click', () => {
+            if (onSelectScenario) {
+              onSelectScenario(key);
+            }
+          });
+        group.addLayer(marker);
+      });
+      return;
+    }
 
     const centerLat = scenario.lat;
     const centerLng = scenario.lng;
@@ -483,12 +537,27 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       if (sc.id === scenario.id) return; // Skip active spill
 
       const otherColor = sc.oilColor || '#EAB308';
+      const isWest = sc.id.includes('001') || sc.id.includes('004');
+      const placementClass = isWest ? 'placement-left' : 'placement-right';
+      let shortTitle = sc.title;
+      if (sc.id.includes('001')) shortTitle = 'Mumbai High Basin';
+      else if (sc.id.includes('002')) shortTitle = 'Chennai–Ennore';
+      else if (sc.id.includes('003')) shortTitle = 'Andaman Sea SL-7';
+      else if (sc.id.includes('004')) shortTitle = 'Goa Coastal Waters';
+
       const otherBeacon = L.divIcon({
-        className: 'gis-incident-beacon',
+        className: 'gis-glass-marker-wrap',
         html: `
-          <div style="position:relative;width:24px;height:24px;margin-left:-12px;margin-top:-12px;cursor:pointer;">
-            <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:${otherColor};opacity:0.4;animation:pulseBeacon 2s infinite;"></div>
-            <div style="position:absolute;top:4px;left:4px;width:16px;height:16px;border-radius:50%;background:${otherColor};border:2px solid #FFFFFF;box-shadow:0 0 10px ${otherColor};"></div>
+          <div class="gis-glass-marker">
+            <div class="gis-glass-pulse" style="border-color: ${otherColor}; box-shadow: 0 0 10px ${otherColor}55;"></div>
+            <div class="gis-glass-dot" style="background: ${otherColor}; box-shadow: 0 0 8px ${otherColor};"></div>
+            <div class="gis-glass-capsule ${placementClass}">
+              <span class="gis-capsule-id">${sc.id}</span>
+              <span class="gis-capsule-title">${shortTitle}</span>
+              <span class="gis-capsule-pill" style="border-color: ${otherColor}44; color: ${otherColor}; background: ${otherColor}15;">
+                ${sc.oilType}
+              </span>
+            </div>
           </div>
         `,
         iconSize: [0, 0],
@@ -496,10 +565,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       });
 
       const marker = L.marker([sc.lat, sc.lng], { icon: otherBeacon })
-        .bindTooltip(`<b>🚨 ${sc.title}</b><br>${sc.oilType} · ${sc.area || ''} (${sc.sev})<br><span style="color:#38BDF8;">Click to investigate</span>`, {
-          sticky: true,
-          className: 'gis-custom-tooltip',
-        })
         .on('click', () => {
           if (onSelectScenario) {
             onSelectScenario(key);
@@ -513,7 +578,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     <div
       ref={containerRef}
       id="leaflet-map"
-      style={{ flex: 1, width: '100%', height: '100%', minHeight: 400, position: 'relative' }}
+      style={{ flex: 1, width: '100%', height: '100%', minHeight: 0, position: 'relative' }}
     />
   );
 };
