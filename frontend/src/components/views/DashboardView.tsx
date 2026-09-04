@@ -13,7 +13,7 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({
   currentScenario,
   onSelectTab,
-  onOpenForensicModal,
+  onOpenForensicModal: _onOpenForensicModal,
   onUpdateCoords,
   onSelectScenario,
 }) => {
@@ -38,122 +38,66 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '6px 16px',
+          padding: '6px 14px',
           borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--bg-surface)',
           flexShrink: 0,
         }}
       >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 800,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'var(--accent)',
-              }}
-            >
-              DEFENSE MARITIME C2 · SITUATIONAL INTELLIGENCE
-            </span>
-            <span style={{ color: 'var(--border-default)' }}>|</span>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                fontSize: 10,
-                fontWeight: 700,
-                color: statusColor,
-              }}
-            >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: statusColor,
+              display: 'inline-block',
+            }}
+          ></span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+            {currentScenario ? currentScenario.title : 'Indian Ocean & EEZ Maritime Surveillance'}
+          </span>
+          {currentScenario && (
+            <>
               <span
                 style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: statusColor,
-                  boxShadow: `0 0 6px ${statusColor}`,
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: 10,
+                  fontWeight: 600,
+                  padding: '1px 5px',
+                  borderRadius: 3,
+                  background: 'var(--bg-raised)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-secondary)',
                 }}
-              ></span>
-              {currentScenario ? currentScenario.sev : '4 MONITORED SPILL INCIDENTS'}
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
-            <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-              {currentScenario ? currentScenario.title : 'Indian Ocean & EEZ Maritime Surveillance Hub'}
-            </h1>
-            <span
-              style={{
-                fontFamily: 'JetBrains Mono',
-                fontSize: 11,
-                fontWeight: 700,
-                padding: '1px 6px',
-                borderRadius: 4,
-                background: 'var(--bg-raised)',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-secondary)',
-              }}
-            >
-              {currentScenario ? currentScenario.id : 'ALL SECTORS'}
-            </span>
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                padding: '1px 8px',
-                borderRadius: 12,
-                background: 'rgba(37, 99, 235, 0.1)',
-                color: '#2563EB',
-                border: '1px solid rgba(37, 99, 235, 0.25)',
-              }}
-            >
-              {currentScenario
-                ? `${currentScenario.oilType} · Live Sentinel-1 SAR Pipeline`
-                : 'National Fleet Overview · Live Sentinel-1 SAR Pipeline'}
-            </span>
-          </div>
-
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-            {currentScenario ? (
-              <>
-                {currentScenario.sub} · Candidate Intercept:{' '}
-                <strong style={{ color: 'var(--text-primary)' }}>{currentScenario.topVessel}</strong> · Sensor:{' '}
-                <strong>Sentinel-1A IW GRD / Sentinel-2 L2A</strong>
-              </>
-            ) : (
-              'Click any marked incident beacon on the chart or select from the dropdown above to inspect calibrated SAR telemetry & drift trajectories.'
-            )}
-          </div>
+              >
+                {currentScenario.id}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                {currentScenario.oilType} · {currentScenario.area || 'Active'} · Intercept: <strong style={{ color: 'var(--text-secondary)' }}>{currentScenario.topVessel}</strong>
+              </span>
+            </>
+          )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {currentScenario && onSelectScenario && (
             <button
               className="btn btn-secondary"
               onClick={() => onSelectScenario('')}
-              style={{ padding: '6px 12px', fontSize: 11, gap: 5 }}
+              style={{ padding: '4px 10px', fontSize: 11, gap: 5 }}
               title="Return to National Indian Ocean Overview"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>zoom_out_map</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>zoom_out_map</span>
               Overview
             </button>
           )}
           <button
-            className="btn btn-secondary"
-            onClick={onOpenForensicModal}
-            style={{ padding: '6px 12px', fontSize: 11, gap: 6 }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 15, color: 'var(--accent)' }}>verified</span>
-            Legal Dossier
-          </button>
-          <button
             className="btn btn-primary"
             onClick={() => onSelectTab('investigation')}
-            style={{ padding: '6px 14px', fontSize: 11, gap: 6 }}
+            style={{ padding: '4px 12px', fontSize: 11, gap: 5 }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>analytics</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>analytics</span>
             SAR Studio
           </button>
         </div>

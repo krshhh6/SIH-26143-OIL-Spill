@@ -8,31 +8,7 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal 
   const masterHash =
     'a3f7c2d1e8b49f0c5a2e7d3b8c4f1a9e2d5b7c3e8a1f4d9b6c2e5a8f3d7b1c4e9a2f6d0b5c8e3a7f1d4b9c2e6a0f5d3b8c1e4a7f2d6b0c9e5a8f1d3b7c0e6';
 
-  const [verifyInput, setVerifyInput] = useState<string>('');
   const [feedback, setFeedback] = useState<{ text: string; color: string } | null>(null);
-
-  const handleVerify = () => {
-    const input = verifyInput.trim();
-    if (!input) {
-      setFeedback({
-        text: 'Please enter a SHA-256 hash string.',
-        color: 'var(--sev-medium)',
-      });
-      return;
-    }
-
-    if (input.toLowerCase() === masterHash.toLowerCase()) {
-      setFeedback({
-        text: '✅ INTEGRITY CONFIRMED: Master hash matches database signature. 0 byte tamper detected.',
-        color: '#16A34A',
-      });
-    } else {
-      setFeedback({
-        text: '❌ INTEGRITY FAILURE: Hash mismatch! Data may have been tampered or corrupted.',
-        color: 'var(--sev-critical)',
-      });
-    }
-  };
 
   return (
     <div id="tab-evidence" className="tab-content visible">
@@ -41,7 +17,7 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal 
         <div>
           <div className="flex items-center gap-3">
             <div className="page-title">Forensic Evidence &amp; Chain of Custody</div>
-            <span className="id-tag">SHA-256 TAMPER-PROOF</span>
+            <span className="id-tag">CRYPTOGRAPHIC SEAL</span>
           </div>
           <div className="page-subtitle">
             Cryptographically verifiable evidence package for maritime regulatory enforcement
@@ -67,40 +43,25 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal 
               <span className="chip chip-ok">VERIFIED</span>
             </div>
             <div className="panel-body">
-              <div style={{ background: 'var(--bg-raised)', padding: '10px 12px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
-                  Master Dossier SHA-256 Hash
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--bg-raised)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--accent)' }}>verified</span>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Cryptographic Chain of Custody</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>ISO/IEC 27037 Tamper-Proof Digital Seal · Registered in Maritime Ledger</div>
+                  </div>
                 </div>
-                <div className="mono text-xs text-mono" style={{ wordBreak: 'break-all' }}>
-                  {masterHash}
-                </div>
-              </div>
-
-              {/* Interactive Hash Integrity Verifier */}
-              <div style={{ marginTop: 'var(--sp-3)', display: 'flex', gap: 'var(--sp-2)' }}>
-                <input
-                  type="text"
-                  placeholder="Paste SHA-256 to verify integrity..."
-                  value={verifyInput}
-                  onChange={(e) => setVerifyInput(e.target.value)}
-                  style={{
-                    flex: 1,
-                    padding: '6px 10px',
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: 11,
-                    border: '1px solid var(--border-default)',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'var(--bg-surface)',
-                    color: 'var(--text-primary)',
-                    outline: 'none',
-                  }}
-                />
                 <button
                   className="btn btn-secondary"
-                  onClick={handleVerify}
-                  style={{ padding: '6px 12px', fontSize: 11 }}
+                  onClick={() => {
+                    navigator.clipboard?.writeText(masterHash);
+                    setFeedback({ text: 'Cryptographic certificate copied to clipboard.', color: 'var(--accent)' });
+                    setTimeout(() => setFeedback(null), 3000);
+                  }}
+                  style={{ padding: '4px 10px', fontSize: 11, gap: 5 }}
                 >
-                  Verify Integrity
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>content_copy</span>
+                  Copy Signature
                 </button>
               </div>
               {feedback && (

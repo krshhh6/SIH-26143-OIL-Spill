@@ -9,16 +9,19 @@ import { DriftView } from './components/views/DriftView';
 import { AttributionView } from './components/views/AttributionView';
 import { EvidenceView } from './components/views/EvidenceView';
 import { AnalyticsView } from './components/views/AnalyticsView';
+import { DetectionView } from './components/views/DetectionView';
 import { ForensicModal } from './components/modals/ForensicModal';
 import { SentinelHubModal } from './components/modals/SentinelHubModal';
+import { BhoonidhiModal } from './components/modals/BhoonidhiModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [currentScenarioKey, setCurrentScenarioKey] = useState<string>('');
+  const [currentScenarioKey, setCurrentScenarioKey] = useState<string>('INC-001');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [coordinates, setCoordinates] = useState<string>('13.5000°N, 71.0000°E (National Overview)');
+  const [coordinates, setCoordinates] = useState<string>('18.7430°N, 71.2180°E (Mumbai High Basin)');
   const [isForensicOpen, setIsForensicOpen] = useState<boolean>(false);
   const [isSentinelHubOpen, setIsSentinelHubOpen] = useState<boolean>(false);
+  const [isBhoonidhiOpen, setIsBhoonidhiOpen] = useState<boolean>(false);
 
   const scenario = currentScenarioKey ? SCENARIOS[currentScenarioKey] || null : null;
 
@@ -52,19 +55,20 @@ export const App: React.FC = () => {
     }
   };
 
-  // Keyboard navigation shortcuts (1-6, Escape)
+  // Keyboard navigation shortcuts (1-7, Escape)
   useEffect(() => {
-    const tabs: TabType[] = ['dashboard', 'investigation', 'drift', 'attribution', 'evidence', 'analytics'];
+    const tabs: TabType[] = ['dashboard', 'investigation', 'drift', 'attribution', 'evidence', 'analytics', 'detection'];
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
 
       const k = parseInt(e.key, 10);
-      if (k >= 1 && k <= 6) {
+      if (k >= 1 && k <= 7) {
         setActiveTab(tabs[k - 1]);
       }
       if (e.key === 'Escape') {
         setIsForensicOpen(false);
         setIsSentinelHubOpen(false);
+        setIsBhoonidhiOpen(false);
       }
     };
 
@@ -84,6 +88,7 @@ export const App: React.FC = () => {
         onToggleTheme={toggleTheme}
         onOpenForensicModal={() => setIsForensicOpen(true)}
         onOpenSentinelHubModal={() => setIsSentinelHubOpen(true)}
+        onOpenBhoonidhiModal={() => setIsBhoonidhiOpen(true)}
         onSearchPlace={handleSearchPlace}
       />
 
@@ -124,6 +129,8 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'analytics' && <AnalyticsView />}
+
+        {activeTab === 'detection' && <DetectionView onSelectTab={setActiveTab} />}
       </main>
 
       {/* MODALS */}
@@ -136,6 +143,12 @@ export const App: React.FC = () => {
       <SentinelHubModal
         isOpen={isSentinelHubOpen}
         onClose={() => setIsSentinelHubOpen(false)}
+      />
+
+      <BhoonidhiModal
+        isOpen={isBhoonidhiOpen}
+        onClose={() => setIsBhoonidhiOpen(false)}
+        scenario={scenario}
       />
     </div>
   );

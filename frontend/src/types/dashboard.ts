@@ -30,12 +30,24 @@ export interface CandidateVessel {
   risk: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
-export type TabType = 'dashboard' | 'investigation' | 'drift' | 'attribution' | 'evidence' | 'analytics';
+export type TabType = 'dashboard' | 'investigation' | 'drift' | 'attribution' | 'evidence' | 'analytics' | 'detection';
 export type DimensionMode = '2D' | '3D';
-export type BaseLayerType = 'satellite' | 'sar' | 'carto-voyager' | 'carto-dark' | 'sar-vh' | 'opensea' | 'msn' | 'day' | 'dark';
-export type CesiumBaseLayerType = 'google' | 'esri';
+export type BaseLayerType = 'bhuvan-satellite' | 'satellite' | 'sar' | 'carto-voyager' | 'carto-dark' | 'sar-vh' | 'opensea' | 'msn' | 'day' | 'dark' | 'bhuvan-vector';
 
-export type CopernicusLayerId = 'true-color' | 'sar-vv' | 'swir-oil' | 'false-color' | 'ndwi' | 'thermal';
+export type CopernicusLayerId = 'true-color' | 'sar-vv' | 'sar-vh' | 'swir-oil' | 'false-color' | 'ndwi' | 'thermal' | 'nisar-ls' | 'eos-04';
+
+export interface BhoonidhiNisarGranule {
+  id: string;
+  dataset: 'NISAR_S' | 'NISAR_L' | 'NISAR_JOINT' | 'EOS04';
+  product: 'L2-GCOV' | 'L1-RSLC';
+  acquisitionTime: string;
+  orbitDirection: 'ASCENDING' | 'DESCENDING';
+  sBandDampingDb: number;
+  lBandDampingDb: number;
+  dfdi: number;
+  verdict: 'CONFIRMED_MINERAL_OIL' | 'BIOGENIC_LOOKALIKE';
+  confidence: number;
+}
 
 export interface CopernicusLayerInfo {
   id: CopernicusLayerId;
@@ -81,4 +93,12 @@ export interface DetectionResult {
   model_version?: string;
   message?: string;
   error?: string;
+}
+
+export interface SarClassificationResult {
+  imageFile: string;
+  prediction: 'oil_spill' | 'no_oil';
+  confidence: number;
+  inferenceTimeMs: number;
+  gradcamDataUrl?: string;
 }

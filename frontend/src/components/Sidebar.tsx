@@ -62,6 +62,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
           Spill Analytics
           <span className="nav-badge gray">14d</span>
         </li>
+        <li
+          className={`nav-item ${activeTab === 'detection' ? 'active' : ''}`}
+          onClick={() => onSelectTab('detection')}
+        >
+          <span className="material-symbols-outlined">science</span>
+          SAR Detection Lab
+          <span className="nav-badge" style={{ backgroundColor: 'var(--accent)', color: 'var(--text)' }}>NEW</span>
+        </li>
       </ul>
 
       <div className="sys-status">

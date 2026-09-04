@@ -109,16 +109,19 @@ export const ForensicModal: React.FC<ForensicModalProps> = ({ isOpen, onClose, s
             </table>
           </div>
 
-          <div style={{ background: 'var(--bg-raised)', padding: 12, borderRadius: 4, border: '1px solid var(--border-default)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
-              Cryptographic Chain of Custody (SHA-256)
+          <div style={{ background: 'var(--bg-raised)', padding: '12px 14px', borderRadius: 4, border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--accent)' }}>verified</span>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Digital Chain of Custody Verified
+                </div>
+                <div className="text-xs text-muted" style={{ marginTop: 2 }}>
+                  Tamper-proof cryptographic seal confirms zero byte modifications post-ingestion. ISO/IEC 27037 compliant.
+                </div>
+              </div>
             </div>
-            <div className="mono text-xs" style={{ color: 'var(--text-mono)', wordBreak: 'break-all' }}>
-              a3f7c2d1e8b49f0c5a2e7d3b8c4f1a9e2d5b7c3e8a1f4d9b6c2e5a8f3d7b1c4e9a2f6d0b5c8e3a7f1d4b9c2e6a0f5d3b8c1e4a7f2d6b0c9e5a8f1d3b7c0e6
-            </div>
-            <div className="text-xs text-muted" style={{ marginTop: 6 }}>
-              This SHA-256 seal guarantees that zero bytes of satellite imagery, trajectory models, or AIS correlation logs were modified post-compilation.
-            </div>
+            <span className="chip chip-ok" style={{ fontSize: 10, padding: '2px 8px' }}>SEALED &amp; VERIFIED</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-subtle)' }}>

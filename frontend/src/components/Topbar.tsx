@@ -11,6 +11,7 @@ interface TopbarProps {
   onToggleTheme: () => void;
   onOpenForensicModal: () => void;
   onOpenSentinelHubModal: () => void;
+  onOpenBhoonidhiModal: () => void;
   onSearchPlace: (query: string) => void;
 }
 
@@ -22,7 +23,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   theme,
   onToggleTheme,
   onOpenForensicModal,
-  onOpenSentinelHubModal,
+  onOpenSentinelHubModal: _onOpenSentinelHubModal,
+  onOpenBhoonidhiModal: _onOpenBhoonidhiModal,
   onSearchPlace,
 }) => {
   const [searchInput, setSearchInput] = React.useState('');
@@ -70,7 +72,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           onChange={(e) => onSelectScenario(e.target.value)}
           title="Switch Active Maritime Spill Incident"
         >
-          <option value="">📍 Select spill location...</option>
+          <option value="">Select monitored incident...</option>
           {Object.entries(SCENARIOS).map(([key, s]) => (
             <option key={key} value={key}>
               {s.id}: {s.title} ({s.oilType})
@@ -139,19 +141,6 @@ export const Topbar: React.FC<TopbarProps> = ({
         >
           <span className="material-symbols-outlined" style={{ fontSize: 15, color: 'var(--accent)' }}>gavel</span>
           Dossier
-        </button>
-
-        {/* Sentinel Hub & CDSE Gateway */}
-        <button
-          className="btn btn-secondary"
-          onClick={onOpenSentinelHubModal}
-          title="Sentinel Hub & Copernicus Data Space Ecosystem API Suite"
-          style={{ padding: '4px 9px', fontSize: 11, gap: 5 }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 15, color: '#0284C7' }}>
-            hub
-          </span>
-          CDSE Cloud
         </button>
 
         {/* Theme Switcher */}

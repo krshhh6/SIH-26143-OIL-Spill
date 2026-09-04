@@ -1928,15 +1928,14 @@
     try {
       Cesium.Ion.defaultAccessToken = ''; // Zero-token free mode
 
-      // Primary 3D Photorealistic Satellite Globe Provider (Google Earth Satellite)
-      const googleSatelliteProvider = new Cesium.UrlTemplateImageryProvider({
-        url: 'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-        subdomains: ['0', '1', '2', '3'],
-        maximumLevel: 20
+      // Primary 3D Photorealistic Satellite Globe Provider (ESRI World Imagery)
+      const esriSatelliteProvider = new Cesium.UrlTemplateImageryProvider({
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        maximumLevel: 19
       });
 
       cesiumViewer = new Cesium.Viewer('cesium-container', {
-        imageryProvider: googleSatelliteProvider,
+        imageryProvider: esriSatelliteProvider,
         baseLayerPicker: false,
         geocoder: false,
         homeButton: false,
@@ -2184,9 +2183,8 @@ Inside 50% Probability Envelope`,
       btnGoogle.classList.add('active');
       cesiumViewer.imageryLayers.addImageryProvider(
         new Cesium.UrlTemplateImageryProvider({
-          url: 'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-          subdomains: ['0', '1', '2', '3'],
-          maximumLevel: 20
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
+          maximumLevel: 13
         })
       );
     }

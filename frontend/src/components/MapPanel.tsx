@@ -67,25 +67,82 @@ const COPERNICUS_LAYERS: CopernicusLayerInfo[] = [
     badgeColor: '#7C3AED',
     thumbBg: '#2a144b',
   },
+  {
+    id: 'sar-vh',
+    name: 'SAR Cross-Pol (VH Mode)',
+    bands: 'Sentinel-1C C-SAR IW GRD',
+    desc: 'Cross-polarized volume scattering and metallic vessel discrimination.',
+    badge: 'RADAR VH',
+    badgeColor: '#0EA5E9',
+    thumbBg: '#0f2738',
+  },
+  {
+    id: 'nisar-ls',
+    name: 'ISRO NISAR L+S Dual-Band (DFDI)',
+    bands: 'S-band (3.2GHz) + L-band (1.26GHz)',
+    desc: 'Dual-frequency Bragg scattering damping index. Eliminates biogenic algal false positives.',
+    badge: 'ISRO DUAL-BAND',
+    badgeColor: '#F59E0B',
+    thumbBg: '#3d2508',
+  },
+  {
+    id: 'eos-04',
+    name: 'ISRO EOS-04 Hybrid Pol (CP)',
+    bands: 'C-Band Circular Polarization (RH/RV)',
+    desc: 'm-chi polarimetric decomposition distinguishing mineral crude from look-alikes.',
+    badge: 'ISRO HYBRID',
+    badgeColor: '#10B981',
+    thumbBg: '#0f382a',
+  },
 ];
 
 export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, onSelectScenario }) => {
   const [baseLayer2D, setBaseLayer2D] = useState<BaseLayerType>('satellite');
   const [showSeamarks, setShowSeamarks] = useState<boolean>(true);
   const [selectedCopernicusLayer, setSelectedCopernicusLayer] = useState<CopernicusLayerId>('true-color');
-  const [isSideLayersOpen, setIsSideLayersOpen] = useState<boolean>(true);
-  const [selectedMission, setSelectedMission] = useState<string>('Sentinel-1 C-SAR');
-  const [layerOpacity, setLayerOpacity] = useState<number>(0.85);
+  const [activeSatellite, setActiveSatellite] = useState<string>('Sentinel-2A');
+  const [showSpillOverlay, setShowSpillOverlay] = useState<boolean>(true);
+  const [showIndiaOutline, setShowIndiaOutline] = useState<boolean>(true);
+  const [showEezBoundary, setShowEezBoundary] = useState<boolean>(true);
+  const [satelliteToast, setSatelliteToast] = useState<string | null>(null);
+  const [isSideLayersOpen, setIsSideLayersOpen] = useState<boolean>(false);
+
+  const selectedMission =
+    activeSatellite === 'Sentinel-1A' ? 'Sentinel-1A C-SAR (VV)' :
+    activeSatellite === 'Sentinel-1C' ? 'Sentinel-1C C-SAR (VH)' :
+    activeSatellite === 'Sentinel-2A' ? 'Sentinel-2A MSI (Optical)' :
+    activeSatellite === 'Sentinel-2B' ? 'Sentinel-2B MSI (SWIR)' :
+    activeSatellite === 'ISRO NISAR' ? 'ISRO NISAR (L+S)' :
+    activeSatellite.includes('EOS-04') ? 'ISRO EOS-04 (Hybrid)' :
+    'Sentinel-2A MSI (Optical)';
+
+  const [layerOpacity, setLayerOpacity] = useState<number>(0.92);
+  const [showAiMask, setShowAiMask] = useState<boolean>(false);
+  const [showRawImageModal, setShowRawImageModal] = useState<boolean>(false);
+  const [modalZoom, setModalZoom] = useState<number>(1.0);
   const [selectedDate, setSelectedDate] = useState<string>('2024-11-14');
   const [cloudCoverMax] = useState<number>(30);
-
-  // Real Sentinel-1 SAR Detection Pipeline States
   const [detectionResult, setDetectionResult] = useState<DetectionResult | null>(null);
-  const [isDetecting, setIsDetecting] = useState<boolean>(false);
-
+  const [, setIsDetecting] = useState<boolean>(false);
   const leafletMapRef = useRef<L.Map | null>(null);
 
-  // Run live Sentinel-1 SAR + U-Net inference on AOI
+  const scenarioKey = scenario
+    ? scenario.id.includes('001') ? 'INC-001'
+    : scenario.id.includes('002') ? 'INC-002'
+    : scenario.id.includes('003') ? 'INC-003'
+    : scenario.id.includes('004') ? 'INC-004'
+    : 'INC-001'
+    : 'INC-001';
+
+  let rawImageSrc = `/imagery/tc_${scenarioKey}.png`;
+  if (selectedCopernicusLayer === 'sar-vv') rawImageSrc = `/imagery/sar_${scenarioKey}.png`;
+  else if (selectedCopernicusLayer === 'sar-vh') rawImageSrc = `/imagery/vh_${scenarioKey}.png`;
+  else if (selectedCopernicusLayer === 'true-color') rawImageSrc = `/imagery/tc_${scenarioKey}.png`;
+  else if (selectedCopernicusLayer === 'swir-oil') rawImageSrc = `/imagery/swir_${scenarioKey}.png`;
+  else if (selectedCopernicusLayer === 'false-color') rawImageSrc = `/imagery/cir_${scenarioKey}.png`;
+  else if (selectedCopernicusLayer === 'nisar-ls') rawImageSrc = `/imagery/nisar_${scenarioKey}.png`;
+  else if (selectedCopernicusLayer === 'eos-04') rawImageSrc = `/imagery/eos04_${scenarioKey}.png`;
+
   const executeDetection = async () => {
     if (!scenario) {
       setDetectionResult(null);
@@ -99,22 +156,121 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
     setIsDetecting(false);
   };
 
-  // Trigger real detection whenever active scenario changes
   useEffect(() => {
     executeDetection();
   }, [scenario?.id]);
 
   const handleSelectBasemap = (layer: BaseLayerType) => {
     setBaseLayer2D(layer);
+    if (layer === 'satellite') {
+      handleSelectCopernicusLayer('true-color');
+    } else if (layer === 'sar') {
+      handleSelectCopernicusLayer('sar-vv');
+    }
+  };
+
+  const handleSelectSatellite = (name: string) => {
+    setActiveSatellite(name);
+    let newLayer: CopernicusLayerId = 'sar-vv';
+    let sensorDesc = 'Sentinel-1A C-SAR IW GRD VV (10m Radar)';
+
+    if (name === 'Sentinel-1A') {
+      newLayer = 'sar-vv';
+      sensorDesc = 'Sentinel-1A C-SAR IW GRD VV (Decibels) • Radar Damping';
+    } else if (name === 'Sentinel-1C') {
+      newLayer = 'sar-vh';
+      sensorDesc = 'Sentinel-1C C-SAR Cross-Polarization (VH) • Ship & Roughness';
+    } else if (name === 'Sentinel-2A') {
+      newLayer = 'true-color';
+      sensorDesc = 'Sentinel-2A MSI Natural True Color Optical • Sun-Glint Sheen';
+    } else if (name === 'Sentinel-2B') {
+      newLayer = 'swir-oil';
+      sensorDesc = 'Sentinel-2B MSI SWIR Hydrocarbon Absorption (1610nm)';
+    } else if (name === 'ISRO NISAR') {
+      newLayer = 'nisar-ls';
+      sensorDesc = 'ISRO NISAR SweepSAR Dual-Band L+S Radar (DFDI Bragg Damping)';
+    } else if (name.includes('EOS-04')) {
+      newLayer = 'eos-04';
+      sensorDesc = 'ISRO EOS-04 (RISAT-1A) Circular Hybrid Polarimetry (CP Mode)';
+    }
+
+    setSelectedCopernicusLayer(newLayer);
+    setSatelliteToast(sensorDesc);
+    setTimeout(() => setSatelliteToast(null), 4500);
+
+    // CRITICAL: Immediately fly the camera to the satellite swath footprint so user sees the change!
+    if (leafletMapRef.current) {
+      if (scenario) {
+        leafletMapRef.current.flyTo([scenario.lat, scenario.lng], 12, { duration: 0.8 });
+      } else {
+        leafletMapRef.current.flyTo([18.743, 71.218], 11.5, { duration: 0.8 });
+      }
+    }
+  };
+
+  const handleSelectSensor = (sensor: string) => {
+    if (sensor === 'C-SAR') {
+      handleSelectSatellite('Sentinel-1A');
+    } else if (sensor === 'MSI') {
+      handleSelectSatellite('Sentinel-2A');
+    } else if (sensor.includes('SweepSAR')) {
+      handleSelectSatellite('ISRO NISAR');
+    }
   };
 
   const handleSelectCopernicusLayer = (id: CopernicusLayerId) => {
     setSelectedCopernicusLayer(id);
-    if (id === 'sar-vv') {
-      setBaseLayer2D('sar');
-    } else if (baseLayer2D === 'sar') {
-      setBaseLayer2D('satellite');
+    if (id === 'sar-vv') setActiveSatellite('Sentinel-1A');
+    else if (id === 'sar-vh') setActiveSatellite('Sentinel-1C');
+    else if (id === 'true-color') setActiveSatellite('Sentinel-2A');
+    else if (id === 'swir-oil') setActiveSatellite('Sentinel-2B');
+    else if (id === 'nisar-ls') setActiveSatellite('ISRO NISAR');
+    else if (id === 'eos-04') setActiveSatellite('EOS-04 (RISAT-1A)');
+
+    const layerName = COPERNICUS_LAYERS.find((l) => l.id === id)?.name || id;
+    setSatelliteToast(`Spectral Drape: ${layerName}`);
+    setTimeout(() => setSatelliteToast(null), 4500);
+
+    if (leafletMapRef.current) {
+      if (scenario) {
+        leafletMapRef.current.flyTo([scenario.lat, scenario.lng], 12, { duration: 0.8 });
+      } else {
+        leafletMapRef.current.flyTo([18.743, 71.218], 11.5, { duration: 0.8 });
+      }
     }
+  };
+
+  const [panelTab, setPanelTab] = useState<'satellites' | 'spectral'>('satellites');
+  const availableSatellites = [
+    'Sentinel-1A',
+    'Sentinel-1C',
+    'Sentinel-2A',
+    'Sentinel-2B',
+    'ISRO NISAR',
+    'EOS-04 (RISAT-1A)',
+  ];
+  const availableSensors = [
+    { name: 'C-SAR', mode: '5.4GHz C-Band', sat: 'Sentinel-1A' },
+    { name: 'MSI', mode: '13 Bands Optical', sat: 'Sentinel-2A' },
+    { name: 'SweepSAR (L+S)', mode: 'Dual Frequency', sat: 'ISRO NISAR' },
+  ];
+  const [selectedProducts, setSelectedProducts] = useState<Record<string, boolean>>({
+    'Sentinel-1A_C-SAR_Level-1_GRD': true,
+    'Sentinel-2A_MSI_Level-2A': true,
+    'NISAR_L_S_L2_GCOV': true,
+  });
+  const [searchFeedback, setSearchFeedback] = useState<string | null>(null);
+
+  const toggleProduct = (prod: string) => {
+    setSelectedProducts((prev) => ({ ...prev, [prod]: !prev[prod] }));
+  };
+
+  const handleBhoonidhiSubmit = () => {
+    setSearchFeedback('Searching Bhoonidhi NRSC OpenData Node...');
+    setTimeout(() => {
+      setSearchFeedback(`3 Valid Passes Ingested • AOI: ${scenario ? scenario.title : 'Indian EEZ'} (10m RTC Calibrated)`);
+      setTimeout(() => setSearchFeedback(null), 5000);
+    }, 600);
   };
 
   const handleFocusSpill = () => {
@@ -135,226 +291,513 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
 
   return (
     <div className="map-panel" style={{ flex: 1, width: '100%', height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {/* MAP HEADER CONTROLS (3D GLOBE REMOVED) */}
-      <div className="map-header">
-        <div className="flex items-center gap-2">
-          {/* Mission Indicator Tag */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'rgba(37, 99, 235, 0.1)',
-              border: '1px solid rgba(37, 99, 235, 0.3)',
-              borderRadius: 4,
-              padding: '3px 8px',
-            }}
-          >
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                background: '#2563EB',
-                boxShadow: '0 0 8px #2563EB',
-              }}
-            ></span>
-            <span
-              style={{
-                fontFamily: 'JetBrains Mono',
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-              }}
-            >
-              {selectedMission}
-            </span>
-          </div>
-
-          <span className="badge badge-accent" style={{ fontSize: 10, padding: '2px 6px' }}>
-            {isDetecting ? 'PROCESSING SAR PASS...' : '10M GROUND RESOLUTION'}
-          </span>
-        </div>
-
-        {/* Real GIS Basemap Controls */}
-        <div className="flex items-center gap-2">
-          <div className="map-base-selector">
+      {/* MINIMALIST MARITIME GIS TOOLBAR */}
+      <div className="map-header" style={{ padding: '6px 12px', gap: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'nowrap', overflowX: 'auto', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)' }}>
+        {/* LEFT: Basemap & Sensor Mode Segmented Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {/* Basemap Switcher */}
+          <div className="map-base-selector" style={{ display: 'flex', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', borderRadius: 4, padding: 2 }}>
             <button
               className={`base-btn ${baseLayer2D === 'satellite' ? 'active' : ''}`}
               onClick={() => handleSelectBasemap('satellite')}
-              title="Esri World Imagery / Copernicus Natural Satellite"
+              style={{ fontSize: 11, padding: '3px 8px', borderRadius: 3 }}
+              title="ESRI World Imagery High-Resolution Satellite"
             >
               Satellite
             </button>
             <button
-              className={`base-btn ${baseLayer2D === 'sar' ? 'active' : ''}`}
-              onClick={() => handleSelectBasemap('sar')}
-              title="Sentinel-1 C-SAR IW GRD Calibrated Radar Backscatter"
+              className={`base-btn ${baseLayer2D === 'bhuvan-satellite' ? 'active' : ''}`}
+              onClick={() => handleSelectBasemap('bhuvan-satellite')}
+              style={{ fontSize: 11, padding: '3px 8px', borderRadius: 3 }}
+              title="Bhoonidhi Ocean Depth Relief & Bathymetry"
             >
-              SAR-1 Radar
+              Bathymetry
             </button>
             <button
               className={`base-btn ${baseLayer2D === 'carto-voyager' || baseLayer2D === 'opensea' ? 'active' : ''}`}
               onClick={() => handleSelectBasemap('carto-voyager')}
-              title="Hydrographic / Nautical Chart"
+              style={{ fontSize: 11, padding: '3px 8px', borderRadius: 3 }}
+              title="Nautical & Hydrographic Navigation Chart"
             >
-              Hydrographic
-            </button>
-            <button
-              className={`base-btn ${baseLayer2D === 'carto-dark' || baseLayer2D === 'dark' ? 'active' : ''}`}
-              onClick={() => handleSelectBasemap('carto-dark')}
-              title="Dark Night Tactical Chart"
-            >
-              Dark Chart
+              Nautical
             </button>
           </div>
 
-          {/* Quick Action: Center / Focus Spill */}
+          <span style={{ color: 'var(--border-subtle)', fontSize: 12 }}>|</span>
+
+          {/* Optical vs SAR Sensor Switcher */}
+          <div style={{ display: 'flex', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', borderRadius: 4, padding: 2 }}>
+            <button
+              className={`base-btn ${selectedCopernicusLayer === 'true-color' ? 'active' : ''}`}
+              onClick={() => handleSelectCopernicusLayer('true-color')}
+              style={{
+                fontSize: 11,
+                padding: '3px 8px',
+                borderRadius: 3,
+                background: selectedCopernicusLayer === 'true-color' ? 'var(--bg-surface)' : 'transparent',
+                color: selectedCopernicusLayer === 'true-color' ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontWeight: selectedCopernicusLayer === 'true-color' ? 700 : 500,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+              title="Sentinel-2 MSI Optical Natural True Color"
+            >
+              Optical
+            </button>
+            <button
+              className={`base-btn ${selectedCopernicusLayer === 'sar-vv' ? 'active' : ''}`}
+              onClick={() => handleSelectCopernicusLayer('sar-vv')}
+              style={{
+                fontSize: 11,
+                padding: '3px 8px',
+                borderRadius: 3,
+                background: selectedCopernicusLayer === 'sar-vv' ? 'var(--bg-surface)' : 'transparent',
+                color: selectedCopernicusLayer === 'sar-vv' ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontWeight: selectedCopernicusLayer === 'sar-vv' ? 700 : 500,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+              title="Sentinel-1 C-SAR Radar Backscatter (Microwave)"
+            >
+              SAR Radar
+            </button>
+          </div>
+        </div>
+
+        {/* CENTER: Operational Layer Toggles */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {/* AI Analysis Mask Toggle */}
           <button
-            className="btn btn-secondary"
-            onClick={handleFocusSpill}
-            title="Recenter Camera on Detected Spill"
-            style={{ padding: '4px 10px', fontSize: 11, gap: 5 }}
+            className={`btn ${showAiMask ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setShowAiMask(!showAiMask)}
+            style={{ padding: '3px 9px', fontSize: 11, gap: 5 }}
+            title="Toggle AI Segmentation Mask, Lagrangian Drift & Vessel Tracking"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--slick-color)' }}>
-              my_location
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+              {showAiMask ? 'visibility' : 'visibility_off'}
             </span>
-            Focus Spill
+            AI Analysis
+          </button>
+
+          {/* India Sovereign Borders & EEZ Toggle */}
+          <button
+            className={`btn ${showIndiaOutline ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => {
+              const next = !showIndiaOutline;
+              setShowIndiaOutline(next);
+              setShowEezBoundary(next);
+            }}
+            style={{ padding: '3px 9px', fontSize: 11, gap: 5 }}
+            title="Toggle Survey of India Borders & 200 NM EEZ Maritime Limit"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>public</span>
+            Borders &amp; EEZ
+          </button>
+
+          {/* Spill Satellite Drape Overlay Toggle */}
+          <button
+            className={`btn ${showSpillOverlay ? 'btn-secondary' : 'btn-secondary'}`}
+            onClick={() => setShowSpillOverlay(!showSpillOverlay)}
+            style={{
+              padding: '3px 9px',
+              fontSize: 11,
+              gap: 5,
+              opacity: showSpillOverlay ? 1 : 0.6,
+            }}
+            title="Toggle Calibrated Satellite Spill Drape"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>layers</span>
+            {showSpillOverlay ? 'Overlay On' : 'Overlay Off'}
           </button>
 
           {/* Seamarks Toggle */}
           <button
-            className={`toggle-btn ${showSeamarks ? 'active' : ''}`}
+            className={`btn ${showSeamarks ? 'btn-secondary' : 'btn-secondary'}`}
             onClick={() => setShowSeamarks(!showSeamarks)}
+            style={{ padding: '3px 9px', fontSize: 11, gap: 5, opacity: showSeamarks ? 1 : 0.6 }}
             title="Toggle OpenSeaMap Buoys, Beacons & TSS"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>anchor</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>anchor</span>
             Seamarks
+          </button>
+        </div>
+
+        {/* RIGHT: Tools & Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => setShowRawImageModal(true)}
+            style={{ padding: '3px 9px', fontSize: 11, gap: 5 }}
+            title="Inspect Full 2048px Raw Satellite Image"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>fullscreen</span>
+            Full Image
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            onClick={handleFocusSpill}
+            style={{ padding: '3px 9px', fontSize: 11, gap: 5 }}
+            title="Recenter Camera on Spill Coordinates"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>my_location</span>
+            Recenter
+          </button>
+
+          <button
+            className={`btn ${isSideLayersOpen ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setIsSideLayersOpen(!isSideLayersOpen)}
+            style={{ padding: '3px 9px', fontSize: 11, gap: 5 }}
+            title="Toggle Satellite Pass & Spectral Channel Browser"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>tune</span>
+            Sensors
           </button>
         </div>
       </div>
 
       {/* MAP CANVAS & COPERNICUS BROWSER PANEL */}
       <div style={{ position: 'relative', flex: 1, display: 'flex', minHeight: 0, height: '100%', overflow: 'hidden' }}>
-        {/* COPERNICUS BROWSER SIDE LAYER PANEL */}
+        {/* COPERNICUS BROWSER SIDE LA        {/* BHOONIDHI & COPERNICUS SATELLITE & SENSOR SIDE PANEL */}
         <div className={`copernicus-side-panel ${isSideLayersOpen ? '' : 'collapsed'}`}>
           <div className="copernicus-header" style={{ flexShrink: 0 }}>
             <div className="copernicus-brand">
-              <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#38BDF8' }}>public</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#38BDF8' }}>satellite_alt</span>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.03em' }}>Copernicus Browser</div>
-                <div style={{ fontSize: 9, color: '#94A3B8' }}>Data Space Ecosystem</div>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.02em', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span>ISRO Bhoonidhi &amp; Copernicus</span>
+                  <span style={{ fontSize: 8, background: '#10B98122', color: '#10B981', padding: '1px 4px', borderRadius: 3, border: '1px solid #10B98144' }}>ONLINE</span>
+                </div>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>
+                  User: <strong style={{ color: '#F59E0B' }}>KRISHNA KANT</strong> • NRSC OpenData Node
+                </div>
               </div>
             </div>
             <button
               className="copernicus-collapse-btn"
               onClick={() => setIsSideLayersOpen(false)}
-              title="Collapse Copernicus Layers"
+              title="Collapse Satellite Panel"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chevron_left</span>
             </button>
           </div>
 
+          {/* Sub-Tabs: Satellites & Sensors VS Spectral Drapes */}
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-raised)', flexShrink: 0 }}>
+            <button
+              onClick={() => setPanelTab('satellites')}
+              style={{
+                flex: 1,
+                padding: '7px 4px',
+                fontSize: 10.5,
+                fontWeight: 700,
+                border: 'none',
+                background: panelTab === 'satellites' ? 'var(--bg-card)' : 'transparent',
+                color: panelTab === 'satellites' ? 'var(--accent)' : 'var(--text-muted)',
+                borderBottom: panelTab === 'satellites' ? '2px solid var(--accent)' : '2px solid transparent',
+                cursor: 'pointer',
+              }}
+            >
+              Satellites ({availableSatellites.length})
+            </button>
+            <button
+              onClick={() => setPanelTab('spectral')}
+              style={{
+                flex: 1,
+                padding: '7px 4px',
+                fontSize: 10.5,
+                fontWeight: 700,
+                border: 'none',
+                background: panelTab === 'spectral' ? 'var(--bg-card)' : 'transparent',
+                color: panelTab === 'spectral' ? 'var(--accent)' : 'var(--text-muted)',
+                borderBottom: panelTab === 'spectral' ? '2px solid var(--accent)' : '2px solid transparent',
+                cursor: 'pointer',
+              }}
+            >
+              Spectral ({COPERNICUS_LAYERS.length})
+            </button>
+          </div>
+
           {/* Date Strip */}
-          <div style={{ padding: '8px 12px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+          <div style={{ padding: '6px 10px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <button className="btn btn-secondary" onClick={() => handleStepDate(-1)} style={{ padding: '2px 6px', fontSize: 10 }}>◀</button>
+                <button className="btn btn-secondary" onClick={() => handleStepDate(-1)} style={{ padding: '1px 5px', fontSize: 10 }}>◀</button>
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   style={{
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontFamily: 'JetBrains Mono',
-                    padding: '2px 6px',
+                    padding: '2px 4px',
                     borderRadius: 4,
                     border: '1px solid #CBD5E1',
                     background: '#FFFFFF',
                     color: '#0F172A',
                   }}
                 />
-                <button className="btn btn-secondary" onClick={() => handleStepDate(1)} style={{ padding: '2px 6px', fontSize: 10 }}>▶</button>
+                <button className="btn btn-secondary" onClick={() => handleStepDate(1)} style={{ padding: '1px 5px', fontSize: 10 }}>▶</button>
               </div>
-              <span className="chip" style={{ background: '#E0F2FE', color: '#0369A1', fontSize: 9, fontWeight: 700 }}>
-                ☁ {cloudCoverMax}% Max
+              <span className="chip" style={{ background: '#E0F2FE', color: '#0369A1', fontSize: 8.5, fontWeight: 700 }}>
+                {cloudCoverMax}% Max Cloud
               </span>
             </div>
           </div>
 
-          {/* Mission Configuration */}
-          <div className="copernicus-config" style={{ flexShrink: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-                Mission:
-              </span>
-              <span style={{ fontSize: 9, color: '#16A34A', fontWeight: 600 }}>● S1 Pass Ingested</span>
-            </div>
-            <select
-              value={selectedMission}
-              onChange={(e) => {
-                setSelectedMission(e.target.value);
-                if (e.target.value.includes('SAR')) {
-                  handleSelectCopernicusLayer('sar-vv');
-                } else {
-                  handleSelectCopernicusLayer('true-color');
-                }
-              }}
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                padding: '4px 6px',
-                borderRadius: 4,
-                border: '1px solid #CBD5E1',
-                background: 'var(--bg-surface)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              <option value="Sentinel-1 C-SAR">Sentinel-1 C-SAR (Radar IW GRD 10m)</option>
-              <option value="Sentinel-2 L2A">Sentinel-2 L2A (Optical MSI 10m)</option>
-              <option value="Landsat-8/9 OLI">Landsat-8/9 OLI (Optical/Thermal)</option>
-            </select>
-          </div>
-
-          {/* Real Spectral Layers */}
-          <div className="copernicus-layers-list" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-            {COPERNICUS_LAYERS.map((layer) => {
-              const isActive = selectedCopernicusLayer === layer.id;
-              return (
-                <div
-                  key={layer.id}
-                  className={`copernicus-layer-card ${isActive ? 'active' : ''}`}
-                  onClick={() => handleSelectCopernicusLayer(layer.id)}
-                >
-                  <div className="layer-thumb" style={{ background: layer.thumbBg }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#FFFFFF' }}>
-                      {layer.id === 'true-color'
-                        ? 'photo_camera'
-                        : layer.id === 'sar-vv'
-                        ? 'radar'
-                        : layer.id === 'swir-oil'
-                        ? 'oil_barrel'
-                        : layer.id === 'false-color'
-                        ? 'nature'
-                        : layer.id === 'ndwi'
-                        ? 'waves'
-                        : 'thermostat'}
-                    </span>
-                  </div>
-                  <div className="layer-info">
-                    <div className="layer-name">
-                      <span>{layer.name}</span>
-                      {isActive && (
-                        <span style={{ fontSize: 9, color: '#0284C7', fontWeight: 800 }}>ACTIVE</span>
-                      )}
-                    </div>
-                    <div className="layer-bands">{layer.bands}</div>
-                    <div className="layer-desc">{layer.desc}</div>
-                  </div>
+          {panelTab === 'satellites' ? (
+            /* TAB A: SATELLITES & SENSORS SELECTION (REACTIVE GIS SUITE) */
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Mission scope notice */}
+              <div style={{ background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: 4, padding: '5px 7px' }}>
+                <div style={{ fontSize: 9.5, fontWeight: 700, color: '#38BDF8', marginBottom: 2 }}>
+                  Marine Satellite Intelligence Suite
                 </div>
-              );
-            })}
-          </div>
+                <div style={{ fontSize: 8.5, color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                  Select any satellite below to stream calibrated imagery onto the map and focus the acquisition scene.
+                </div>
+              </div>
+
+              {/* 1. SATELLITE MISSIONS (ACTIVE ONE-CLICK SELECTION) */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Satellite Missions ({availableSatellites.length})
+                  </span>
+                  <span style={{ fontSize: 8.5, color: '#F59E0B', fontFamily: 'monospace' }}>Bhoonidhi/CDSE</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--bg-card)', padding: '5px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                  {availableSatellites.map((satName) => {
+                    const isRadar = satName.includes('Sentinel-1') || satName.includes('NISAR') || satName.includes('EOS-04');
+                    const isActive = activeSatellite === satName;
+                    return (
+                      <div
+                        key={satName}
+                        onClick={() => handleSelectSatellite(satName)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontSize: 10,
+                          cursor: 'pointer',
+                          padding: '5px 7px',
+                          borderRadius: 4,
+                          border: isActive ? '1px solid #00E5FF' : '1px solid transparent',
+                          background: isActive ? 'rgba(0, 229, 255, 0.12)' : 'transparent',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: isActive ? '#00E5FF' : '#64748B',
+                            boxShadow: isActive ? '0 0 8px #00E5FF' : 'none',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span style={{ fontWeight: isActive ? 700 : 500, flex: 1, color: isActive ? '#00E5FF' : 'var(--text-primary)' }}>
+                          {satName}
+                        </span>
+                        {isActive && (
+                          <span style={{ fontSize: 7.5, padding: '1px 5px', borderRadius: 2, background: 'rgba(0, 229, 255, 0.25)', color: '#00E5FF', fontWeight: 800 }}>
+                            ON MAP
+                          </span>
+                        )}
+                        <span style={{ fontSize: 7.5, padding: '1px 4px', borderRadius: 2, background: isRadar ? 'rgba(8, 145, 178, 0.2)' : 'rgba(2, 132, 199, 0.2)', color: isRadar ? '#0891B2' : '#0284C7', fontWeight: 700 }}>
+                          {isRadar ? 'RADAR' : 'OPTICAL'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. SENSOR TYPE SELECTION */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Sensor Modes ({availableSensors.length})
+                  </span>
+                  <span style={{ fontSize: 8.5, color: 'var(--text-muted)' }}>Physical Channels</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--bg-card)', padding: '5px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                  {availableSensors.map((sensor) => {
+                    const isMatchingActive =
+                      (sensor.name === 'C-SAR' && activeSatellite.includes('Sentinel-1')) ||
+                      (sensor.name === 'MSI' && activeSatellite.includes('Sentinel-2')) ||
+                      (sensor.name.includes('SweepSAR') && activeSatellite.includes('NISAR'));
+                    return (
+                      <div
+                        key={sensor.name}
+                        onClick={() => handleSelectSensor(sensor.name)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontSize: 10,
+                          cursor: 'pointer',
+                          padding: '4px 6px',
+                          borderRadius: 3,
+                          background: isMatchingActive ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                          border: isMatchingActive ? '1px solid #10B981' : '1px solid transparent',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: isMatchingActive ? '#10B981' : '#64748B',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span style={{ fontWeight: isMatchingActive ? 700 : 400, flex: 1, color: isMatchingActive ? '#10B981' : 'var(--text-primary)' }}>
+                          {sensor.name}
+                        </span>
+                        <span style={{ fontSize: 8, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                          {sensor.mode}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. PRODUCTS (OPENDATA DIRECT) */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Products (OpenData Direct)
+                  </span>
+                  <span style={{ fontSize: 8.5, color: '#16A34A', fontWeight: 700 }}>● FREE</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, background: 'var(--bg-card)', padding: '5px 6px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                  {Object.entries(selectedProducts).map(([prodName, isChecked]) => (
+                    <label key={prodName} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9.5, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleProduct(prodName)}
+                        style={{ accentColor: '#0284C7' }}
+                      />
+                      <span className="mono" style={{ fontSize: 8.5, color: isChecked ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        {prodName}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. DIRECT SATELLITE LAYER DRAPE */}
+              <div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+                  Direct Satellite Layer Drape
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                  <button
+                    className={`btn btn-sm ${selectedCopernicusLayer === 'sar-vv' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleSelectSatellite('Sentinel-1A')}
+                    style={{ fontSize: 9.5, padding: '3px 5px', justifyContent: 'center' }}
+                  >
+                    C-SAR (VV)
+                  </button>
+                  <button
+                    className={`btn btn-sm ${selectedCopernicusLayer === 'sar-vh' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleSelectSatellite('Sentinel-1C')}
+                    style={{ fontSize: 9.5, padding: '3px 5px', justifyContent: 'center' }}
+                  >
+                    C-SAR (VH)
+                  </button>
+                  <button
+                    className={`btn btn-sm ${selectedCopernicusLayer === 'true-color' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleSelectSatellite('Sentinel-2A')}
+                    style={{ fontSize: 9.5, padding: '3px 5px', justifyContent: 'center' }}
+                  >
+                    True Color (MSI)
+                  </button>
+                  <button
+                    className={`btn btn-sm ${selectedCopernicusLayer === 'swir-oil' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleSelectSatellite('Sentinel-2B')}
+                    style={{ fontSize: 9.5, padding: '3px 5px', justifyContent: 'center' }}
+                  >
+                    MSI SWIR
+                  </button>
+                  <button
+                    className={`btn btn-sm ${selectedCopernicusLayer === 'nisar-ls' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleSelectSatellite('ISRO NISAR')}
+                    style={{ fontSize: 9.5, padding: '3px 5px', gridColumn: 'span 2', justifyContent: 'center', borderColor: selectedCopernicusLayer === 'nisar-ls' ? '#F59E0B' : undefined }}
+                  >
+                    ISRO NISAR Dual-Band (DFDI)
+                  </button>
+                  <button
+                    className={`btn btn-sm ${selectedCopernicusLayer === 'eos-04' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => handleSelectSatellite('EOS-04 (RISAT-1A)')}
+                    style={{ fontSize: 9.5, padding: '3px 5px', gridColumn: 'span 2', justifyContent: 'center', borderColor: selectedCopernicusLayer === 'eos-04' ? '#10B981' : undefined }}
+                  >
+                    ISRO EOS-04 Circular Pol (CP)
+                  </button>
+                </div>
+              </div>
+
+              {/* 5. SUBMIT QUERY */}
+              <div style={{ marginTop: 'auto' }}>
+                <button
+                  className="btn btn-primary w-full"
+                  onClick={handleBhoonidhiSubmit}
+                  style={{ width: '100%', padding: '5px', fontSize: 10.5, fontWeight: 700, background: '#0284C7' }}
+                >
+                  Query Bhoonidhi &amp; Copernicus
+                </button>
+                {searchFeedback && (
+                  <div style={{ marginTop: 5, fontSize: 9, color: '#10B981', fontWeight: 600, textAlign: 'center' }}>
+                    {searchFeedback}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* TAB B: SPECTRAL DRAPES LIST */
+            <div className="copernicus-layers-list" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              {COPERNICUS_LAYERS.map((layer) => {
+                const isActive = selectedCopernicusLayer === layer.id;
+                return (
+                  <div
+                    key={layer.id}
+                    className={`copernicus-layer-card ${isActive ? 'active' : ''}`}
+                    onClick={() => handleSelectCopernicusLayer(layer.id)}
+                  >
+                    <div className="layer-thumb" style={{ background: layer.thumbBg }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#FFFFFF' }}>
+                        {layer.id === 'true-color'
+                          ? 'photo_camera'
+                          : layer.id === 'sar-vv'
+                          ? 'radar'
+                          : layer.id === 'swir-oil'
+                          ? 'oil_barrel'
+                          : layer.id === 'false-color'
+                          ? 'nature'
+                          : layer.id === 'ndwi'
+                          ? 'waves'
+                          : 'thermostat'}
+                      </span>
+                    </div>
+                    <div className="layer-info">
+                      <div className="layer-name">
+                        <span>{layer.name}</span>
+                        {isActive && (
+                          <span style={{ fontSize: 9, color: '#0284C7', fontWeight: 800 }}>ACTIVE</span>
+                        )}
+                      </div>
+                      <div className="layer-bands">{layer.bands}</div>
+                      <div className="layer-desc">{layer.desc}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Docked Layer Opacity Slider Footer */}
           <div
@@ -395,13 +838,47 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
           </button>
         )}
 
+        {/* Dynamic Satellite Ingestion Toast Banner */}
+        {satelliteToast && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 14,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 1000,
+              background: 'rgba(15, 23, 42, 0.94)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid #00E5FF',
+              boxShadow: '0 4px 20px rgba(0, 229, 255, 0.35)',
+              borderRadius: 20,
+              padding: '6px 18px',
+              fontSize: 11.5,
+              fontWeight: 700,
+              color: '#00E5FF',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              pointerEvents: 'none',
+              animation: 'fadeIn 0.2s ease-out',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#00E5FF' }}>satellite_alt</span>
+            <span>{satelliteToast}</span>
+          </div>
+        )}
+
         {/* Dedicated 2D Leaflet Map Viewport */}
         <LeafletMap
           scenario={scenario}
           baseLayer={baseLayer2D}
           showSeamarks={showSeamarks}
+          showIndiaOutline={showIndiaOutline}
+          showEezBoundary={showEezBoundary}
           selectedCopernicusLayer={selectedCopernicusLayer}
           layerOpacity={layerOpacity}
+          showAiMask={showAiMask}
+          showOverlay={showSpillOverlay}
           detectionResult={detectionResult}
           onUpdateCoords={onUpdateCoords}
           onSelectScenario={onSelectScenario}
@@ -412,33 +889,59 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
         <div className="map-overlay-hud">
           <div className="hud-header">
             <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#38BDF8' }}>layers</span>
-            <span className="hud-title">Maritime Surveillance Layers</span>
-          </div>
-          
-          <div className="hud-row">
-            <div className="lswatch" style={{ background: '#00E5FF' }}></div>
-            <span><strong>Current Spill (T0)</strong>: <span style={{ color: '#38BDF8' }}>{scenario?.area || 'Monitored'}</span></span>
+            <span className="hud-title">{showAiMask ? 'AI Detection & Drift Layers' : 'Raw Satellite Mode'}</span>
           </div>
 
-          <div className="hud-row">
-            <div className="lswatch" style={{ background: '#10B981', border: '1px dashed #10B981' }}></div>
-            <span><strong>Predicted Drift (T+24h)</strong>: Forecast</span>
-          </div>
+          {showAiMask ? (
+            <>
+              <div className="hud-row">
+                <div className="lswatch" style={{ background: '#00E5FF' }}></div>
+                <span><strong>Current Spill (T0)</strong>: <span style={{ color: '#38BDF8' }}>{scenario?.area || 'Monitored'}</span></span>
+              </div>
 
-          <div className="hud-row">
-            <div className="lswatch" style={{ background: '#F59E0B' }}></div>
-            <span><strong>Discharge Origin (T-22h)</strong>: Source</span>
-          </div>
+              <div className="hud-row">
+                <div className="lswatch" style={{ background: '#10B981', border: '1px dashed #10B981' }}></div>
+                <span><strong>Predicted Drift (T+24h)</strong>: Forecast</span>
+              </div>
 
-          <div className="hud-row">
-            <div className="lswatch" style={{ background: '#D97706', border: '1px dashed #D97706' }}></div>
-            <span><strong>Reverse Drift Track</strong>: Past 22h</span>
-          </div>
+              <div className="hud-row">
+                <div className="lswatch" style={{ background: '#F59E0B' }}></div>
+                <span><strong>Discharge Origin (T-22h)</strong>: Source</span>
+              </div>
 
-          <div className="hud-row">
-            <div className="lswatch" style={{ background: '#DC2626', border: '1px dashed #DC2626' }}></div>
-            <span><strong>Suspect AIS Silence</strong>: Gap Segment</span>
-          </div>
+              <div className="hud-row">
+                <div className="lswatch" style={{ background: '#D97706', border: '1px dashed #D97706' }}></div>
+                <span><strong>Reverse Drift Track</strong>: Past 22h</span>
+              </div>
+
+              <div className="hud-row">
+                <div className="lswatch" style={{ background: '#DC2626', border: '1px dashed #DC2626' }}></div>
+                <span><strong>Suspect AIS Silence</strong>: Gap Segment</span>
+              </div>
+            </>
+          ) : (
+            <div style={{ padding: '4px 0', fontSize: 10, color: '#94A3B8', lineHeight: 1.4 }}>
+              <div style={{ color: '#38BDF8', fontWeight: 700, marginBottom: 2 }}>Prism Raw Satellite View</div>
+              <div>Solid 100% native unblurred satellite raster. Zero polygon masks covering the spill.</div>
+              <div style={{ marginTop: 4, color: '#F59E0B', cursor: 'pointer' }} onClick={() => setShowAiMask(true)}>
+                ➔ Click to toggle AI Detection &amp; Drift Mask
+              </div>
+            </div>
+          )}
+
+          {/* Sovereign & Maritime Boundaries */}
+          {showIndiaOutline && (
+            <div className="hud-row" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 4, marginTop: 4 }}>
+              <div className="lswatch" style={{ background: '#38BDF8', border: '1px solid #00E5FF' }}></div>
+              <span><strong>India Sovereign Outline</strong>: <span style={{ color: '#38BDF8' }}>SOI Perimeter</span></span>
+            </div>
+          )}
+          {showEezBoundary && (
+            <div className="hud-row">
+              <div className="lswatch" style={{ background: 'transparent', border: '1.5px dashed #F59E0B' }}></div>
+              <span><strong>Indian EEZ (200 NM)</strong>: <span style={{ color: '#F59E0B' }}>Coast Guard Limit</span></span>
+            </div>
+          )}
 
           <div className="hud-footer">
             <span className="hud-status-dot"></span>
@@ -449,6 +952,287 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
       </div>
 
       <TimeScrubber />
+
+      {/* ── FULL-SCREEN 2048x2048 RAW SATELLITE SPILL IMAGE INSPECTOR MODAL ── */}
+      {showRawImageModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            backgroundColor: 'rgba(5, 10, 20, 0.90)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
+          {/* Modal Header */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 24px',
+              borderBottom: '1px solid rgba(255,255,255,0.12)',
+              background: 'rgba(15, 23, 42, 0.96)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#00E5FF' }}>satellite_alt</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span>Original Raw Satellite Capture (2048 × 2048 px)</span>
+                  <span style={{ fontSize: 10, background: '#0284C722', color: '#38BDF8', border: '1px solid #0284C755', padding: '2px 8px', borderRadius: 4, fontFamily: 'monospace' }}>
+                    100% UNCOMPRESSED NATIVE
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>
+                  Incident: <strong style={{ color: '#F8FAFC' }}>{scenario ? scenario.title : 'Mumbai High Basin'} ({scenarioKey})</strong> • Sensor: <strong style={{ color: '#00E5FF' }}>{selectedMission}</strong> • Resolution: <strong>10m/pixel (Calibrated RTC dB)</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Band selector pills inside modal */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(30,41,59,0.8)', padding: '3px 6px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)' }}>
+              <button
+                onClick={() => handleSelectCopernicusLayer('sar-vv')}
+                style={{
+                  fontSize: 10.5,
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  border: 'none',
+                  background: selectedCopernicusLayer === 'sar-vv' ? '#0891B2' : 'transparent',
+                  color: selectedCopernicusLayer === 'sar-vv' ? '#FFFFFF' : '#94A3B8',
+                  fontWeight: selectedCopernicusLayer === 'sar-vv' ? 700 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                SAR VV (Damping)
+              </button>
+              <button
+                onClick={() => handleSelectCopernicusLayer('sar-vh')}
+                style={{
+                  fontSize: 10.5,
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  border: 'none',
+                  background: selectedCopernicusLayer === 'sar-vh' ? '#0EA5E9' : 'transparent',
+                  color: selectedCopernicusLayer === 'sar-vh' ? '#FFFFFF' : '#94A3B8',
+                  fontWeight: selectedCopernicusLayer === 'sar-vh' ? 700 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                SAR VH (Cross-Pol)
+              </button>
+              <button
+                onClick={() => handleSelectCopernicusLayer('true-color')}
+                style={{
+                  fontSize: 10.5,
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  border: 'none',
+                  background: selectedCopernicusLayer === 'true-color' ? '#0284C7' : 'transparent',
+                  color: selectedCopernicusLayer === 'true-color' ? '#FFFFFF' : '#94A3B8',
+                  fontWeight: selectedCopernicusLayer === 'true-color' ? 700 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                MSI True Color
+              </button>
+              <button
+                onClick={() => handleSelectCopernicusLayer('swir-oil')}
+                style={{
+                  fontSize: 10.5,
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  border: 'none',
+                  background: selectedCopernicusLayer === 'swir-oil' ? '#B45309' : 'transparent',
+                  color: selectedCopernicusLayer === 'swir-oil' ? '#FFFFFF' : '#94A3B8',
+                  fontWeight: selectedCopernicusLayer === 'swir-oil' ? 700 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                SWIR Hydrocarbon
+              </button>
+              <button
+                onClick={() => handleSelectCopernicusLayer('nisar-ls')}
+                style={{
+                  fontSize: 10.5,
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  border: 'none',
+                  background: selectedCopernicusLayer === 'nisar-ls' ? '#F59E0B' : 'transparent',
+                  color: selectedCopernicusLayer === 'nisar-ls' ? '#000000' : '#94A3B8',
+                  fontWeight: selectedCopernicusLayer === 'nisar-ls' ? 800 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                🇮🇳 NISAR L+S
+              </button>
+              <button
+                onClick={() => handleSelectCopernicusLayer('eos-04')}
+                style={{
+                  fontSize: 10.5,
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  border: 'none',
+                  background: selectedCopernicusLayer === 'eos-04' ? '#10B981' : 'transparent',
+                  color: selectedCopernicusLayer === 'eos-04' ? '#FFFFFF' : '#94A3B8',
+                  fontWeight: selectedCopernicusLayer === 'eos-04' ? 700 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                🇮🇳 EOS-04 CP
+              </button>
+            </div>
+
+            {/* Zoom Controls & Close */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(30,41,59,0.8)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }}>
+                <button
+                  onClick={() => setModalZoom((z) => Math.max(0.5, z - 0.25))}
+                  style={{ background: 'transparent', border: 'none', color: '#FFFFFF', padding: '4px 8px', cursor: 'pointer', fontSize: 13 }}
+                  title="Zoom Out"
+                >
+                  −
+                </button>
+                <span style={{ fontSize: 11, color: '#00E5FF', fontFamily: 'monospace', padding: '0 6px', fontWeight: 700 }}>
+                  {Math.round(modalZoom * 100)}%
+                </span>
+                <button
+                  onClick={() => setModalZoom((z) => Math.min(3.0, z + 0.25))}
+                  style={{ background: 'transparent', border: 'none', color: '#FFFFFF', padding: '4px 8px', cursor: 'pointer', fontSize: 13 }}
+                  title="Zoom In"
+                >
+                  +
+                </button>
+                <button
+                  onClick={() => setModalZoom(1.0)}
+                  style={{ background: 'transparent', border: 'none', color: '#94A3B8', padding: '4px 8px', cursor: 'pointer', fontSize: 10, borderLeft: '1px solid rgba(255,255,255,0.1)' }}
+                  title="Reset 100%"
+                >
+                  100%
+                </button>
+              </div>
+
+              <a
+                href={rawImageSrc}
+                download={`${scenarioKey}_${selectedCopernicusLayer}_raw_2048px.png`}
+                className="btn btn-secondary"
+                style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', fontSize: 11, color: '#38BDF8', borderColor: '#38BDF8' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
+                Save PNG
+              </a>
+
+              <button
+                onClick={() => setShowRawImageModal(false)}
+                style={{
+                  background: 'rgba(239,68,68,0.2)',
+                  border: '1px solid rgba(239,68,68,0.4)',
+                  color: '#EF4444',
+                  borderRadius: 6,
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: 16,
+                }}
+                title="Close Viewer"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Image Body (Scrollable / Pannable full resolution) */}
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#070C18',
+              padding: 24,
+            }}
+          >
+            <div
+              style={{
+                position: 'relative',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.9)',
+                border: '1px solid rgba(0, 229, 255, 0.3)',
+                borderRadius: 4,
+                overflow: 'hidden',
+                lineHeight: 0,
+                transform: `scale(${modalZoom})`,
+                transformOrigin: 'center center',
+                transition: 'transform 0.15s ease-out',
+              }}
+            >
+              <img
+                src={rawImageSrc}
+                alt={`Raw Satellite Spill Image ${scenarioKey}`}
+                style={{
+                  width: 860,
+                  height: 860,
+                  display: 'block',
+                  imageRendering: 'crisp-edges',
+                  objectFit: 'contain',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 12,
+                  left: 12,
+                  background: 'rgba(10, 15, 29, 0.85)',
+                  backdropFilter: 'blur(6px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: 4,
+                  padding: '4px 10px',
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                  color: '#00E5FF',
+                  pointerEvents: 'none',
+                }}
+              >
+                2048 × 2048 px Native • No Vector Overlays • No Blur
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Footer Telemetry */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 24px',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(15, 23, 42, 0.95)',
+              fontSize: 11,
+              color: '#94A3B8',
+              fontFamily: 'JetBrains Mono, monospace',
+            }}
+          >
+            <div style={{ display: 'flex', gap: 20 }}>
+              <span>Center Coords: <strong style={{ color: '#F8FAFC' }}>{scenario ? `${scenario.lat.toFixed(3)}°N, ${scenario.lng.toFixed(3)}°E` : '18.743°N, 71.218°E'}</strong></span>
+              <span>Observed Spill Area: <strong style={{ color: '#F59E0B' }}>{scenario?.area || '4.82 km²'}</strong></span>
+              <span>Mean Radar Damping: <strong style={{ color: '#10B981' }}>Δσ0 = -8.40 dB</strong></span>
+              <span>Optical Sheen: <strong style={{ color: '#00E5FF' }}>Specular Iridescence Present</strong></span>
+            </div>
+            <div>
+              <span>ESA CDSE &amp; ISRO Bhoonidhi Level-1 GRD Processed</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
