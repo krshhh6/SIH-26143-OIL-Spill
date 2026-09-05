@@ -97,8 +97,16 @@ export interface DetectionResult {
 
 export interface SarClassificationResult {
   imageFile: string;
-  prediction: 'oil_spill' | 'no_oil';
+  prediction: 'oil_spill' | 'no_oil' | 'invalid_sar';
   confidence: number;
   inferenceTimeMs: number;
   gradcamDataUrl?: string;
+  errorMessage?: string;
+  rejectionReason?: string;
+  metrics?: {
+    meanBrightness: number;
+    brightRatio: number;
+    sharpTransitions: number;
+    isColor: boolean;
+  };
 }

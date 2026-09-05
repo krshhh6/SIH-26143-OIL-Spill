@@ -33,3 +33,7 @@ Thumbs.db
 *.tar.gz
 *.nc
 *.nc4
+
+# Root junctions for standalone static dashboard
+/demo-sar
+/imagery

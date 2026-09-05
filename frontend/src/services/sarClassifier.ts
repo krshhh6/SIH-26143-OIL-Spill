@@ -22,9 +22,129 @@ export async function loadModel(): Promise<void> {
   }
 }
 
+interface ImageValidationResult {
+  isValid: boolean;
+  reason?: string;
+  metrics: {
+    meanBrightness: number;
+    brightRatio: number;
+    sharpTransitions: number;
+    isColor: boolean;
+  };
+}
+
+export function validateSarImage(data: Uint8ClampedArray, width: number, height: number): ImageValidationResult {
+  const totalPixels = width * height;
+  let sumBrightness = 0;
+  let brightCount = 0;
+  let colorDiffSum = 0;
+  
+  const grayValues = new Float32Array(totalPixels);
+  
+  for (let i = 0; i < totalPixels; i++) {
+    const r = data[i * 4];
+    const g = data[i * 4 + 1];
+    const b = data[i * 4 + 2];
+    
+    // Saturation / color distance
+    colorDiffSum += Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
+    
+    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+    grayValues[i] = gray;
+    sumBrightness += gray;
+    if (gray > 190) {
+      brightCount++;
+    }
+  }
+  
+  const meanBrightness = sumBrightness / totalPixels;
+  const brightRatio = brightCount / totalPixels;
+  const avgColorDiff = colorDiffSum / totalPixels;
+  const isColor = avgColorDiff > 28;
+  
+  // Check for document/invoice text transitions
+  let sharpTransitions = 0;
+  const stride = 3;
+  for (let y = 0; y < height; y++) {
+    const rowOffset = y * width;
+    for (let x = 0; x < width - stride; x++) {
+      const diff = Math.abs(grayValues[rowOffset + x + stride] - grayValues[rowOffset + x]);
+      if (diff > 85) {
+        sharpTransitions++;
+      }
+    }
+  }
+  const transitionRatio = sharpTransitions / totalPixels;
+  
+  // 1. Text document / invoice / receipt detection:
+  // Paper background is predominantly bright (>190) and contains sharp dark-to-bright text transitions.
+  if (brightRatio > 0.30 && transitionRatio > 0.02) {
+    return {
+      isValid: false,
+      reason: 'Paper Document / Printed Invoice (Non-Marine Scene)',
+      metrics: { meanBrightness, brightRatio, sharpTransitions: transitionRatio, isColor }
+    };
+  }
+  
+  // 2. Overexposed or flat white sheet/document
+  if (brightRatio > 0.50 && meanBrightness > 160) {
+    return {
+      isValid: false,
+      reason: 'High-Luminance Non-Marine Surface (White paper/document)',
+      metrics: { meanBrightness, brightRatio, sharpTransitions: transitionRatio, isColor }
+    };
+  }
+  
+  // 3. Completely blank or black image
+  if (meanBrightness < 8) {
+    return {
+      isValid: false,
+      reason: 'Empty / Black Frame (Zero radar backscatter signal)',
+      metrics: { meanBrightness, brightRatio, sharpTransitions: transitionRatio, isColor }
+    };
+  }
+
+  // 4. Strong optical color photo (portrait, selfie, colorful room)
+  if (isColor && avgColorDiff > 45) {
+    return {
+      isValid: false,
+      reason: 'Optical Color Camera Photo (SAR models require single-polarization microwave radar)',
+      metrics: { meanBrightness, brightRatio, sharpTransitions: transitionRatio, isColor }
+    };
+  }
+
+  return {
+    isValid: true,
+    metrics: { meanBrightness, brightRatio, sharpTransitions: transitionRatio, isColor }
+  };
+}
+
 export async function classifyImage(imageElement: HTMLImageElement | HTMLCanvasElement): Promise<SarClassificationResult> {
   const start = performance.now();
   
+  const canvas = document.createElement('canvas');
+  canvas.width = 400;
+  canvas.height = 400;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(imageElement, 0, 0, 400, 400);
+  
+  const imageData = ctx.getImageData(0, 0, 400, 400);
+  const data = imageData.data;
+  
+  // Domain Validation Check
+  const validation = validateSarImage(data, 400, 400);
+  if (!validation.isValid) {
+    return {
+      imageFile: imageElement instanceof HTMLImageElement ? imageElement.src : 'canvas',
+      prediction: 'invalid_sar',
+      confidence: 0,
+      inferenceTimeMs: Math.round(performance.now() - start),
+      errorMessage: 'Uploaded image is not a Synthetic Aperture Radar (SAR) ocean scene.',
+      rejectionReason: validation.reason,
+      metrics: validation.metrics,
+    };
+  }
+
   // Demo mode fallback
   if (!session) {
     await new Promise(r => setTimeout(r, 600)); // Simulate inference time
@@ -34,17 +154,9 @@ export async function classifyImage(imageElement: HTMLImageElement | HTMLCanvasE
       prediction: prob > 0.5 ? 'oil_spill' : 'no_oil',
       confidence: prob > 0.5 ? prob : 1 - prob,
       inferenceTimeMs: Math.round(performance.now() - start),
+      metrics: validation.metrics,
     };
   }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = 400;
-  canvas.height = 400;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(imageElement, 0, 0, 400, 400);
-  
-  const imageData = ctx.getImageData(0, 0, 400, 400);
-  const data = imageData.data;
   
   const tensorData = new Float32Array(400 * 400);
   for (let i = 0; i < 400 * 400; i++) {
@@ -73,6 +185,7 @@ export async function classifyImage(imageElement: HTMLImageElement | HTMLCanvasE
     prediction,
     confidence,
     inferenceTimeMs: Math.round(performance.now() - start),
+    metrics: validation.metrics,
   };
 }
 

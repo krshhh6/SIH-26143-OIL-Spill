@@ -161,46 +161,90 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
         <section style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
           <div style={{ 
             padding: 'var(--sp-4)', 
-            background: result.prediction === 'oil_spill' ? 'linear-gradient(90deg, rgba(220, 38, 38, 0.2) 0%, transparent 100%)' : 'linear-gradient(90deg, rgba(22, 163, 74, 0.2) 0%, transparent 100%)',
+            background: result.prediction === 'oil_spill' 
+              ? 'linear-gradient(90deg, rgba(220, 38, 38, 0.25) 0%, transparent 100%)' 
+              : result.prediction === 'invalid_sar'
+              ? 'linear-gradient(90deg, rgba(239, 68, 68, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)'
+              : 'linear-gradient(90deg, rgba(22, 163, 74, 0.2) 0%, transparent 100%)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
             <div>
-              <h2 style={{ fontSize: '1.5rem', color: result.prediction === 'oil_spill' ? '#ef4444' : '#4ade80', margin: '0 0 var(--sp-1) 0' }}>
-                {result.prediction === 'oil_spill' ? '🛢️ OIL SPILL DETECTED' : '✅ CLEAN OCEAN'}
+              <h2 style={{ 
+                fontSize: '1.5rem', 
+                color: result.prediction === 'oil_spill' ? '#ef4444' : result.prediction === 'invalid_sar' ? '#f59e0b' : '#4ade80', 
+                margin: '0 0 var(--sp-1) 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                {result.prediction === 'oil_spill' && '🛢️ OIL SPILL DETECTED'}
+                {result.prediction === 'no_oil' && '✅ CLEAN OCEAN'}
+                {result.prediction === 'invalid_sar' && '⚠️ INVALID INPUT: NOT AN OCEAN / SAR RADAR IMAGE'}
               </h2>
               <div style={{ display: 'flex', gap: 'var(--sp-4)', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                <span>Confidence: {(result.confidence * 100).toFixed(1)}%</span>
-                <span>Inference Time: {result.inferenceTimeMs}ms</span>
+                {result.prediction === 'invalid_sar' ? (
+                  <>
+                    <span style={{ color: '#f87171', fontWeight: 600 }}>Reason: {result.rejectionReason}</span>
+                    <span>Domain: Out of Distribution (OOD)</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Confidence: {(result.confidence * 100).toFixed(1)}%</span>
+                    <span>Inference Time: {result.inferenceTimeMs}ms</span>
+                  </>
+                )}
               </div>
             </div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>
-              {(result.confidence * 100).toFixed(0)}%
+            <div style={{ 
+              fontSize: result.prediction === 'invalid_sar' ? '1.5rem' : '2.5rem', 
+              fontWeight: 'bold',
+              color: result.prediction === 'invalid_sar' ? '#f59e0b' : 'inherit'
+            }}>
+              {result.prediction === 'invalid_sar' ? 'REJECTED' : `${(result.confidence * 100).toFixed(0)}%`}
             </div>
           </div>
 
+          {result.prediction === 'invalid_sar' && (
+            <div style={{ padding: '12px 16px', background: 'rgba(239, 68, 68, 0.12)', borderBottom: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', fontSize: '0.85rem' }}>
+              <strong>Notice:</strong> This model is calibrated strictly for Synthetic Aperture Radar (SAR) ocean backscatter imagery (Sentinel-1 / ISRO RISAT/EOS-04). Documents, paper receipts, invoices, and standard optical photos are automatically rejected to prevent false positive/negative classifications.
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '1px', background: 'rgba(255,255,255,0.1)' }}>
             <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
-              <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem' }}>Original SAR Image</div>
+              <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem' }}>
+                {result.prediction === 'invalid_sar' ? 'Uploaded Non-Marine Image' : 'Original SAR Image'}
+              </div>
               <img src={selectedImage} alt="Selected" style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', background: '#000' }} />
             </div>
             <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
               <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
                 Attention Map (Occlusion Sensitivity)
-                {!heatmapUrl && !isGeneratingHeatmap && (
+                {result.prediction !== 'invalid_sar' && !heatmapUrl && !isGeneratingHeatmap && (
                   <button onClick={handleGenerateHeatmap} style={{ background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)', borderRadius: '4px', cursor: 'pointer', padding: '0 4px', fontSize: '0.8rem' }}>Generate</button>
                 )}
               </div>
-              <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#000' }}>
-                <img src={selectedImage} alt="Selected" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
-                {isGeneratingHeatmap && (
-                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', zIndex: 2 }}>
-                    <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite', fontSize: '2rem' }}>autorenew</span>
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {result.prediction === 'invalid_sar' ? (
+                  <div style={{ padding: 'var(--sp-4)', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '3rem', color: '#f59e0b', marginBottom: '8px' }}>block</span>
+                    <p style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Attention Map Disabled</p>
+                    <p style={{ marginTop: '4px' }}>Input was flagged as non-marine / document image. Please upload a verified SAR ocean scene.</p>
                   </div>
-                )}
-                {heatmapUrl && (
-                  <img src={heatmapUrl} alt="Heatmap" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'screen', opacity: 0.8, zIndex: 1 }} />
+                ) : (
+                  <>
+                    <img src={selectedImage} alt="Selected" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
+                    {isGeneratingHeatmap && (
+                      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', zIndex: 2 }}>
+                        <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite', fontSize: '2rem' }}>autorenew</span>
+                      </div>
+                    )}
+                    {heatmapUrl && (
+                      <img src={heatmapUrl} alt="Heatmap" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'screen', opacity: 0.8, zIndex: 1 }} />
+                    )}
+                  </>
                 )}
               </div>
             </div>

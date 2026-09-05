@@ -24,8 +24,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
           onClick={() => onSelectTab('investigation')}
         >
           <span className="material-symbols-outlined">satellite_alt</span>
-          Copernicus Satellite Studio
-          <span className="nav-badge blue">CDSE</span>
+          Varuna Satellite Studio
+          <span className="nav-badge blue">DRISHTI</span>
         </li>
         <li
           className={`nav-item ${activeTab === 'drift' ? 'active' : ''}`}

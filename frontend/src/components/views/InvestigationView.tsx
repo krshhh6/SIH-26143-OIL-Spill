@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { TabType } from '../../types/dashboard';
+import type { Scenario, TabType } from '../../types/dashboard';
 
 interface InvestigationViewProps {
   onSelectTab: (tab: TabType) => void;
   onOpenForensicModal: () => void;
+  currentScenario?: Scenario | null;
+  currentScenarioKey?: string;
 }
 
 interface CopernicusLayer {
@@ -39,14 +41,48 @@ const COPERNICUS_LAYERS_DATA: Record<string, CopernicusLayer[]> = {
 export const InvestigationView: React.FC<InvestigationViewProps> = ({
   onSelectTab,
   onOpenForensicModal,
+  currentScenario,
+  currentScenarioKey,
 }) => {
   const [activeMission, setActiveMission] = useState<string>('S1');
   const [activeLayer, setActiveLayer] = useState<string>('sar-vv');
   const [cloudCoverage, setCloudCoverage] = useState<number>(15);
   const [splitPercent, setSplitPercent] = useState<number>(50);
+  const [customImageSrc, setCustomImageSrc] = useState<string | null>(null);
+  const [selectedChipName, setSelectedChipName] = useState<string>('Incident SAR Scene (Mumbai High)');
 
   const splitViewerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isDraggingRef = useRef<boolean>(false);
+
+  const scenarioKey = currentScenarioKey || 'INC-001';
+  const incidentTitle = currentScenario?.title || 'Mumbai High Offshore Basin';
+  const incidentArea = currentScenario?.area || '4.82 km²';
+  const incidentCoords = currentScenario ? `${currentScenario.lat.toFixed(3)}°N, ${currentScenario.lng.toFixed(3)}°E` : '18.743°N, 71.218°E';
+
+  // Compute active real satellite photo source
+  let activeImageSrc = `/imagery/sar_${scenarioKey}.png`;
+  if (customImageSrc) {
+    activeImageSrc = customImageSrc;
+  } else if (activeMission === 'S1') {
+    if (activeLayer === 'sar-vh') {
+      activeImageSrc = `/imagery/vh_${scenarioKey}.png`;
+    } else {
+      activeImageSrc = `/imagery/sar_${scenarioKey}.png`;
+    }
+  } else if (activeMission === 'S2') {
+    if (activeLayer === 's2-false') {
+      activeImageSrc = `/imagery/cir_${scenarioKey}.png`;
+    } else if (activeLayer === 'swir') {
+      activeImageSrc = `/imagery/swir_${scenarioKey}.png`;
+    } else {
+      activeImageSrc = `/imagery/tc_${scenarioKey}.png`;
+    }
+  } else if (activeMission === 'S3') {
+    activeImageSrc = `/imagery/eos04_${scenarioKey}.png`;
+  } else if (activeMission === 'S6') {
+    activeImageSrc = `/imagery/nisar_${scenarioKey}.png`;
+  }
 
   // Split slider mouse/touch drag handler
   useEffect(() => {
@@ -79,22 +115,22 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
   }, []);
 
   const getMissionBadge = () => {
-    if (activeMission === 'S1') return 'SENTINEL-1 C-SAR';
-    if (activeMission === 'S2') return 'SENTINEL-2 MSI OPTICAL';
-    if (activeMission === 'S3') return 'SENTINEL-3 OLCI / SLSTR';
-    if (activeMission === 'S6') return 'SENTINEL-6 MICHAEL FREILICH';
-    return 'COPERNICUS MULTI-MISSION';
+    if (activeMission === 'S1') return 'SENTINEL-1 C-SAR (VARUNA NETRA)';
+    if (activeMission === 'S2') return 'SENTINEL-2 MSI OPTICAL (DIVYA DRISHTI)';
+    if (activeMission === 'S3') return 'SENTINEL-3 / EOS-04 (SAMUDRA DRISHTI)';
+    if (activeMission === 'S6') return 'SENTINEL-6 / NISAR (ALTIMETRY)';
+    return 'VARUNA MULTI-MISSION OBSERVATORY';
   };
 
   const getTelemetryChip = () => {
     if (activeMission === 'S1') return 'Sentinel-1A IW GRD · C-SAR 5.4 GHz · Descending Orbit · 10m Res';
     if (activeMission === 'S2') return 'Sentinel-2B MSI L2A · 13 Spectral Bands · BOA Reflectance · 10m Res';
-    if (activeMission === 'S3') return 'Sentinel-3A OLCI/SLSTR · 300m Ocean Colour · Daily Marine Revisit';
-    if (activeMission === 'S6') return 'Sentinel-6 Poseidon-4 · High-Res SAR Altimeter · Geostrophic Currents';
+    if (activeMission === 'S3') return 'ISRO EOS-04 / Sentinel-3 · 300m Ocean Colour · Daily Marine Revisit';
+    if (activeMission === 'S6') return 'NASA-ISRO NISAR / S6 · Dual-Freq L+S Radar · Geostrophic Currents';
     return '';
   };
 
-  const launchCopernicusBrowser = () => {
+  const launchSatellitePortal = () => {
     window.open('https://browser.dataspace.copernicus.eu/', '_blank');
   };
 
@@ -104,19 +140,19 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
       <div className="page-header" style={{ paddingTop: 'var(--sp-4)' }}>
         <div>
           <div className="flex items-center gap-3">
-            <div className="page-title">Copernicus Satellite Studio &amp; SAR Look-Alike Validation</div>
+            <div className="page-title">Varuna-Drishti Satellite Studio &amp; SAR Look-Alike Validation</div>
             <span className="id-tag">{getMissionBadge()}</span>
-            <span className="chip chip-c">ESA CDSE SATELLITE ENGINE</span>
+            <span className="chip chip-c">VARUNA SPACE ENGINE · SAMUDRA-NETRA</span>
           </div>
           <div className="page-subtitle">
-            Multi-mission spectral layer inspector, calibrated SAR backscatter cross-sections, and false-alarm suppression
+            Vedic maritime surveillance · {incidentTitle} ({incidentCoords}) · Calibrated SAR backscatter cross-sections &amp; look-alike suppression
           </div>
         </div>
         <div className="page-actions">
           <button
             className="btn btn-secondary flex items-center gap-1"
-            onClick={launchCopernicusBrowser}
-            title="Launch Official ESA Copernicus Browser Portal"
+            onClick={launchSatellitePortal}
+            title="Launch Space Agency Data Portal"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
             Copernicus Browser
@@ -132,7 +168,7 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
         </div>
       </div>
 
-      {/* COPERNICUS SATELLITE MISSION SELECTOR BAR */}
+      {/* SATELLITE MISSION SELECTOR BAR */}
       <div
         style={{
           margin: '0 var(--sp-6) var(--sp-3)',
@@ -156,6 +192,8 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
               onClick={() => {
                 setActiveMission('S1');
                 setActiveLayer('sar-vv');
+                setCustomImageSrc(null);
+                setSelectedChipName(`Incident ${scenarioKey} SAR Scene`);
               }}
             >
               Sentinel-1 (SAR)
@@ -165,6 +203,8 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
               onClick={() => {
                 setActiveMission('S2');
                 setActiveLayer('s2-rgb');
+                setCustomImageSrc(null);
+                setSelectedChipName(`Incident ${scenarioKey} Optical True Color`);
               }}
             >
               Sentinel-2 (Optical)
@@ -174,18 +214,22 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
               onClick={() => {
                 setActiveMission('S3');
                 setActiveLayer('s3-chl');
+                setCustomImageSrc(null);
+                setSelectedChipName(`ISRO EOS-04 / S3 Ocean Scene`);
               }}
             >
-              Sentinel-3 (Ocean)
+              Sentinel-3 / EOS-04
             </button>
             <button
               className={`base-btn ${activeMission === 'S6' ? 'active' : ''}`}
               onClick={() => {
                 setActiveMission('S6');
                 setActiveLayer('s6-alt');
+                setCustomImageSrc(null);
+                setSelectedChipName(`NISAR / S6 Altimetry`);
               }}
             >
-              Sentinel-6 (Altimetry)
+              Sentinel-6 / NISAR
             </button>
           </div>
         </div>
@@ -214,7 +258,7 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
       {/* SPECTRAL LAYER PRESETS BAR */}
       <div
         style={{
-          margin: '0 var(--sp-6) var(--sp-4)',
+          margin: '0 var(--sp-6) var(--sp-3)',
           display: 'flex',
           gap: 6,
           flexWrap: 'wrap',
@@ -227,8 +271,12 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
         {COPERNICUS_LAYERS_DATA[activeMission]?.map((lyr) => (
           <button
             key={lyr.id}
-            className={`toggle-btn ${activeLayer === lyr.id ? 'active' : ''}`}
-            onClick={() => setActiveLayer(lyr.id)}
+            className={`toggle-btn ${activeLayer === lyr.id && !customImageSrc ? 'active' : ''}`}
+            onClick={() => {
+              setActiveLayer(lyr.id);
+              setCustomImageSrc(null);
+              setSelectedChipName(`${scenarioKey} - ${lyr.label}`);
+            }}
             title={lyr.desc}
           >
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#06B6D4', display: 'inline-block' }}></span>
@@ -250,63 +298,227 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
 
       <div className="inv-grid">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
-          {/* DUAL-PANE SAR SPLIT SLIDER */}
+          {/* DUAL-PANE REAL SATELLITE PHOTO SPLIT SLIDER */}
           <div className="panel">
-            <div className="panel-header">
-              <span className="panel-title">
+            <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>compare</span>
-                Dual-Pane Split: Raw Sentinel-1 SAR Backscatter (Left) vs AI Detection Mask (Right)
+                Dual-Pane Split: Raw Real Satellite Photo (Left) vs AI U-Net Detection (Right)
               </span>
-              <span className="text-xs text-muted">Drag handle to inspect</span>
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 11, color: '#06B6D4', background: 'rgba(6,182,212,0.15)', padding: '2px 8px', borderRadius: 4, fontFamily: 'var(--font-mono)' }}>
+                  {selectedChipName}
+                </span>
+                <span className="text-xs text-muted">Drag handle to inspect</span>
+              </div>
             </div>
+
+            {/* QUICK REAL-IMAGE CHIPS & UPLOAD BAR */}
+            <div
+              style={{
+                padding: '8px 12px',
+                background: 'rgba(0, 0, 0, 0.2)',
+                borderBottom: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 8,
+              }}
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                  Real SAR Photo Chips:
+                </span>
+                <button
+                  className={`btn btn-xs ${!customImageSrc ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: 11, padding: '2px 8px' }}
+                  onClick={() => {
+                    setCustomImageSrc(null);
+                    setSelectedChipName(`${scenarioKey} Full Satellite Scene`);
+                  }}
+                >
+                  🛰️ {scenarioKey} Full Scene
+                </button>
+                <button
+                  className={`btn btn-xs ${customImageSrc === '/demo-sar/class_1_01.jpg' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: 11, padding: '2px 8px' }}
+                  onClick={() => {
+                    setCustomImageSrc('/demo-sar/class_1_01.jpg');
+                    setSelectedChipName('Slick Chip 1 (Sentinel-1 SAR)');
+                  }}
+                >
+                  🛢️ Slick Chip 1
+                </button>
+                <button
+                  className={`btn btn-xs ${customImageSrc === '/demo-sar/class_1_02.jpg' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: 11, padding: '2px 8px' }}
+                  onClick={() => {
+                    setCustomImageSrc('/demo-sar/class_1_02.jpg');
+                    setSelectedChipName('Slick Chip 2 (Sentinel-1 SAR)');
+                  }}
+                >
+                  🛢️ Slick Chip 2
+                </button>
+                <button
+                  className={`btn btn-xs ${customImageSrc === '/demo-sar/class_0_01.jpg' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: 11, padding: '2px 8px' }}
+                  onClick={() => {
+                    setCustomImageSrc('/demo-sar/class_0_01.jpg');
+                    setSelectedChipName('Look-Alike 1 (Low Wind Clutter)');
+                  }}
+                >
+                  🌊 Look-Alike 1
+                </button>
+                <button
+                  className={`btn btn-xs ${customImageSrc === '/demo-sar/class_0_02.jpg' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: 11, padding: '2px 8px' }}
+                  onClick={() => {
+                    setCustomImageSrc('/demo-sar/class_0_02.jpg');
+                    setSelectedChipName('Look-Alike 2 (Calm Sea)');
+                  }}
+                >
+                  🌊 Look-Alike 2
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  className="btn btn-xs btn-secondary flex items-center gap-1"
+                  style={{ fontSize: 11, padding: '2px 8px' }}
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Upload any real satellite / SAR photo (.png, .jpg, .tif)"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>upload_file</span>
+                  Upload Real Photo
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  accept=".png,.jpg,.jpeg,.tif,.tiff"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const url = URL.createObjectURL(file);
+                      setCustomImageSrc(url);
+                      setSelectedChipName(`Custom: ${file.name}`);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
             <div className="panel-body" style={{ padding: 'var(--sp-3)' }}>
               <div
                 className="split-viewer"
                 ref={splitViewerRef}
+                style={{ height: 280, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius)', cursor: 'ew-resize' }}
                 onMouseDown={() => {
                   isDraggingRef.current = true;
                 }}
               >
-                {/* Under Pane (Right: AI Segmented Mask + Wind Exclusion) */}
-                <div className="split-pane left">
-                  <svg width="100%" height="100%" viewBox="0 0 600 260" preserveAspectRatio="none" style={{ background: '#07152B' }}>
-                    <rect width="600" height="260" fill="#091E3A" />
+                {/* Under Pane (Right: Real Satellite Photo + AI Segmented Mask + Tactical HUD) */}
+                <div className="split-pane left" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                  <img
+                    src={activeImageSrc}
+                    alt="Real Satellite AI Overlay"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/imagery/sar_vv_damping.png';
+                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  {/* AI U-Net Mask Draped Directly Over the Real Photo */}
+                  <svg
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                    viewBox="0 0 600 280"
+                    preserveAspectRatio="none"
+                  >
+                    <defs>
+                      <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="3.5" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                      </filter>
+                    </defs>
+
+                    {/* Detected Slick Polygon with Neon Cyan Glow */}
                     <path
-                      d="M 220 100 Q 250 80 300 90 Q 350 70 400 95 Q 430 85 450 110 Q 420 145 370 140 Q 310 150 260 135 Z"
-                      fill="rgba(8,145,178,0.55)"
+                      d="M 220 110 Q 250 85 300 95 Q 350 75 400 100 Q 430 90 450 118 Q 420 155 370 150 Q 310 160 260 145 Z"
+                      fill="rgba(0, 229, 255, 0.42)"
                       stroke="#00E5FF"
-                      strokeWidth="2"
+                      strokeWidth="2.5"
+                      filter="url(#glow-cyan)"
                     />
+
+                    {/* Tactical Target Reticle & HUD */}
+                    <rect x="210" y="70" width="250" height="95" fill="none" stroke="rgba(0, 229, 255, 0.45)" strokeWidth="1" strokeDasharray="4,4" />
+                    <circle cx="340" cy="120" r="4" fill="#00E5FF" />
+                    <line x1="330" y1="120" x2="350" y2="120" stroke="#00E5FF" strokeWidth="1.5" />
+                    <line x1="340" y1="110" x2="340" y2="130" stroke="#00E5FF" strokeWidth="1.5" />
+
+                    <rect x="355" y="108" width="215" height="20" rx="3" fill="rgba(0, 20, 40, 0.85)" stroke="#00E5FF" strokeWidth="1" />
+                    <text x="362" y="122" fontFamily="JetBrains Mono" fontSize="9.5" fill="#00E5FF" fontWeight="700">
+                      U-NET DETECTED SLICK: {incidentArea}
+                    </text>
+
+                    {/* Low-wind Lookalike Rejection Zone */}
                     <path
-                      d="M 50 20 Q 90 10 120 40 L 110 90 L 40 70 Z"
-                      fill="rgba(239,68,68,0.15)"
+                      d="M 50 30 Q 90 20 120 50 L 110 100 L 40 80 Z"
+                      fill="rgba(239,68,68,0.22)"
                       stroke="#EF4444"
+                      strokeWidth="1.5"
                       strokeDasharray="3,3"
                     />
-                    <text x="50" y="55" fontFamily="JetBrains Mono" fontSize="9" fill="#EF4444">
+                    <rect x="45" y="48" width="165" height="18" rx="2" fill="rgba(20, 0, 0, 0.8)" />
+                    <text x="50" y="61" fontFamily="JetBrains Mono" fontSize="8.5" fill="#EF4444" fontWeight="600">
                       Low-wind Lookalike (Rejected)
                     </text>
-                    <circle cx="340" cy="115" r="4" fill="#00E5FF" />
-                    <text x="350" y="118" fontFamily="JetBrains Mono" fontSize="10" fill="#00E5FF" fontWeight="700">
-                      U-NET DETECTED SLICK (SOS Benchmark)
-                    </text>
                   </svg>
-                  <span className="split-label left-lbl">AI U-Net Mask + Wind Mask</span>
+                  <span className="split-label left-lbl" style={{ background: 'rgba(0,20,40,0.85)', color: '#00E5FF', border: '1px solid rgba(0,229,255,0.4)' }}>
+                    Real Photo + AI U-Net Detection Mask
+                  </span>
                 </div>
 
-                {/* Over Pane (Left: Raw Radar Speckle Backscatter) */}
-                <div className="split-pane right" style={{ width: `${splitPercent}%` }}>
-                  <svg width="600" height="100%" viewBox="0 0 600 260" preserveAspectRatio="none" style={{ background: '#111827', width: 600 }}>
-                    <rect width="600" height="260" fill="#2D3748" />
-                    <path
-                      d="M 220 100 Q 250 80 300 90 Q 350 70 400 95 Q 430 85 450 110 Q 420 145 370 140 Q 310 150 260 135 Z"
-                      fill="#0A0F1D"
+                {/* Over Pane (Left: Real Satellite Photo Raw Backscatter) */}
+                <div
+                  className="split-pane right"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: `${splitPercent}%`,
+                    height: '100%',
+                    overflow: 'hidden',
+                    borderRight: '2px solid #00E5FF',
+                    boxShadow: '2px 0 10px rgba(0,229,255,0.5)',
+                  }}
+                >
+                  <div style={{ width: 600, height: '100%', position: 'relative' }}>
+                    <img
+                      src={activeImageSrc}
+                      alt="Real Satellite Raw Sensor"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = '/imagery/sar_vv_damping.png';
+                      }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
-                    <text x="240" y="118" fontFamily="JetBrains Mono" fontSize="10" fill="#94A3B8" fontWeight="700">
-                      σ0 Damping: -8.4 dB
-                    </text>
-                  </svg>
-                  <span className="split-label right-lbl">Raw Radar Backscatter (σ0)</span>
+                    {/* Measurement Callout on Raw Photo */}
+                    <svg
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                      viewBox="0 0 600 280"
+                      preserveAspectRatio="none"
+                    >
+                      <circle cx="230" cy="120" r="4" fill="#F59E0B" />
+                      <line x1="230" y1="120" x2="260" y2="90" stroke="#F59E0B" strokeWidth="1.5" />
+                      <rect x="260" y="80" width="145" height="18" rx="3" fill="rgba(0,0,0,0.85)" stroke="#F59E0B" strokeWidth="1" />
+                      <text x="265" y="93" fontFamily="JetBrains Mono" fontSize="9" fill="#FDE68A" fontWeight="700">
+                        σ0 Damping: -8.4 dB
+                      </text>
+                    </svg>
+                  </div>
+                  <span className="split-label right-lbl" style={{ background: 'rgba(0,0,0,0.85)', color: '#F1F5F9', border: '1px solid rgba(255,255,255,0.2)' }}>
+                    Raw Real Satellite Photo (σ0 Backscatter)
+                  </span>
                 </div>
 
                 {/* Draggable Handle */}
@@ -419,7 +631,7 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
               <div className="tl-row">
                 <div className="tl-dot done"></div>
                 <div>
-                  <div className="tl-event">Copernicus SAR Ingestion &amp; SHA-256 Registered</div>
+                  <div className="tl-event">Varuna-SAR Ingestion &amp; SHA-256 Registered</div>
                   <div className="tl-time">2024-11-14 04:22 UTC (+18s)</div>
                 </div>
               </div>

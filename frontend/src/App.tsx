@@ -117,6 +117,8 @@ export const App: React.FC = () => {
           <InvestigationView
             onSelectTab={setActiveTab}
             onOpenForensicModal={() => setIsForensicOpen(true)}
+            currentScenario={scenario}
+            currentScenarioKey={currentScenarioKey}
           />
         )}
 
