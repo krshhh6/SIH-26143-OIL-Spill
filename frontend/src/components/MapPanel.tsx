@@ -102,8 +102,8 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
   const [selectedCopernicusLayer, setSelectedCopernicusLayer] = useState<CopernicusLayerId>('true-color');
   const [activeSatellite, setActiveSatellite] = useState<string>('Sentinel-2A');
   const [showSpillOverlay, setShowSpillOverlay] = useState<boolean>(true);
-  const [showIndiaOutline, setShowIndiaOutline] = useState<boolean>(true);
-  const [showEezBoundary, setShowEezBoundary] = useState<boolean>(true);
+  const [showIndiaOutline, setShowIndiaOutline] = useState<boolean>(false);
+  const [showEezBoundary, setShowEezBoundary] = useState<boolean>(false);
   const [satelliteToast, setSatelliteToast] = useState<string | null>(null);
   const [isSideLayersOpen, setIsSideLayersOpen] = useState<boolean>(false);
 
@@ -117,7 +117,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
     'Sentinel-2A MSI (Optical)';
 
   const [layerOpacity, setLayerOpacity] = useState<number>(0.92);
-  const [showAiMask, setShowAiMask] = useState<boolean>(false);
+  const [showAiMask, setShowAiMask] = useState<boolean>(true);
   const [showRawImageModal, setShowRawImageModal] = useState<boolean>(false);
   const [modalZoom, setModalZoom] = useState<number>(1.0);
   const [selectedDate, setSelectedDate] = useState<string>('2024-11-14');
@@ -198,13 +198,9 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
     setSatelliteToast(sensorDesc);
     setTimeout(() => setSatelliteToast(null), 4500);
 
-    // CRITICAL: Immediately fly the camera to the satellite swath footprint so user sees the change!
-    if (leafletMapRef.current) {
-      if (scenario) {
-        leafletMapRef.current.flyTo([scenario.lat, scenario.lng], 12, { duration: 0.8 });
-      } else {
-        leafletMapRef.current.flyTo([18.743, 71.218], 11.5, { duration: 0.8 });
-      }
+    // Fly camera only when a specific incident is active
+    if (leafletMapRef.current && scenario) {
+      leafletMapRef.current.flyTo([scenario.lat, scenario.lng], 12, { duration: 0.8 });
     }
   };
 
@@ -231,12 +227,8 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
     setSatelliteToast(`Spectral Drape: ${layerName}`);
     setTimeout(() => setSatelliteToast(null), 4500);
 
-    if (leafletMapRef.current) {
-      if (scenario) {
-        leafletMapRef.current.flyTo([scenario.lat, scenario.lng], 12, { duration: 0.8 });
-      } else {
-        leafletMapRef.current.flyTo([18.743, 71.218], 11.5, { duration: 0.8 });
-      }
+    if (leafletMapRef.current && scenario) {
+      leafletMapRef.current.flyTo([scenario.lat, scenario.lng], 12, { duration: 0.8 });
     }
   };
 
@@ -278,7 +270,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
       if (scenario) {
         leafletMapRef.current.flyTo([scenario.lat, scenario.lng], 12, { duration: 0.8 });
       } else {
-        leafletMapRef.current.flyTo([13.5, 71.0], 3.75, { duration: 0.8 });
+        leafletMapRef.current.flyTo([15.5, 79.0], 4.25, { duration: 0.8 });
       }
     }
   };

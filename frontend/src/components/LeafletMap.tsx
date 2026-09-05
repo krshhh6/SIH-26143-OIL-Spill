@@ -49,8 +49,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const initialCenter: [number, number] = scenario ? [scenario.lat, scenario.lng] : [13.5, 71.0];
-    const initialZoom = scenario ? 11 : 3.75;
+    const initialCenter: [number, number] = scenario ? [scenario.lat, scenario.lng] : [15.5, 79.0];
+    const initialZoom = scenario ? 11 : 4.25;
 
     const map = L.map(containerRef.current, {
       center: initialCenter,
@@ -321,7 +321,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       if (scenario) {
         map.flyTo([scenario.lat, scenario.lng], 11, { duration: 1.2 });
       } else {
-        map.flyTo([13.5, 71.0], 3.75, { duration: 1.2 });
+        map.flyTo([15.5, 79.0], 4.25, { duration: 1.2 });
       }
     }
   }, [scenario?.id, scenario?.lat, scenario?.lng]);

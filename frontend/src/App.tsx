@@ -16,9 +16,9 @@ import { BhoonidhiModal } from './components/modals/BhoonidhiModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [currentScenarioKey, setCurrentScenarioKey] = useState<string>('INC-001');
+  const [currentScenarioKey, setCurrentScenarioKey] = useState<string>('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [coordinates, setCoordinates] = useState<string>('18.7430°N, 71.2180°E (Mumbai High Basin)');
+  const [coordinates, setCoordinates] = useState<string>('15.5000°N, 79.0000°E (Indian Ocean EEZ)');
   const [isForensicOpen, setIsForensicOpen] = useState<boolean>(false);
   const [isSentinelHubOpen, setIsSentinelHubOpen] = useState<boolean>(false);
   const [isBhoonidhiOpen, setIsBhoonidhiOpen] = useState<boolean>(false);
@@ -40,7 +40,7 @@ export const App: React.FC = () => {
       const s = SCENARIOS[key];
       setCoordinates(`${s.lat.toFixed(4)}°N, ${s.lng.toFixed(4)}°E`);
     } else {
-      setCoordinates('13.5000°N, 71.0000°E (National Overview)');
+      setCoordinates('15.5000°N, 79.0000°E (Indian Ocean EEZ)');
     }
   };
 
