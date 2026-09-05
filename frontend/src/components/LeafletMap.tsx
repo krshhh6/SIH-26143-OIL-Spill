@@ -478,7 +478,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           html: `
             <div class="gis-glass-marker active-incident" style="color: #00E5FF; cursor: pointer;">
               <div class="gis-glass-dot" style="background: #00E5FF; box-shadow: 0 0 10px rgba(0, 229, 255, 0.6); border: 2px solid #FFFFFF;"></div>
-              <div class="gis-glass-capsule ${placementClass}" style="border-color: rgba(0, 229, 255, 0.6); background: rgba(10, 15, 29, 0.94);">
+              <div class="gis-glass-capsule ${placementClass}" style="border-color: rgba(0, 229, 255, 0.6);">
                 <span class="gis-capsule-id" style="background: rgba(0, 229, 255, 0.22); border-color: #00E5FF; color: #00E5FF;">
                   ${sc.id.replace('2026-', '')}
                 </span>
@@ -517,7 +517,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           html: `
             <div class="gis-glass-marker" style="color: ${badgeColor}; cursor: pointer;">
               <div class="gis-glass-dot" style="background: ${badgeColor}; box-shadow: 0 1px 6px rgba(0,0,0,0.5); border: 1.5px solid #FFFFFF;"></div>
-              <div class="gis-glass-capsule ${placementClass}" style="border-color: ${badgeColor}55; background: rgba(10, 15, 29, 0.92);">
+              <div class="gis-glass-capsule ${placementClass}" style="border-color: ${badgeColor}55;">
                 <span class="gis-capsule-id" style="background: ${badgeColor}18; border-color: ${badgeColor}55; color: ${badgeColor};">
                   ${sc.id.replace('2026-', '')}
                 </span>
@@ -719,16 +719,29 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
       const vesselPos = driftGeo.vesselTrack[driftGeo.vesselTrack.length - 1];
       const vesselIcon = L.divIcon({
-        className: 'gis-vessel-marker',
+        className: 'gis-glass-marker-wrap',
         html: `
-          <div class="gis-vessel-wrap" style="transform: rotate(${driftGeo.vesselHeading}deg);" title="${scenario.topVessel}">
-            <svg width="22" height="22" viewBox="0 0 18 18">
-              <polygon points="9,1 16,16 9,12 2,16" fill="#EA580C" stroke="#FFFFFF" stroke-width="1.5" />
-            </svg>
+          <div class="gis-glass-marker" style="color: #EA580C; cursor: pointer;">
+            <div class="gis-vessel-wrap" style="position: absolute; top: -11px; left: -11px; width: 22px; height: 22px; transform: rotate(${driftGeo.vesselHeading}deg);" title="${scenario.topVessel}">
+              <svg width="22" height="22" viewBox="0 0 18 18">
+                <polygon points="9,1 16,16 9,12 2,16" fill="#EA580C" stroke="#FFFFFF" stroke-width="1.5" />
+              </svg>
+            </div>
+            <div class="gis-glass-capsule placement-right" style="border-color: rgba(234, 88, 12, 0.6); left: 16px;">
+              <span class="gis-capsule-pill" style="color: #EA580C; border-color: rgba(234, 88, 12, 0.6); background: rgba(234, 88, 12, 0.18); font-weight: 700;">
+                SUSPECT
+              </span>
+              <span class="gis-capsule-title" style="color: #FFFFFF; font-weight: 700;">
+                ${scenario.topVessel}
+              </span>
+              <span class="gis-capsule-id" style="background: rgba(234, 88, 12, 0.22); border-color: #EA580C; color: #EA580C;">
+                AIS TRACK
+              </span>
+            </div>
           </div>
         `,
-        iconSize: [22, 22],
-        iconAnchor: [11, 11],
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
       });
       group.addLayer(
         L.marker(vesselPos, { icon: vesselIcon }).bindPopup(`
@@ -746,14 +759,20 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
       // 2. DISCHARGE ORIGIN PIN (T-22h Source)
       const originIcon = L.divIcon({
-        className: 'gis-origin-marker',
+        className: 'gis-glass-marker-wrap',
         html: `
-          <div style="position:relative;width:24px;height:24px;margin-left:-12px;margin-top:-12px;">
-            <div style="position:absolute;width:100%;height:100%;border-radius:50%;border:1.5px solid #F59E0B;opacity:0.6;"></div>
-            <div style="position:absolute;top:4px;left:4px;width:16px;height:16px;border-radius:50%;background:#F59E0B;border:2px solid #FFFFFF;box-shadow:0 1px 6px rgba(0,0,0,0.5);"></div>
-            <div style="position:absolute;left:24px;top:-13px;background:rgba(10,15,29,0.95);border:1px solid #F59E0B88;border-radius:4px;padding:3px 8px;color:#FFFFFF;font-family:monospace;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,0.85);display:flex;align-items:center;gap:6px;">
-              <span style="width:6px;height:6px;border-radius:50%;background:#F59E0B;"></span>
-              <span>ESTIMATED DISCHARGE ORIGIN (T-22h)</span>
+          <div class="gis-glass-marker" style="color: #F59E0B; cursor: pointer;">
+            <div class="gis-glass-dot" style="background: #F59E0B; box-shadow: 0 0 10px rgba(245, 158, 11, 0.6); border: 2px solid #FFFFFF;"></div>
+            <div class="gis-glass-capsule placement-right" style="border-color: rgba(245, 158, 11, 0.6);">
+              <span class="gis-capsule-pill" style="color: #F59E0B; border-color: rgba(245, 158, 11, 0.6); background: rgba(245, 158, 11, 0.18); font-weight: 700;">
+                ORIGIN
+              </span>
+              <span class="gis-capsule-title" style="color: #FFFFFF; font-weight: 700;">
+                Estimated Discharge
+              </span>
+              <span class="gis-capsule-id" style="background: rgba(245, 158, 11, 0.22); border-color: #F59E0B; color: #F59E0B;">
+                T - 22h
+              </span>
             </div>
           </div>
         `,
@@ -773,14 +792,20 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
       // 3. PREDICTED FORWARD DRIFT PIN (T+24h Forecast)
       const forwardIcon = L.divIcon({
-        className: 'gis-forward-drift-pin',
+        className: 'gis-glass-marker-wrap',
         html: `
-          <div style="position:relative;width:24px;height:24px;margin-left:-12px;margin-top:-12px;">
-            <div style="position:absolute;width:100%;height:100%;border-radius:50%;border:1.5px solid #10B981;opacity:0.6;"></div>
-            <div style="position:absolute;top:4px;left:4px;width:16px;height:16px;border-radius:50%;background:#10B981;border:2px solid #FFFFFF;box-shadow:0 1px 6px rgba(0,0,0,0.5);"></div>
-            <div style="position:absolute;left:24px;top:-13px;background:rgba(10,15,29,0.95);border:1px solid #10B98188;border-radius:4px;padding:3px 8px;color:#FFFFFF;font-family:monospace;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,0.85);display:flex;align-items:center;gap:6px;">
-              <span style="width:6px;height:6px;border-radius:50%;background:#10B981;"></span>
-              <span>PREDICTED SPILL DRIFT (T+24h)</span>
+          <div class="gis-glass-marker" style="color: #10B981; cursor: pointer;">
+            <div class="gis-glass-dot" style="background: #10B981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.6); border: 2px solid #FFFFFF;"></div>
+            <div class="gis-glass-capsule placement-right" style="border-color: rgba(16, 185, 129, 0.6);">
+              <span class="gis-capsule-pill" style="color: #10B981; border-color: rgba(16, 185, 129, 0.6); background: rgba(16, 185, 129, 0.18); font-weight: 700;">
+                FORECAST
+              </span>
+              <span class="gis-capsule-title" style="color: #FFFFFF; font-weight: 700;">
+                Predicted Spill Drift
+              </span>
+              <span class="gis-capsule-id" style="background: rgba(16, 185, 129, 0.22); border-color: #10B981; color: #10B981;">
+                T + 24h
+              </span>
             </div>
           </div>
         `,
