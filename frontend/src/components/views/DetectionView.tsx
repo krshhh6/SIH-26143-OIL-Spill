@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { TabType, SarClassificationResult } from '../../types/dashboard';
 import { loadModel, isModelLoaded, classifyImage, generateOcclusionMap } from '../../services/sarClassifier';
+import { decodeTiffFile } from '../../utils/tiffDecoder';
 
 interface DetectionViewProps {
   onSelectTab?: (tab: TabType) => void;
@@ -13,6 +14,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
   const [isGeneratingHeatmap, setIsGeneratingHeatmap] = useState(false);
+  const [tiffNotice, setTiffNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -21,9 +23,28 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
     });
   }, []);
 
-  const handleImageUpload = (file: File) => {
-    const url = URL.createObjectURL(file);
-    handleImageSelect(url);
+  const handleImageUpload = async (file: File) => {
+    const isTiff = file.name.toLowerCase().endsWith('.tif') ||
+                   file.name.toLowerCase().endsWith('.tiff') ||
+                   file.type.includes('tiff');
+
+    if (isTiff) {
+      try {
+        setIsProcessing(true);
+        setTiffNotice(`Decoding GeoTIFF: ${file.name}...`);
+        const decoded = await decodeTiffFile(file);
+        setTiffNotice(`🛰️ GeoTIFF Decoded: ${file.name} — ${decoded.formatDescription}`);
+        handleImageSelect(decoded.dataUrl);
+      } catch (err) {
+        console.error('Failed to decode TIFF:', err);
+        setTiffNotice('❌ Failed to decode TIFF/GeoTIFF raster.');
+        setIsProcessing(false);
+      }
+    } else {
+      setTiffNotice(null);
+      const url = URL.createObjectURL(file);
+      handleImageSelect(url);
+    }
   };
 
   const handleImageSelect = (url: string) => {
@@ -101,8 +122,13 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
           }}
         >
           <span className="material-symbols-outlined" style={{ fontSize: '3rem', opacity: 0.5, marginBottom: 'var(--sp-3)' }}>cloud_upload</span>
-          <p>Drop a SAR image here or click to upload</p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 'var(--sp-2)' }}>Accepts .jpg, .png, .tif</p>
+          <p>Drop a SAR image or GeoTIFF (.tif) here or click to upload</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 'var(--sp-2)' }}>Accepts .tif, .tiff, .jpg, .png (Auto-calibrates 32-bit Sentinel-1 dB)</p>
+          {tiffNotice && (
+            <div style={{ marginTop: 'var(--sp-2)', padding: '4px 8px', borderRadius: 'var(--radius)', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.3)', color: '#00E5FF', fontSize: '0.78rem' }}>
+              {tiffNotice}
+            </div>
+          )}
           <input 
             type="file" 
             ref={fileInputRef} 
@@ -125,7 +151,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
                   src={src} 
                   alt={`Class 1 Sample ${i+1}`}
                   style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 'var(--radius)', cursor: 'pointer', border: selectedImage === src ? '2px solid var(--accent)' : 'none' }}
-                  onClick={() => handleImageSelect(src)}
+                  onClick={() => { setTiffNotice(null); handleImageSelect(src); }}
                   onError={(e) => (e.currentTarget.style.display = 'none')}
                 />
               ))}

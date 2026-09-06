@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Scenario, TabType } from '../../types/dashboard';
+import { decodeTiffFile } from '../../utils/tiffDecoder';
 
 interface InvestigationViewProps {
   onSelectTab: (tab: TabType) => void;
@@ -387,22 +388,38 @@ export const InvestigationView: React.FC<InvestigationViewProps> = ({
                   className="btn btn-xs btn-secondary flex items-center gap-1"
                   style={{ fontSize: 11, padding: '2px 8px' }}
                   onClick={() => fileInputRef.current?.click()}
-                  title="Upload any real satellite / SAR photo (.png, .jpg, .tif)"
+                  title="Upload any real satellite photo or Sentinel-1 GeoTIFF (.tif, .png, .jpg)"
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: 14 }}>upload_file</span>
-                  Upload Real Photo
+                  Upload Photo / GeoTIFF
                 </button>
                 <input
                   type="file"
                   ref={fileInputRef}
                   style={{ display: 'none' }}
                   accept=".png,.jpg,.jpeg,.tif,.tiff"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      const url = URL.createObjectURL(file);
-                      setCustomImageSrc(url);
-                      setSelectedChipName(`Custom: ${file.name}`);
+                      const isTiff = file.name.toLowerCase().endsWith('.tif') ||
+                                     file.name.toLowerCase().endsWith('.tiff') ||
+                                     file.type.includes('tiff');
+                      if (isTiff) {
+                        try {
+                          setSelectedChipName(`Decoding ${file.name}...`);
+                          const decoded = await decodeTiffFile(file);
+                          setCustomImageSrc(decoded.dataUrl);
+                          setSelectedChipName(`GeoTIFF: ${file.name}`);
+                        } catch (err) {
+                          console.error("Failed to decode GeoTIFF:", err);
+                          alert("Failed to decode GeoTIFF: " + (err instanceof Error ? err.message : String(err)));
+                          setSelectedChipName(`Failed: ${file.name}`);
+                        }
+                      } else {
+                        const url = URL.createObjectURL(file);
+                        setCustomImageSrc(url);
+                        setSelectedChipName(`Custom: ${file.name}`);
+                      }
                     }
                   }}
                 />
