@@ -12,7 +12,7 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   currentScenario,
-  onSelectTab,
+  onSelectTab: _onSelectTab,
   onOpenForensicModal: _onOpenForensicModal,
   onUpdateCoords,
   onSelectScenario,
@@ -92,14 +92,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               Overview
             </button>
           )}
-          <button
-            className="btn btn-primary"
-            onClick={() => onSelectTab('investigation')}
-            style={{ padding: '4px 12px', fontSize: 11, gap: 5 }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>analytics</span>
-            SAR Studio
-          </button>
         </div>
       </div>
 

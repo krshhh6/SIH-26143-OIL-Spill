@@ -19,14 +19,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
           Command Dashboard
           <span className="nav-badge" id="badge-count">3</span>
         </li>
-        <li
-          className={`nav-item ${activeTab === 'investigation' ? 'active' : ''}`}
-          onClick={() => onSelectTab('investigation')}
-        >
-          <span className="material-symbols-outlined">satellite_alt</span>
-          Varuna Satellite Studio
-          <span className="nav-badge blue">DRISHTI</span>
-        </li>
+
         <li
           className={`nav-item ${activeTab === 'drift' ? 'active' : ''}`}
           onClick={() => onSelectTab('drift')}

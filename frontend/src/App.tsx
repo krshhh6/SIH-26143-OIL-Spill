@@ -4,7 +4,6 @@ import { SCENARIOS } from './data/scenarios';
 import { Topbar } from './components/Topbar';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/views/DashboardView';
-import { InvestigationView } from './components/views/InvestigationView';
 import { DriftView } from './components/views/DriftView';
 import { AttributionView } from './components/views/AttributionView';
 import { EvidenceView } from './components/views/EvidenceView';
@@ -55,14 +54,14 @@ export const App: React.FC = () => {
     }
   };
 
-  // Keyboard navigation shortcuts (1-7, Escape)
+  // Keyboard navigation shortcuts (1-6, Escape)
   useEffect(() => {
-    const tabs: TabType[] = ['dashboard', 'investigation', 'drift', 'attribution', 'evidence', 'analytics', 'detection'];
+    const tabs: TabType[] = ['dashboard', 'drift', 'attribution', 'evidence', 'analytics', 'detection'];
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
 
       const k = parseInt(e.key, 10);
-      if (k >= 1 && k <= 7) {
+      if (k >= 1 && k <= 6) {
         setActiveTab(tabs[k - 1]);
       }
       if (e.key === 'Escape') {
@@ -113,14 +112,6 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'investigation' && (
-          <InvestigationView
-            onSelectTab={setActiveTab}
-            onOpenForensicModal={() => setIsForensicOpen(true)}
-            currentScenario={scenario}
-            currentScenarioKey={currentScenarioKey}
-          />
-        )}
 
         {activeTab === 'drift' && <DriftView onSelectTab={setActiveTab} />}
 
