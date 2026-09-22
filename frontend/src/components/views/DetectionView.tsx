@@ -87,9 +87,9 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
     img.src = selectedImage;
   };
 
-  // Curated samples: removed 1, 2, 8 (last third), 10 (last) from class 1, and 5 from class 0
-  const class1Images = [3, 4, 5, 6, 7, 9].map((n) => `/demo-sar/class_1_${n}.jpg`);
-  const class0Images = [1, 2, 3, 4, 6, 7, 8, 9, 10].map((n) => `/demo-sar/class_0_${n}.jpg`);
+  // Exactly 5 balanced, high-aesthetic curated samples per class
+  const class1Images = [3, 5, 6, 7, 9].map((n) => `/demo-sar/class_1_${n}.jpg`);
+  const class0Images = [1, 2, 3, 6, 7].map((n) => `/demo-sar/class_0_${n}.jpg`);
 
   return (
     <div className="view-container glass" style={{ padding: 'var(--sp-6)', overflowY: 'auto', height: '100%' }}>
@@ -144,20 +144,22 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
         </div>
 
         {/* Gallery */}
-        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 'var(--sp-4)', borderRadius: 'var(--radius-lg)' }}>
-          <h3 style={{ marginBottom: 'var(--sp-4)' }}>Try Sample Images</h3>
+        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 'var(--sp-4)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <h3 style={{ marginBottom: 'var(--sp-3)' }}>Try Sample Images</h3>
           
-          <div style={{ marginBottom: 'var(--sp-4)' }}>
+          <div style={{ marginBottom: 'var(--sp-3)' }}>
             <div style={{ fontSize: '0.85rem', marginBottom: 'var(--sp-2)', color: 'var(--text-muted)' }}>🛢️ Oil Spill Samples (Class 1)</div>
-            <div style={{ display: 'flex', gap: 'var(--sp-2)', overflowX: 'auto', paddingBottom: 'var(--sp-2)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--sp-2)' }}>
               {class1Images.map((src, i) => (
                 <img 
                   key={`c1-${i}`} 
                   src={src} 
                   alt={`Class 1 Sample ${i+1}`}
-                  style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 'var(--radius)', cursor: 'pointer', border: selectedImage === src ? '2px solid var(--accent)' : 'none' }}
+                  style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 'var(--radius)', cursor: 'pointer', border: selectedImage === src ? '2px solid var(--accent)' : '1px solid rgba(255,255,255,0.1)', transition: 'transform 0.15s ease' }}
                   onClick={() => { setTiffNotice(null); handleImageSelect(src); }}
                   onError={(e) => (e.currentTarget.style.display = 'none')}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 />
               ))}
             </div>
@@ -165,15 +167,17 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
 
           <div>
             <div style={{ fontSize: '0.85rem', marginBottom: 'var(--sp-2)', color: 'var(--text-muted)' }}>🌊 Clean Ocean Samples (Class 0)</div>
-            <div style={{ display: 'flex', gap: 'var(--sp-2)', overflowX: 'auto', paddingBottom: 'var(--sp-2)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--sp-2)' }}>
               {class0Images.map((src, i) => (
                 <img 
                   key={`c0-${i}`} 
                   src={src} 
                   alt={`Class 0 Sample ${i+1}`}
-                  style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 'var(--radius)', cursor: 'pointer', border: selectedImage === src ? '2px solid var(--accent)' : 'none' }}
+                  style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 'var(--radius)', cursor: 'pointer', border: selectedImage === src ? '2px solid var(--accent)' : '1px solid rgba(255,255,255,0.1)', transition: 'transform 0.15s ease' }}
                   onClick={() => handleImageSelect(src)}
                   onError={(e) => (e.currentTarget.style.display = 'none')}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 />
               ))}
             </div>
