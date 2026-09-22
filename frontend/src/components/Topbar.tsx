@@ -46,10 +46,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   return (
     <header className="topbar">
       {/* BRAND LOGO */}
-      <div className="topbar-logo">
-        <div className="logo-icon">
-          <span className="material-symbols-rounded" style={{ fontSize: 20 }}>waves</span>
-        </div>
+      <div className="topbar-logo" style={{ padding: 0, gap: '12px' }}>
+        <img src="/clean_raw_logo.png" alt="Spill Sense Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
         <div>
           <div className="logo-name">SPILL SENSE</div>
           <div className="logo-sub">MARITIME C2 INTELLIGENCE</div>
