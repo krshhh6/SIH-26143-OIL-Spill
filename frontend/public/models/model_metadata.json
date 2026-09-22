@@ -1,8 +1,8 @@
 {
   "model_name": "DualPolOilSpillNet",
   "model_type": "classifier",
-  "version": "v3_zenodo_gt_dualpol",
-  "exported_at": "2026-09-22T11:00:19Z",
+  "version": "v3_zenodo_gt_dualpol_finetuned",
+  "exported_at": "2026-09-22T15:40:45Z",
   "in_channels": 2,
   "input_shape": [
     1,
@@ -14,55 +14,13 @@
     "VV",
     "VH"
   ],
-  "optimal_threshold": 0.26999999999999996,
+  "optimal_threshold": 0.45000000000000007,
   "normalization": {
     "vv_min_db": -32.0,
     "vv_max_db": -10.0,
     "vh_min_db": -42.0,
     "vh_max_db": -20.0
   },
-  "metrics": {
-    "val_accuracy": 0.9649232046492321,
-    "val_precision": 0.9798948345190226,
-    "val_recall": 0.9682151589242054,
-    "val_f1": 0.9740199846272098,
-    "val_pr_auc": 0.9842636707051265,
-    "val_roc_auc": 0.9937564643515722
-  },
-  "category_metrics": {
-    "clean": {
-      "count": 1082.0,
-      "tnr": 0.9491682070240296,
-      "fpr": 0.05083179297597042,
-      "tn": 1027.0,
-      "fp": 55.0
-    },
-    "lookalike": {
-      "count": 389.0,
-      "tnr": 0.9820051413881749,
-      "fpr": 0.017994858611825194,
-      "tn": 382.0,
-      "fp": 7.0
-    },
-    "oil": {
-      "count": 3272.0,
-      "recall": 0.9682151589242054,
-      "tp": 3168.0,
-      "fn": 104.0
-    },
-    "ship_wake": {
-      "count": 75.0,
-      "tnr": 0.96,
-      "fpr": 0.04,
-      "tn": 72.0,
-      "fp": 3.0
-    }
-  },
-  "confusion_matrix": {
-    "tp": 3168,
-    "tn": 1481,
-    "fp": 65,
-    "fn": 104
-  },
+  "finetune_note": "Fine-tuned on gallery-representative Zenodo scenes",
   "onnx_size_kb": 1261.8896484375
 }
