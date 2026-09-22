@@ -138,7 +138,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
     };
 
     socket.on('drift_completed', handleDriftCompleted);
-    socket.on('system_status', (data) => console.log(data.message));
+    socket.on('system_status', (data: any) => console.log(data.message));
 
     return () => {
       socket.off('drift_completed', handleDriftCompleted);
