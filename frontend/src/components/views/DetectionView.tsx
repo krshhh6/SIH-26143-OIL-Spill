@@ -87,8 +87,9 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
     img.src = selectedImage;
   };
 
-  const class1Images = Array.from({ length: 10 }, (_, i) => `/demo-sar/class_1_${i + 1}.jpg`);
-  const class0Images = Array.from({ length: 10 }, (_, i) => `/demo-sar/class_0_${i + 1}.jpg`);
+  // Curated samples: removed 1, 2, 8 (last third), 10 (last) from class 1, and 5 from class 0
+  const class1Images = [3, 4, 5, 6, 7, 9].map((n) => `/demo-sar/class_1_${n}.jpg`);
+  const class0Images = [1, 2, 3, 4, 6, 7, 8, 9, 10].map((n) => `/demo-sar/class_0_${n}.jpg`);
 
   return (
     <div className="view-container glass" style={{ padding: 'var(--sp-6)', overflowY: 'auto', height: '100%' }}>
