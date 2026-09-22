@@ -34,7 +34,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
         setTiffNotice(`Decoding GeoTIFF: ${file.name}...`);
         const decoded = await decodeTiffFile(file);
         setTiffNotice(`🛰️ GeoTIFF Decoded: ${file.name} — ${decoded.formatDescription}`);
-        handleImageSelect(decoded.dataUrl);
+        handleImageSelect(decoded.dataUrl, { vvRaster: decoded.vvRaster, vhRaster: decoded.vhRaster });
       } catch (err) {
         console.error('Failed to decode TIFF:', err);
         setTiffNotice('❌ Failed to decode TIFF/GeoTIFF raster.');
@@ -47,7 +47,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
     }
   };
 
-  const handleImageSelect = (url: string) => {
+  const handleImageSelect = (url: string, rasters?: { vvRaster?: Float32Array; vhRaster?: Float32Array }) => {
     setSelectedImage(url);
     setResult(null);
     setHeatmapUrl(null);
@@ -57,7 +57,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
     img.crossOrigin = "Anonymous";
     img.onload = async () => {
       try {
-        const res = await classifyImage(img);
+        const res = await classifyImage(img, rasters);
         setResult(res);
       } catch (err) {
         console.error(err);
@@ -218,7 +218,13 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
                 ) : (
                   <>
                     <span>Confidence: {(result.confidence * 100).toFixed(1)}%</span>
-                    <span>Inference Time: {result.inferenceTimeMs}ms</span>
+                    <span>Classifier: {result.inferenceTimeMs}ms</span>
+                    {result.spillAreaPercent !== undefined && result.spillAreaPercent > 0 && (
+                      <span style={{ color: '#ef4444', fontWeight: 600 }}>Spill Area: {result.spillAreaPercent}%</span>
+                    )}
+                    {result.segmentationTimeMs !== undefined && (
+                      <span>Segmenter: {result.segmentationTimeMs}ms</span>
+                    )}
                   </>
                 )}
               </div>
@@ -245,6 +251,21 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
               </div>
               <img src={selectedImage} alt="Selected" style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', background: '#000' }} />
             </div>
+
+            {/* SpillSegNet Segmentation Panel */}
+            {result.segmentationMask && (
+              <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
+                <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
+                  <span>🎯 SpillSegNet U-Net Mask</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Coverage: {result.spillAreaPercent}%</span>
+                </div>
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#000' }}>
+                  <img src={selectedImage} alt="Original" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <img src={result.segmentationMask} alt="SpillSegNet Mask" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 1 }} />
+                </div>
+              </div>
+            )}
+
             <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
               <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
                 Attention Map (Occlusion Sensitivity)

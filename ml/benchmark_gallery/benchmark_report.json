@@ -1,0 +1,402 @@
+[
+  {
+    "index": 0,
+    "scene_id": "oil_00000",
+    "category": "oil",
+    "cls_probability": 0.8515,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0553,
+    "seg_mean_prob": 0.0615
+  },
+  {
+    "index": 1,
+    "scene_id": "oil_00001",
+    "category": "oil",
+    "cls_probability": 0.5231,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.2031,
+    "seg_mean_prob": 0.219
+  },
+  {
+    "index": 2,
+    "scene_id": "oil_00002",
+    "category": "oil",
+    "cls_probability": 0.9636,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0299,
+    "seg_mean_prob": 0.0898
+  },
+  {
+    "index": 3,
+    "scene_id": "oil_00003",
+    "category": "oil",
+    "cls_probability": 0.981,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0588,
+    "seg_mean_prob": 0.111
+  },
+  {
+    "index": 4,
+    "scene_id": "oil_00004",
+    "category": "oil",
+    "cls_probability": 0.979,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0809,
+    "seg_mean_prob": 0.1367
+  },
+  {
+    "index": 5,
+    "scene_id": "oil_00005",
+    "category": "oil",
+    "cls_probability": 0.9708,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.1566,
+    "seg_mean_prob": 0.204
+  },
+  {
+    "index": 6,
+    "scene_id": "oil_00006",
+    "category": "oil",
+    "cls_probability": 0.9413,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0091,
+    "seg_mean_prob": 0.0284
+  },
+  {
+    "index": 7,
+    "scene_id": "oil_00007",
+    "category": "oil",
+    "cls_probability": 0.8011,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0976,
+    "seg_mean_prob": 0.124
+  },
+  {
+    "index": 8,
+    "scene_id": "oil_00008",
+    "category": "oil",
+    "cls_probability": 0.7611,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.1184,
+    "seg_mean_prob": 0.1501
+  },
+  {
+    "index": 9,
+    "scene_id": "oil_00009",
+    "category": "oil",
+    "cls_probability": 0.9211,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0799,
+    "seg_mean_prob": 0.0596
+  },
+  {
+    "index": 10,
+    "scene_id": "clean_00000_0_0",
+    "category": "clean",
+    "cls_probability": 0.2049,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0017
+  },
+  {
+    "index": 11,
+    "scene_id": "clean_00000_0_384",
+    "category": "clean",
+    "cls_probability": 0.0592,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0015
+  },
+  {
+    "index": 12,
+    "scene_id": "clean_00000_0_768",
+    "category": "clean",
+    "cls_probability": 0.065,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0016
+  },
+  {
+    "index": 13,
+    "scene_id": "clean_00000_0_1152",
+    "category": "clean",
+    "cls_probability": 0.0811,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0017
+  },
+  {
+    "index": 14,
+    "scene_id": "clean_00000_0_1536",
+    "category": "clean",
+    "cls_probability": 0.0951,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0019
+  },
+  {
+    "index": 15,
+    "scene_id": "clean_00000_384_0",
+    "category": "clean",
+    "cls_probability": 0.097,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0016
+  },
+  {
+    "index": 16,
+    "scene_id": "clean_00000_384_384",
+    "category": "clean",
+    "cls_probability": 0.0778,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0016
+  },
+  {
+    "index": 17,
+    "scene_id": "clean_00000_384_768",
+    "category": "clean",
+    "cls_probability": 0.0623,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0016
+  },
+  {
+    "index": 18,
+    "scene_id": "clean_00000_384_1152",
+    "category": "clean",
+    "cls_probability": 0.0883,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0018
+  },
+  {
+    "index": 19,
+    "scene_id": "clean_00000_384_1536",
+    "category": "clean",
+    "cls_probability": 0.0925,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0018
+  },
+  {
+    "index": 20,
+    "scene_id": "lookalike_00001_0_0",
+    "category": "lookalike",
+    "cls_probability": 0.0299,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0017
+  },
+  {
+    "index": 21,
+    "scene_id": "lookalike_00001_0_384",
+    "category": "lookalike",
+    "cls_probability": 0.0351,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0018
+  },
+  {
+    "index": 22,
+    "scene_id": "lookalike_00001_384_0",
+    "category": "lookalike",
+    "cls_probability": 0.0446,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0018
+  },
+  {
+    "index": 23,
+    "scene_id": "lookalike_00001_384_384",
+    "category": "lookalike",
+    "cls_probability": 0.0307,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0017
+  },
+  {
+    "index": 24,
+    "scene_id": "lookalike_00001_768_0",
+    "category": "lookalike",
+    "cls_probability": 0.0523,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0024
+  },
+  {
+    "index": 25,
+    "scene_id": "lookalike_00001_768_384",
+    "category": "lookalike",
+    "cls_probability": 0.0377,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0017
+  },
+  {
+    "index": 26,
+    "scene_id": "lookalike_00001_1152_0",
+    "category": "lookalike",
+    "cls_probability": 0.0368,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0017
+  },
+  {
+    "index": 27,
+    "scene_id": "lookalike_00001_1536_0",
+    "category": "lookalike",
+    "cls_probability": 0.0316,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0017
+  },
+  {
+    "index": 28,
+    "scene_id": "lookalike_00002_1536_1536",
+    "category": "lookalike",
+    "cls_probability": 0.0222,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0016
+  },
+  {
+    "index": 29,
+    "scene_id": "lookalike_00003_1536_1536",
+    "category": "lookalike",
+    "cls_probability": 0.0199,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0017
+  },
+  {
+    "index": 30,
+    "scene_id": "ship_wake_00013_1536_0",
+    "category": "ship_wake",
+    "cls_probability": 0.0205,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.1203
+  },
+  {
+    "index": 31,
+    "scene_id": "ship_wake_00013_1536_1152",
+    "category": "ship_wake",
+    "cls_probability": 0.9519,
+    "cls_decision": "OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.1058
+  },
+  {
+    "index": 32,
+    "scene_id": "ship_wake_00014_1536_384",
+    "category": "ship_wake",
+    "cls_probability": 0.1905,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0019
+  },
+  {
+    "index": 33,
+    "scene_id": "ship_wake_00014_1536_768",
+    "category": "ship_wake",
+    "cls_probability": 0.1613,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0019
+  },
+  {
+    "index": 34,
+    "scene_id": "ship_wake_00025_0_0",
+    "category": "ship_wake",
+    "cls_probability": 0.0513,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0022
+  },
+  {
+    "index": 35,
+    "scene_id": "ship_wake_00025_0_384",
+    "category": "ship_wake",
+    "cls_probability": 0.1078,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0072
+  },
+  {
+    "index": 36,
+    "scene_id": "ship_wake_00025_0_768",
+    "category": "ship_wake",
+    "cls_probability": 0.0595,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0069
+  },
+  {
+    "index": 37,
+    "scene_id": "ship_wake_00025_384_384",
+    "category": "ship_wake",
+    "cls_probability": 0.1302,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0031
+  },
+  {
+    "index": 38,
+    "scene_id": "ship_wake_00025_384_768",
+    "category": "ship_wake",
+    "cls_probability": 0.1509,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0035
+  },
+  {
+    "index": 39,
+    "scene_id": "ship_wake_00029_768_384",
+    "category": "ship_wake",
+    "cls_probability": 0.0735,
+    "cls_decision": "NON-OIL",
+    "threshold": 0.26999999999999996,
+    "gt_mask_coverage": 0.0,
+    "seg_mean_prob": 0.0018
+  }
+]

@@ -103,6 +103,9 @@ export interface SarClassificationResult {
   gradcamDataUrl?: string;
   errorMessage?: string;
   rejectionReason?: string;
+  segmentationMask?: string;
+  spillAreaPercent?: number;
+  segmentationTimeMs?: number;
   metrics?: {
     meanBrightness: number;
     brightRatio: number;
