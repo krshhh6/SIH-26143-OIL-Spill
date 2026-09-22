@@ -20,6 +20,7 @@ dist/
 node_modules/
 .next/
 out/
+frontend/public/wasm/
 
 # IDE & OS
 .vscode/

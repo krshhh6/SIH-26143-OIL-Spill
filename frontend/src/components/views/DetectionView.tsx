@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { TabType, SarClassificationResult } from '../../types/dashboard';
-import { loadModel, isModelLoaded, classifyImage, generateOcclusionMap } from '../../services/sarClassifier';
+import { loadModel, isModelLoaded, getModelLoadError, classifyImage, generateOcclusionMap } from '../../services/sarClassifier';
 import { decodeTiffFile } from '../../utils/tiffDecoder';
 
 interface DetectionViewProps {
@@ -98,7 +98,11 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
         <div style={{ marginTop: 'var(--sp-3)', display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-2)', padding: 'var(--sp-2) var(--sp-3)', borderRadius: 'var(--radius)', background: 'rgba(255,255,255,0.05)' }}>
           <div className={`sd ${modelStatus === 'loaded' ? 'ok' : modelStatus === 'demo' ? 'warn' : ''}`}></div>
           <span style={{ fontSize: '0.85rem' }}>
-            {modelStatus === 'loading' ? 'Loading ONNX Model...' : modelStatus === 'loaded' ? 'ONNX Model Loaded (WASM)' : 'Demo Mode (Model Not Found)'}
+            {modelStatus === 'loading'
+              ? 'Loading Neural Network...'
+              : modelStatus === 'loaded'
+              ? '✓ DualPolOilSpillNet + SpillSegNet ONNX Active (Deterministic)'
+              : `Deterministic Radar Physics Engine (${getModelLoadError() ? 'ONNX fallback: ' + getModelLoadError() : 'Physics fallback active'})`}
           </span>
         </div>
       </header>
