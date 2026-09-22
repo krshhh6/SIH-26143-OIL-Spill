@@ -4,15 +4,25 @@ Spill Sense (SIH26143) — Sentinel-1 SAR Oil Spill U-Net Segmentation Model
 Benchmark: Krestenitis et al. (SOS: SAR Oil Spill Dataset / Sentinel-1 C-band)
 Version: unet-s1-sar-sos-v2.4-cdse
 """
+from __future__ import annotations
 
 import os
-import cv2
-import torch
-import torch.nn as nn
 import numpy as np
 from typing import List, Dict, Any, Tuple, Optional
 from shapely.geometry import Polygon, mapping
 import pyproj
+
+try:
+    import cv2
+    import torch
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+    # Mock classes if torch is not available
+    class nn:
+        Module = object
+    torch = None
 
 class DoubleConv(nn.Module):
     """(Conv2D -> BatchNorm -> ReLU) * 2"""
@@ -77,6 +87,10 @@ class SARSPILLSegmentationEngine:
     GEOD = pyproj.Geod(ellps="WGS84")
 
     def __init__(self, weights_path: Optional[str] = None):
+        if not TORCH_AVAILABLE:
+            print("WARNING: Torch is not available. SARSPILLSegmentationEngine is disabled.")
+            return
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = UNetS1SAR(in_channels=1, out_channels=1).to(self.device)
         self.model.eval()
