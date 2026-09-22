@@ -45,7 +45,7 @@ This plan sequences the build so a **working P0 end-to-end demo exists before P2
 - Set up Docker Compose: PostgreSQL+PostGIS, Redis, MinIO, backend, frontend.
 - Set up linting/formatting (backend: ruff/black; frontend: eslint/prettier).
 - Set up GitHub Actions skeleton (lint + test on PR).
-- Confirm Mapbox GL JS vs MapLibre GL JS decision (per `tech_stack.md` §1) and wire the chosen library into a blank Next.js page.
+- Wire Leaflet into a blank Next.js page as the primary tactical map.
 
 **Files/modules:** `docker-compose.yml`, `backend/app/main.py`, `backend/app/core/config.py`, `frontend/` scaffold.
 

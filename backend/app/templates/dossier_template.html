@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Maritime Investigation Evidence Dossier</title>
+    <style>
+        body { font-family: 'Helvetica', sans-serif; line-height: 1.6; color: #333; margin: 40px; }
+        .header { border-bottom: 2px solid #004488; padding-bottom: 10px; margin-bottom: 30px; }
+        .header h1 { margin: 0; color: #004488; font-size: 24px; text-transform: uppercase; }
+        .header p { margin: 5px 0 0; font-size: 14px; color: #666; }
+        .section { margin-bottom: 40px; }
+        .section h2 { border-bottom: 1px solid #ccc; color: #444; font-size: 18px; padding-bottom: 5px; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .table th, .table td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 14px; }
+        .table th { background-color: #f8f9fa; font-weight: bold; width: 30%; }
+        .disclaimer { font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px; margin-top: 50px; font-style: italic; }
+        .hash-box { background: #f0f4f8; padding: 15px; border-left: 4px solid #004488; font-family: monospace; font-size: 14px; margin-top: 20px; word-break: break-all; }
+        .vessel-card { border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 15px; background: #fff; }
+        .score-bar { background: #eee; height: 10px; border-radius: 5px; margin-top: 5px; overflow: hidden; }
+        .score-fill { background: #004488; height: 100%; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>SPILL SENSE — Investigation Dossier</h1>
+        <p>Incident Reference: {{ incident_id }} | Generated: {{ generated_at }}</p>
+    </div>
+
+    <div class="section">
+        <h2>1. Incident Overview</h2>
+        <table class="table">
+            <tr>
+                <th>Detection Time (UTC)</th>
+                <td>{{ detection_time }}</td>
+            </tr>
+            <tr>
+                <th>Coordinates (Centroid)</th>
+                <td>{{ coordinates }}</td>
+            </tr>
+            <tr>
+                <th>Estimated Area</th>
+                <td>{{ area_sq_km }} km²</td>
+            </tr>
+            <tr>
+                <th>Status</th>
+                <td>{{ status }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>2. Analytical Processing Provenance</h2>
+        <table class="table">
+            <tr>
+                <th>Satellite Imagery Source</th>
+                <td>{{ satellite_source }} ({{ scene_id }})</td>
+            </tr>
+            <tr>
+                <th>SAR Inference Model</th>
+                <td>{{ segmentation_model_version }}</td>
+            </tr>
+            <tr>
+                <th>Drift Simulation Engine</th>
+                <td>{{ drift_model_version }} ({{ environmental_source }})</td>
+            </tr>
+            <tr>
+                <th>Drift Configuration</th>
+                <td>{{ drift_particle_count }} particles, {{ drift_duration_hrs }} hours backward</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>3. Vessel Attribution Assessment</h2>
+        <p>The following vessel(s) intersected with the probable origin envelope calculated by the drift simulation.</p>
+        
+        {% for vessel in candidates %}
+        <div class="vessel-card">
+            <h3>{{ vessel.name }} (MMSI: {{ vessel.mmsi }})</h3>
+            <p><strong>Overall Attribution Score:</strong> {{ vessel.overall_score }}%</p>
+            <div class="score-bar">
+                <div class="score-fill" style="width: {{ vessel.overall_score }}%;"></div>
+            </div>
+            
+            <table class="table" style="margin-top: 15px;">
+                <tr>
+                    <th>Spatial Match</th>
+                    <td>{{ vessel.spatial_match }}%</td>
+                </tr>
+                <tr>
+                    <th>Temporal Match</th>
+                    <td>{{ vessel.temporal_match }}%</td>
+                </tr>
+                <tr>
+                    <th>Trajectory Alignment</th>
+                    <td>{{ vessel.trajectory_alignment }}%</td>
+                </tr>
+                <tr>
+                    <th>AIS Continuity / Dark Signals</th>
+                    <td>{{ vessel.ais_continuity }}%</td>
+                </tr>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="section">
+        <h2>4. Cryptographic Seal</h2>
+        <p>This document and its underlying digital assets have been mathematically sealed to ensure data integrity.</p>
+        <div class="hash-box">
+            <strong>Dossier SHA-256 Hash:</strong><br>
+            <span id="dossier-hash">{{ sha256_hash }}</span>
+        </div>
+    </div>
+
+    <div class="disclaimer">
+        <strong>Important Legal Notice:</strong> This analytical evidence dossier supports investigation integrity and data provenance through cryptographic hashing. It provides decision support indicating probable origins and highest-ranked candidate vessels based on available environmental and spatial data. It does not establish absolute scientific certainty or legal guilt. Admissibility and final determination are reserved for the appropriate maritime and legal authorities.
+    </div>
+
+</body>
+</html>

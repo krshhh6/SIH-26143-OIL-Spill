@@ -151,7 +151,7 @@ Purpose: cross-incident trends (secondary/tertiary priority).
 |---|---|
 | `IncidentCard` | Compact summary of one incident for dashboard grid/list |
 | `IncidentHeader` | Incident ID, status, severity, timestamp — used atop the Investigation View |
-| `TacticalMap` | Core Mapbox GL (or MapLibre) map wrapper with the project's layer system |
+| `TacticalMap` | Core Leaflet map wrapper with the project's layer system |
 | `MapLayerControl` | Toggle visibility of slick polygon, origin envelope, drift particles, AIS tracks, SAR vessels |
 | `SpillPolygon` | Renders the detected slick geometry with a confidence-linked style |
 | `OriginProbabilityLayer` | Renders the Monte Carlo origin envelope with high/medium/low bands |

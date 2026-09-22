@@ -62,11 +62,11 @@ Data Layer
 |---|---|---|---|---|
 | **Next.js (React) + TypeScript** | Application framework, routing, SSR for dashboard shell | P0 | Plain React + Vite | Next.js chosen for file-based routing across the 6 core screens and easy Vercel-style deployment |
 | **Tailwind CSS** | Styling system | P0 | CSS Modules | Speed of iteration under hackathon time pressure; supports the dark operational theme in `design.md` |
-| **Mapbox GL JS** | Primary tactical map — vector tiles, custom layers | P0 | MapLibre GL JS (open-source fork) | **Risk:** Mapbox requires an API token and has usage-based pricing beyond a free tier. **Mitigation:** MapLibre GL JS is API-compatible and fully open-source — documented as the fallback if token/quota becomes a blocker during the hackathon. Final selection to be confirmed in Phase 1 of `implementationPlan.md`. |
+| **Leaflet** | Primary tactical map — tile layers, custom overlays | P0 | None | Leaflet is fully open-source and meets all mapping requirements for the hackathon without API tokens. |
 | **D3.js / Chart.js** | Attribution score breakdowns, confidence charts, analytics | P1 | Recharts | Chart.js sufficient for MVP charts (bar/line); D3 reserved for any custom probability-contour visualization if time allows |
 | **Socket.io (or native WebSocket)** | Live job-progress updates (processing status) | P1 | Simple polling | Polling is an acceptable P0 fallback if Socket.io integration risks demo stability; documented in `AppFlow.md` §Notifications |
 | **CesiumJS** | 3D globe visualization | **P3** | — | Not required for a 2D tactical-map investigative workflow; classified production/future only |
-| **Deck.gl** | High-performance large-trajectory rendering | **P2** | Mapbox GL native layers | Promote to P1 only if AIS trajectory volume in the demo dataset causes visible frame-rate issues |
+| **Deck.gl** | High-performance large-trajectory rendering | **P2** | Leaflet native layers | Promote to P1 only if AIS trajectory volume in the demo dataset causes visible frame-rate issues |
 
 ---
 

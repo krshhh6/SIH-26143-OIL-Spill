@@ -43,7 +43,7 @@
 
 ## Frontend
 - [ ] Next.js + TypeScript + Tailwind scaffold
-- [ ] Map library decision finalized (Mapbox GL JS vs MapLibre GL JS)
+- [x] Map library decision finalized (Leaflet)
 - [ ] Command Dashboard
 - [ ] Incident Investigation View
 - [ ] Drift Analysis screen
@@ -155,7 +155,7 @@
 | Attribution false positives/negatives | Medium | Medium | Multi-factor scoring, explainable breakdown | Always present as "candidate," never "responsible vessel" |
 | Large AIS dataset performance | Medium | Medium | Indexing per `schema.md` §4.10, DuckDB Spatial for batch analytics (P1) | Reduce demo AIS window size if needed |
 | Celery/Redis integration complexity under time pressure | Low | Medium | Documented RQ fallback in `tech_stack.md` | Fall back to FastAPI `BackgroundTasks` for less critical async jobs only |
-| Mapbox token/quota issues | Low | Low | MapLibre GL JS fallback identified | Switch library (API-compatible) |
+| Leaflet performance with many vectors | Low | Low | Clustering or Canvas markers | Switch to WebGL-based Leaflet plugin |
 | SAR-vessel dark detection unreliable in time available | Medium | Low | Scope as prototype with documented limitations if needed (Phase 9) | AIS-gap analysis alone still satisfies dual dark-vessel differentiator partially |
 
 ## Decisions
