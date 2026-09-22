@@ -21,6 +21,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
         </li>
 
         <li
+          className={`nav-item ${activeTab === 'detection' ? 'active' : ''}`}
+          onClick={() => onSelectTab('detection')}
+        >
+          <span className="material-symbols-outlined">science</span>
+          SAR Detection Lab
+          <span className="nav-badge" style={{ backgroundColor: 'var(--accent)', color: 'var(--text)' }}>AI ONNX</span>
+        </li>
+        <li
           className={`nav-item ${activeTab === 'drift' ? 'active' : ''}`}
           onClick={() => onSelectTab('drift')}
         >
@@ -54,14 +62,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
           <span className="material-symbols-outlined">monitoring</span>
           Spill Analytics
           <span className="nav-badge gray">14d</span>
-        </li>
-        <li
-          className={`nav-item ${activeTab === 'detection' ? 'active' : ''}`}
-          onClick={() => onSelectTab('detection')}
-        >
-          <span className="material-symbols-outlined">science</span>
-          SAR Detection Lab
-          <span className="nav-badge" style={{ backgroundColor: 'var(--accent)', color: 'var(--text)' }}>NEW</span>
         </li>
       </ul>
 

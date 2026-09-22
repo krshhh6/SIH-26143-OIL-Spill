@@ -56,7 +56,7 @@ export const App: React.FC = () => {
 
   // Keyboard navigation shortcuts (1-6, Escape)
   useEffect(() => {
-    const tabs: TabType[] = ['dashboard', 'drift', 'attribution', 'evidence', 'analytics', 'detection'];
+    const tabs: TabType[] = ['dashboard', 'detection', 'drift', 'attribution', 'evidence', 'analytics'];
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
 
