@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import type { TabType, Scenario } from '../../types/dashboard';
 import { SCENARIOS } from '../../data/scenarios';
+import {
+  fetchLiveMetOcean,
+  computeLiveDriftSimulation,
+  type LiveSimulationResult,
+} from '../../services/marineWeatherService';
 
 interface DriftViewProps {
   onSelectTab: (tab: TabType) => void;
@@ -580,22 +585,61 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
   const [simProgress, setSimProgress] = useState<number>(100);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
+  const [liveResult, setLiveResult] = useState<LiveSimulationResult | null>(null);
+  const [isLoadingLive, setIsLoadingLive] = useState<boolean>(false);
+
+  const refreshLiveDriftData = async (keyOverride?: string) => {
+    const k = keyOverride || selectedKey;
+    const activeSc = SCENARIOS[k] || currentScenario || SCENARIOS['INC-001'];
+    const p = DRIFT_PROFILES[k] || DRIFT_PROFILES['INC-001'];
+    setIsLoadingLive(true);
+    try {
+      const metOcean = await fetchLiveMetOcean(activeSc.lat, activeSc.lng);
+      const computed = computeLiveDriftSimulation(
+        activeSc.lat,
+        activeSc.lng,
+        p.initialAreaKm2,
+        activeSc.oilType,
+        metOcean,
+        p.coastalZoneName,
+        p.vulnerableHabitats
+      );
+      setLiveResult(computed);
+    } catch (e) {
+      console.warn('[DriftView] Live met-ocean fetch error:', e);
+    } finally {
+      setIsLoadingLive(false);
+    }
+  };
+
   // Sync when currentScenario changes
   useEffect(() => {
     if (currentScenario?.id) {
       const matchedKey = Object.keys(SCENARIOS).find(
         (k) => SCENARIOS[k].id === currentScenario.id || currentScenario.id.includes(k.replace('INC-', ''))
       );
-      if (matchedKey) setSelectedKey(matchedKey);
+      if (matchedKey) {
+        setSelectedKey(matchedKey);
+        refreshLiveDriftData(matchedKey);
+      }
     }
   }, [currentScenario]);
 
+  useEffect(() => {
+    refreshLiveDriftData(selectedKey);
+  }, [selectedKey]);
+
   const profile = DRIFT_PROFILES[selectedKey] || DRIFT_PROFILES['INC-001'];
-  const currentForecast = profile.forecasts[selectedStepIndex] || profile.forecasts[2];
+  const activeForecasts = liveResult ? liveResult.forecasts : profile.forecasts;
+  const currentForecast = activeForecasts[selectedStepIndex] || activeForecasts[2];
+  const activeOriginCoords = liveResult ? liveResult.originCoords : profile.originCoords;
+  const activeOriginAreaKm2 = liveResult ? liveResult.originAreaKm2 : profile.originAreaKm2;
+  const activeLandfallEta = liveResult ? liveResult.overallLandfallEta : profile.overallLandfallEta;
 
   const handleRunSimulation = () => {
     setIsSimulating(true);
     setSimProgress(0);
+    refreshLiveDriftData(selectedKey);
     const interval = setInterval(() => {
       setSimProgress((prev) => {
         if (prev >= 100) {
@@ -614,7 +658,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
       incident: profile.incidentName,
       scenarioId: profile.scenarioId,
       exportedAt: new Date().toISOString(),
-      features: profile.forecasts.map((f) => ({
+      features: activeForecasts.map((f) => ({
         type: 'Feature',
         geometry: {
           type: 'Point',
@@ -706,6 +750,26 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
               </option>
             ))}
           </select>
+
+          <button
+            className="btn btn-secondary"
+            onClick={() => refreshLiveDriftData(selectedKey)}
+            disabled={isLoadingLive}
+            style={{ gap: 6, fontSize: 12 }}
+            title="Fetch real-time ocean currents and wind from live Copernicus/Open-Meteo API"
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: 16,
+                color: '#38bdf8',
+                animation: isLoadingLive ? 'spin 1s linear infinite' : 'none',
+              }}
+            >
+              satellite_alt
+            </span>
+            {isLoadingLive ? 'Syncing API...' : 'Refresh Live Met-Ocean'}
+          </button>
 
           <button
             className="btn btn-secondary"
@@ -900,7 +964,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--sp-2)' }}>
-                    {profile.forecasts.map((f, idx) => {
+                    {activeForecasts.map((f, idx) => {
                       const isSelected = selectedStepIndex === idx;
                       return (
                         <button
@@ -1015,7 +1079,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Coastal Threat Assessment · Landfall ETA: {profile.overallLandfallEta}
+                      Coastal Threat Assessment · Landfall ETA: {activeLandfallEta}
                     </span>
                     <span
                       style={{
@@ -1194,7 +1258,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                   >
                     <div className="text-xs text-muted fw-600">50% Core Probability</div>
                     <div className="text-base fw-700" style={{ color: 'var(--drift-color)' }}>
-                      {profile.originCoords}
+                      {activeOriginCoords}
                     </div>
                     <div className="text-xs text-muted">{profile.originWindow}</div>
                   </div>
@@ -1207,7 +1271,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                     }}
                   >
                     <div className="text-xs text-muted fw-600">75% Probability Area</div>
-                    <div className="text-base fw-700">{profile.originAreaKm2} km²</div>
+                    <div className="text-base fw-700">{activeOriginAreaKm2} km²</div>
                     <div className="text-xs text-muted">Spatiotemporal uncertainty radius</div>
                   </div>
                   <div
@@ -1295,25 +1359,56 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
               </div>
 
               <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--sp-3)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
-                  Active Environmental Forcing:
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Active Environmental Forcing:
+                  </div>
+                  <span style={{ fontSize: 10, color: liveResult ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
+                    {liveResult ? `🟢 Live API: ${liveResult.metOcean.source.split('(')[0].trim()}` : '🟡 Calibrated CMEMS'}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span className="text-muted">CMEMS Current:</span>
-                    <span className="mono fw-600">{profile.currentVector}</span>
+                    <span className="mono fw-600">
+                      {liveResult
+                        ? `${liveResult.metOcean.currentSpeedMs} m/s (${liveResult.metOcean.currentSpeedKnots} kn) @ ${liveResult.metOcean.currentDirectionDeg}° (${liveResult.metOcean.currentCompassLabel})`
+                        : profile.currentVector}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span className="text-muted">ERA5 10m Wind:</span>
-                    <span className="mono fw-600">{profile.windVector}</span>
+                    <span className="mono fw-600">
+                      {liveResult
+                        ? `${liveResult.metOcean.windSpeedMs} m/s (${liveResult.metOcean.windSpeedKnots} kn) @ ${liveResult.metOcean.windDirectionDeg}° (${liveResult.metOcean.windCompassLabel})`
+                        : profile.windVector}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="text-muted">Sea Surface Temp:</span>
-                    <span className="mono fw-600">{profile.sstCelsius}°C ({profile.seaState})</span>
+                    <span className="text-muted">Sea State &amp; Temp:</span>
+                    <span className="mono fw-600">
+                      {liveResult
+                        ? `${liveResult.metOcean.temperatureCelsius}°C · ${liveResult.metOcean.seaStateDescription}`
+                        : `${profile.sstCelsius}°C (${profile.seaState})`}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span className="text-muted">Net Drift Vector:</span>
+                    <span className="mono fw-700" style={{ color: 'var(--accent)' }}>
+                      {liveResult
+                        ? `${liveResult.metOcean.netDriftSpeedKnots} kn @ ${liveResult.metOcean.netDriftHeadingDeg}° (${liveResult.metOcean.netDriftCompassLabel})`
+                        : `${profile.forecasts[0].driftSpeedKnots} kn @ ${profile.forecasts[0].headingDeg}°`}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span className="text-muted">Oil Hydrocarbon Grade:</span>
                     <span className="mono fw-600">{profile.oilType} ({profile.apiGravity})</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border-subtle)', paddingTop: 4 }}>
+                    <span className="text-muted">Met-Ocean Sync Time:</span>
+                    <span className="mono text-muted" style={{ fontSize: 10 }}>
+                      {liveResult ? `Synchronized at ${liveResult.metOcean.fetchedAt}` : 'Calibrated Baseline'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1342,7 +1437,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                     </tr>
                   </thead>
                   <tbody>
-                    {profile.forecasts.map((f, idx) => (
+                    {activeForecasts.map((f, idx) => (
                       <tr
                         key={f.label}
                         onClick={() => setSelectedStepIndex(idx)}
