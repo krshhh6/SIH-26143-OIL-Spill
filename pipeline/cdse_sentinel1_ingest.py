@@ -204,10 +204,29 @@ class SARCalibrationEngine:
         }
 
     @staticmethod
+    def read_real_sentinel1_grd(file_path):
+        """
+        Reads an actual Sentinel-1 GRD GeoTIFF using rasterio.
+        Returns the raw DN array and a mask (if provided/generated).
+        """
+        import rasterio
+        with rasterio.open(file_path) as dataset:
+            # Sentinel-1 GRD imagery typically has VV and/or VH bands.
+            # Assuming Band 1 is VV polarization.
+            raw_dn = dataset.read(1)
+            
+            # Here we would normally extract a slick mask using the AI model,
+            # but for the ingestion engine we just return the raw array.
+            # Returning a dummy mask for compatibility with the pipeline.
+            slick_mask = raw_dn < (raw_dn.mean() * 0.5)  # Simple threshold stub
+            
+        return raw_dn, slick_mask
+
+    @staticmethod
     def generate_synthetic_sentinel1_slick(height=256, width=256, center_lat=18.743, center_lon=71.218):
         """
-        Generates an authentic synthetic Sentinel-1 calibrated radar scene (dB)
-        replicating the Mumbai High 4.82 km² slick with realistic Bragg clutter.
+        Fallback synthetic Sentinel-1 calibrated radar scene (dB)
+        for offline hackathon robustness when real GeoTIFFs aren't available.
         """
         np.random.seed(26143)
         # 1. Clean sea background with Rayleigh speckle clutter (~ -13.5 dB)

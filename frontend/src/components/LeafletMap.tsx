@@ -16,6 +16,7 @@ interface LeafletMapProps {
   showAiMask?: boolean;
   showOverlay?: boolean;
   detectionResult: DetectionResult | null;
+  driftEnvelopes?: any;
   onUpdateCoords: (coords: string) => void;
   onSelectScenario?: (key: string) => void;
   mapRef: React.MutableRefObject<L.Map | null>;
@@ -32,6 +33,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   showAiMask = false,
   showOverlay = true,
   detectionResult,
+  driftEnvelopes,
   onUpdateCoords,
   onSelectScenario,
   mapRef,
@@ -42,6 +44,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const layersGroupRef = useRef<L.LayerGroup | null>(null);
   const indiaOutlineLayerRef = useRef<L.LayerGroup | null>(null);
   const indiaBoundariesTileRef = useRef<L.TileLayer | null>(null);
+  const driftLayerRef = useRef<L.GeoJSON | null>(null);
   const cachedIndiaOutline = useRef<any>(null);
   const cachedIndiaEez = useRef<any>(null);
 
@@ -308,6 +311,39 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       }
     }
   }, [showIndiaOutline, showEezBoundary]);
+
+  // Real-Time Socket.io Drift Envelope Rendering
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (driftLayerRef.current) {
+      map.removeLayer(driftLayerRef.current);
+      driftLayerRef.current = null;
+    }
+
+    if (showAiMask && driftEnvelopes) {
+      driftLayerRef.current = L.geoJSON(driftEnvelopes, {
+        style: (feature) => {
+          const prob = feature?.properties?.probability;
+          if (prob === '50%') {
+            return { color: '#DC2626', weight: 3, fillColor: '#DC2626', fillOpacity: 0.15 };
+          } else if (prob === '75%') {
+            return { color: '#F97316', weight: 2, dashArray: '6, 6', fillColor: '#F97316', fillOpacity: 0.08 };
+          } else if (prob === '95%') {
+            return { color: '#EAB308', weight: 1.5, dashArray: '2, 4', fillColor: '#EAB308', fillOpacity: 0.03 };
+          }
+          return { color: '#00E5FF', weight: 1, fillOpacity: 0 };
+        },
+        onEachFeature: (feature, layer) => {
+          layer.bindTooltip(
+            `<b>OpenDrift Backend</b><br>Confidence Interval: ${feature?.properties?.probability}`,
+            { sticky: true, className: 'gis-custom-tooltip' }
+          );
+        }
+      }).addTo(map);
+    }
+  }, [driftEnvelopes, showAiMask]);
 
   // Camera navigation: ONLY fly to coordinates when user switches scenario
   const prevScenarioIdRef = useRef<string | undefined>(scenario?.id);

@@ -16,10 +16,10 @@ Spill Sense processes data that ultimately feeds an **evidence chain** for a rea
 ## 2. Secrets & Credential Management
 
 - **No credentials, API keys, tokens, or connection strings are ever committed to source code or version control**, in any form — not in code, not in config files checked into Git, not in comments, not in test fixtures.
-- All secrets (Copernicus Data Space OAuth client ID/secret, ISRO Bhoonidhi credentials, Global Fishing Watch API token, database credentials, Redis/MinIO credentials, Mapbox/MapLibre tokens, JWT signing keys) are supplied exclusively via environment variables, loaded through a `.env` file that is **git-ignored** by default (`.env.example` with placeholder values is the only version-controlled variant).
+- All secrets (Copernicus Data Space OAuth client ID/secret, ISRO Bhoonidhi credentials, Global Fishing Watch API token, database credentials, Redis/MinIO credentials, JWT signing keys) are supplied exclusively via environment variables, loaded through a `.env` file that is **git-ignored** by default (`.env.example` with placeholder values is the only version-controlled variant).
 - Production/demo-day deployment secrets are managed through the deployment environment's configuration mechanism (Docker Compose `env_file`, CI/CD secret store) — never hardcoded into `docker-compose.yml` itself.
 - Rotate any credential immediately if it is suspected to have been exposed (e.g., accidentally pasted into a chat, screen-shared during a demo rehearsal, or committed and later removed from history).
-- Client-side code (frontend) never embeds a secret that grants write access or elevated data access — only public, domain-restricted tokens (e.g., a scoped Mapbox public token) may appear in frontend bundles.
+- Client-side code (frontend) never embeds a secret that grants write access or elevated data access.
 
 ## 3. Authentication & Authorization
 

@@ -4,6 +4,7 @@ import { LeafletMap } from './LeafletMap';
 import { TimeScrubber } from './TimeScrubber';
 import { runSentinel1Detection } from '../services/detectionService';
 import { createAoiForScenario } from '../utils/geoContours';
+import { socket, connectSocket } from '../services/socket';
 import L from 'leaflet';
 
 interface MapPanelProps {
@@ -123,8 +124,28 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
   const [selectedDate, setSelectedDate] = useState<string>('2024-11-14');
   const [cloudCoverMax] = useState<number>(30);
   const [detectionResult, setDetectionResult] = useState<DetectionResult | null>(null);
+  const [driftEnvelopes, setDriftEnvelopes] = useState<any>(null);
   const [, setIsDetecting] = useState<boolean>(false);
   const leafletMapRef = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    connectSocket();
+
+    const handleDriftCompleted = (data: any) => {
+      if (data && data.envelopes_geojson) {
+        setDriftEnvelopes(data.envelopes_geojson);
+      }
+    };
+
+    socket.on('drift_completed', handleDriftCompleted);
+    socket.on('system_status', (data) => console.log(data.message));
+
+    return () => {
+      socket.off('drift_completed', handleDriftCompleted);
+      socket.off('system_status');
+      // disconnectSocket(); // keeping it open for other views
+    };
+  }, []);
 
   const scenarioKey = scenario
     ? scenario.id.includes('001') ? 'INC-001'
@@ -872,6 +893,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
           showAiMask={showAiMask}
           showOverlay={showSpillOverlay}
           detectionResult={detectionResult}
+          driftEnvelopes={driftEnvelopes}
           onUpdateCoords={onUpdateCoords}
           onSelectScenario={onSelectScenario}
           mapRef={leafletMapRef}

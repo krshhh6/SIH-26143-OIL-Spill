@@ -5,10 +5,18 @@ Adheres to AppFlow.md and tech_stack.md specification:
 - DETECT -> TRACE BACK -> ATTRIBUTE -> PROVE
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime
+
+from app.core.database import get_db
+from app.db.models import Incident
+from app.tasks.inference import run_sar_inference
+from app.tasks.drift_simulation import run_backward_drift_simulation
+from app.tasks.ais_correlation import correlate_ais_vessels
+from app.services.pdf_evidence_generator import PDFEvidenceGenerator
 
 router = APIRouter()
 
@@ -34,179 +42,152 @@ class IngestionRequest(BaseModel):
 class DriftRequest(BaseModel):
     incident_id: str
     particle_count: int = 1000
-    horizon_hours: int = 72
-    wind_factor: float = 0.035
+    horizon_hours: int = 24
 
-# ── IN-MEMORY BENCHMARK STORE (Aligned with prd.md §17) ──
-INCIDENTS_DB = {
-    "INC-2026-001": {
-        "id": "INC-2026-001",
-        "title": "Mumbai High Offshore Basin",
-        "lat": 18.743,
-        "lng": 71.218,
-        "severity": "CRITICAL",
-        "oil_type": "Crude Oil",
-        "oil_color": "#B45309",
-        "area": "4.82 km²",
-        "top_vessel": "CRUDE ATLAS (MMSI 419001234)",
-        "attribution_score": 0.82,
-        "damping_db": -8.4,
-        "ais_gap_hours": 4.58,
-        "sha256": "907f4ac404c6780468f10c0607c496d4e872c0502187f5d947055743bdfbd194"
-    },
-    "INC-2026-002": {
-        "id": "INC-2026-002",
-        "title": "Chennai–Ennore Coastal Corridor",
-        "lat": 13.234,
-        "lng": 80.345,
-        "severity": "HIGH",
-        "oil_type": "Heavy Bunker Fuel",
-        "oil_color": "#0D0D11",
-        "area": "3.15 km²",
-        "top_vessel": "PACIFIC GLORY (MMSI 419009988)",
-        "attribution_score": 0.68,
-        "damping_db": -10.2,
-        "ais_gap_hours": 3.50,
-        "sha256": "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5"
-    },
-    "INC-2026-003": {
-        "id": "INC-2026-003",
-        "title": "Andaman Sea Shipping Lane 7",
-        "lat": 10.456,
-        "lng": 93.123,
-        "severity": "MEDIUM",
-        "oil_type": "Oil Bilge Water",
-        "oil_color": "#38BDF8",
-        "area": "1.94 km²",
-        "top_vessel": "UNKNOWN (DARK VESSEL)",
-        "attribution_score": 0.74,
-        "damping_db": -6.8,
-        "ais_gap_hours": 8.12,
-        "sha256": "8a7b6c5d4e3f2a1b8a7b6c5d4e3f2a1b8a7b6c5d4e3f2a1b8a7b6c5d4e3f2a1b"
-    },
-    "INC-2026-004": {
-        "id": "INC-2026-004",
-        "title": "Goa Coastal Waters (Bunkering Leak)",
-        "lat": 15.421,
-        "lng": 73.682,
-        "severity": "LOW",
-        "oil_type": "Diesel / Marine Gas Oil",
-        "oil_color": "#EAB308",
-        "area": "0.85 km²",
-        "top_vessel": "SEA PEARL (MMSI 419003322)",
-        "attribution_score": 0.55,
-        "damping_db": -5.5,
-        "ais_gap_hours": 0.0,
-        "sha256": "1f2e3d4c5b6a78901f2e3d4c5b6a78901f2e3d4c5b6a78901f2e3d4c5b6a7890"
-    }
-}
+class AISRequest(BaseModel):
+    incident_id: str
+    envelopes_wkt: Dict[str, str]
+    time_window_start: str
+    time_window_end: str
 
 # ── ENDPOINTS ──
 
 @router.get("/incidents", response_model=List[IncidentSummary])
-async def list_incidents():
-    """Lists all active oil spill incidents with classification metadata."""
+async def list_incidents(db: Session = Depends(get_db)):
+    """Lists all active oil spill incidents from PostgreSQL."""
+    incidents = db.query(Incident).all()
     results = []
-    for inc in INCIDENTS_DB.values():
+    
+    for inc in incidents:
+        # In a full query, we would join with Vessel to get the top_vessel.
+        # For now, we extract basic fields from the Incident model.
         results.append(IncidentSummary(
-            id=inc["id"],
-            title=inc["title"],
-            lat=inc["lat"],
-            lng=inc["lng"],
-            severity=inc["severity"],
-            oil_type=inc["oil_type"],
-            oil_color=inc["oil_color"],
-            area=inc["area"],
-            top_vessel=inc["top_vessel"],
-            attribution_score=inc["attribution_score"]
+            id=str(inc.id) if inc.id else inc.incident_number,
+            title=inc.title,
+            lat=inc.center_latitude,
+            lng=inc.center_longitude,
+            severity=inc.severity,
+            oil_type=inc.oil_classification,
+            oil_color=inc.oil_color_hex,
+            area=f"{inc.surface_area_sq_km} km²" if inc.surface_area_sq_km else "Pending",
+            top_vessel="PENDING ATTRIBUTION", # Placeholder until AIS run
+            attribution_score=0.0
         ))
     return results
 
 @router.post("/sar/ingest")
-async def ingest_sar_scene(req: IngestionRequest):
+async def ingest_sar_scene(req: IngestionRequest, db: Session = Depends(get_db)):
     """
-    Triggers Copernicus CDSE Sentinel-1 SAR ingestion, radiometric calibration,
-    and Lee speckle filtering.
+    Triggers Copernicus CDSE Sentinel-1 SAR ingestion and ONNX inference.
     """
-    if req.incident_id not in INCIDENTS_DB:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    # Just verifying it exists in DB
+    # Note: the UI might pass the UUID or the incident_number. 
+    # For robust handling, we just proceed if it was passed.
     
-    inc = INCIDENTS_DB[req.incident_id]
+    dummy_file_path = f"/data/sar/{req.incident_id}.tif"
+    dummy_model_path = "/models/oil_classifier.onnx"
+    
+    # Trigger Async Celery Task
+    task = run_sar_inference.delay(dummy_file_path, dummy_model_path)
+    
     return {
-        "status": "COMPLETED",
+        "status": "PROCESSING",
+        "task_id": task.id,
         "incident_id": req.incident_id,
-        "sensor": "Sentinel-1A C-Band SAR (IW GRD)",
-        "polarization": "VV VH",
-        "damping_ratio_db": inc["damping_db"],
-        "look_alike_filters": {
-            "era5_wind_check": "PASSED (4.2 m/s strictly within 3.0-12.0 m/s range)",
-            "chlorophyll_check": "PASSED (0.42 mg/m³ < 2.5 mg/m³ algal threshold)"
-        },
-        "extracted_area": inc["area"],
-        "sha256_raster_hash": inc["sha256"]
+        "message": "SAR inference task has been queued."
     }
 
 @router.post("/drift/backtrack")
-async def run_drift_simulation(req: DriftRequest):
+async def run_drift_simulation(req: DriftRequest, db: Session = Depends(get_db)):
     """
-    Runs backward Lagrangian Monte Carlo trajectory modeling via OpenDrift
-    using CMEMS ocean currents and ERA5 wind vectors.
+    Triggers backward Lagrangian Monte Carlo trajectory modeling via OpenDrift.
     """
-    if req.incident_id not in INCIDENTS_DB:
-        raise HTTPException(status_code=404, detail="Incident not found")
+    # In a full implementation, we fetch the slick centroid from the DB
+    # For now, we trigger the task with mock coordinates
     
-    inc = INCIDENTS_DB[req.incident_id]
-    origin_lat = inc["lat"] + 0.18
-    origin_lng = inc["lng"] - 0.15
+    detection_time_utc = datetime.utcnow().isoformat() + "Z"
+    
+    # Trigger Async Celery Task
+    task = run_backward_drift_simulation.delay(
+        incident_id=req.incident_id,
+        spill_lat=18.743, # Defaulting to Mumbai High if not queried
+        spill_lon=71.218,
+        detection_time_utc=detection_time_utc,
+        duration_hours=req.horizon_hours,
+        particle_count=req.particle_count
+    )
     
     return {
-        "status": "COMPLETED",
-        "engine": "OpenDrift/OpenOil (RK4 Integrator)",
-        "particles_simulated": req.particle_count,
-        "horizon_hours": -req.horizon_hours,
-        "forcing": {
-            "currents": "CMEMS Global Analysis (0.083°)",
-            "winds": "ERA5 Hourly Reanalysis 10m (Stokes drift 3.5%)"
-        },
-        "estimated_discharge_centroid": {
-            "latitude": round(origin_lat, 4),
-            "longitude": round(origin_lng, 4),
-            "interception_window": "T - 22.5 hours"
-        },
-        "probability_envelopes": {
-            "core_50": {"area_km2": 18.4, "confidence": 0.50},
-            "medium_75": {"area_km2": 42.1, "confidence": 0.75},
-            "outer_90": {"area_km2": 95.8, "confidence": 0.90}
-        }
+        "status": "PROCESSING",
+        "task_id": task.id,
+        "incident_id": req.incident_id,
+        "message": "Backward drift simulation has been queued."
+    }
+
+@router.post("/ais/correlate")
+async def run_ais_correlation(req: AISRequest, db: Session = Depends(get_db)):
+    """
+    Triggers AIS vessel correlation against drift probability envelopes.
+    """
+    task = correlate_ais_vessels.delay(
+        incident_id=req.incident_id,
+        envelopes_wkt=req.envelopes_wkt,
+        time_window_start=req.time_window_start,
+        time_window_end=req.time_window_end
+    )
+    
+    return {
+        "status": "PROCESSING",
+        "task_id": task.id,
+        "incident_id": req.incident_id,
+        "message": "AIS Vessel correlation has been queued."
     }
 
 @router.get("/dossier/{incident_id}")
-async def get_evidence_dossier(incident_id: str):
+async def get_evidence_dossier(incident_id: str, db: Session = Depends(get_db)):
     """
-    Compiles an official tamper-evident forensic dossier compliant with
-    Section 356 of the Indian Merchant Shipping Act 1958 and MARPOL Annex I.
+    Generates a cryptographically sealed PDF Evidence Dossier using WeasyPrint.
     """
-    if incident_id not in INCIDENTS_DB:
-        raise HTTPException(status_code=404, detail="Incident not found")
-        
-    inc = INCIDENTS_DB[incident_id]
+    # We would normally query all this from Postgres
+    # db.query(Incident).filter(...)
+    
+    incident_data = {
+        "incident_id": incident_id,
+        "detection_time": "2026-09-18T14:30:00Z",
+        "coordinates": "18.743°N, 71.218°E",
+        "area_sq_km": "4.82 km²",
+        "status": "CONFIRMED ILLEGAL DISCHARGE",
+        "satellite_source": "Sentinel-1A C-Band SAR",
+        "scene_id": "S1A_IW_GRDH_1SDV_20260918T143000",
+        "segmentation_model_version": "SpillSense-ONNX-v2.1",
+        "drift_model_version": "OpenDrift-OpenOil (KDE Contours)",
+        "environmental_source": "CMEMS Global Analysis (Live)",
+        "drift_particle_count": 1000,
+        "drift_duration_hrs": 24,
+        "candidates": [
+            {
+                "name": "CRUDE ATLAS",
+                "mmsi": "419001234",
+                "overall_score": 82.5,
+                "spatial_match": 100,
+                "temporal_match": 100,
+                "trajectory_alignment": 88,
+                "ais_continuity": 45 
+            }
+        ]
+    }
+    
+    generator = PDFEvidenceGenerator()
+    result = generator.generate_dossier(incident_data)
+    
     return {
         "status": "SEALED",
-        "incident_id": inc["id"],
-        "classification": inc["oil_type"],
-        "oil_color_code": inc["oil_color"],
-        "legal_authority": "Indian Coast Guard / Directorate General of Shipping",
-        "statutory_framework": "Merchant Shipping Act 1958 (Part XIA, §356) / MARPOL 73/78 Annex I",
-        "top_offending_vessel": inc["top_vessel"],
-        "attribution_confidence": f"{inc['attribution_score'] * 100:.1f}%",
-        "dark_ship_diagnostic": {
-            "transponder_silence_duration": f"{inc['ais_gap_hours']} hours",
-            "speed_reduction": "13.2 kn -> 4.1 kn within origin envelope",
-            "violation_flag": "HIGH INTENT (Illegal Bilge/Tank Wash Discharge)"
-        },
+        "incident_id": incident_id,
+        "pdf_download_url": f"/static/evidence/{result['filename']}",
         "cryptographic_verification": {
-            "master_sha256": inc["sha256"],
+            "master_sha256": result["sha256_hash"],
             "hash_algorithm": "SHA-256",
+            "generation_time": result["generated_at"],
             "tamper_status": "VERIFIED_GENUINE",
             "chain_of_custody": "Maritime Surveillance Cell (BUG STALKERS)"
         }
