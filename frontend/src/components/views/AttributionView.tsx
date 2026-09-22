@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import type { Scenario, AttributionWeights } from '../../types/dashboard';
+import { SCENARIOS } from '../../data/scenarios';
 
 interface AttributionViewProps {
   currentScenario?: Scenario | null;
+  onSelectScenario?: (key: string) => void;
 }
 
 interface CandidateVesselItem {
@@ -154,9 +156,67 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       risk: 'MEDIUM',
     },
   ],
+  'INC-2026-004': [
+    {
+      mmsi: '419003322',
+      imo: '9245123',
+      name: 'SEA PEARL',
+      flag: 'India',
+      type: 'Bunkering Barge / Coastal Tanker',
+      lat: 15.428,
+      lng: 73.655,
+      sog: 2.1,
+      cog: 172.0,
+      cpa_nm: 0.8,
+      ais_gap_hours: 2.5,
+      attribution_score: 0.84,
+      risk: 'CRITICAL',
+    },
+    {
+      mmsi: '419006543',
+      imo: '9356124',
+      name: 'MORMUGAO MARINER',
+      flag: 'India',
+      type: 'Bulk Carrier',
+      lat: 15.485,
+      lng: 73.710,
+      sog: 11.4,
+      cog: 185.0,
+      cpa_nm: 4.2,
+      ais_gap_hours: 0.4,
+      attribution_score: 0.45,
+      risk: 'MEDIUM',
+    },
+    {
+      mmsi: '419008765',
+      imo: '9411234',
+      name: 'MANDOVI VOYAGER',
+      flag: 'Panama',
+      type: 'Chemical Tanker',
+      lat: 15.520,
+      lng: 73.760,
+      sog: 13.8,
+      cog: 192.0,
+      cpa_nm: 6.8,
+      ais_gap_hours: 0.2,
+      attribution_score: 0.28,
+      risk: 'LOW',
+    },
+  ],
 };
 
-export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenario }) => {
+export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenario, onSelectScenario }) => {
+  const defaultKey = currentScenario?.id.includes('002')
+    ? 'INC-002'
+    : currentScenario?.id.includes('003')
+    ? 'INC-003'
+    : currentScenario?.id.includes('004')
+    ? 'INC-004'
+    : 'INC-001';
+
+  const [selectedKey, setSelectedKey] = useState<string>(defaultKey);
+  const activeScenario = SCENARIOS[selectedKey] || currentScenario || SCENARIOS['INC-001'];
+
   const [weights, setWeights] = useState<AttributionWeights>({
     dist: 0.30,
     time: 0.25,
@@ -173,9 +233,19 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
   const [feedSource, setFeedSource] = useState<string>('AISHub Maritime Transponder Engine');
   const [lastUpdated, setLastUpdated] = useState<string>('Live Calibrated Feed');
 
-  const incidentId = currentScenario?.id || 'INC-2026-001';
-  const incidentLat = currentScenario?.lat || 18.743;
-  const incidentLng = currentScenario?.lng || 71.218;
+  // Synchronize when currentScenario changes from external sources
+  useEffect(() => {
+    if (currentScenario?.id) {
+      const matchedKey = Object.keys(SCENARIOS).find(
+        (k) => SCENARIOS[k].id === currentScenario.id || currentScenario.id.includes(k.replace('INC-', ''))
+      );
+      if (matchedKey) setSelectedKey(matchedKey);
+    }
+  }, [currentScenario]);
+
+  const incidentId = activeScenario.id;
+  const incidentLat = activeScenario.lat;
+  const incidentLng = activeScenario.lng;
 
   // Compute attribution score based on active weights
   const computeVesselScore = (v: CandidateVesselItem, w: AttributionWeights): { score: number; metrics: any } => {
@@ -291,6 +361,36 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
             Spatiotemporal intersection between AISHub live trajectories and OpenDrift reverse origin envelopes
           </div>
         </div>
+
+        <div className="page-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+          <select
+            value={selectedKey}
+            onChange={(e) => {
+              const k = e.target.value;
+              setSelectedKey(k);
+              if (SCENARIOS[k]) {
+                onSelectScenario?.(k);
+              }
+            }}
+            className="input-select"
+            style={{
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 600,
+              background: 'var(--bg-card)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              cursor: 'pointer',
+            }}
+          >
+            {Object.entries(SCENARIOS).map(([key, sc]) => (
+              <option key={key} value={key}>
+                {sc.id} · {sc.title}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* AISHUB INTEGRATION STATUS BAR */}
@@ -385,6 +485,61 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
               </button>
             </div>
 
+            {/* QUICK PRESET BUTTONS */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 16px 12px', alignItems: 'center' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginRight: 4 }}>
+                TUNING PRESETS:
+              </span>
+              <button
+                type="button"
+                onClick={() => setWeights({ dist: 0.30, time: 0.25, gap: 0.25, type: 0.20 })}
+                style={{
+                  fontSize: 10.5,
+                  padding: '3px 9px',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  background: weights.dist === 0.30 && weights.gap === 0.25 ? 'var(--accent)' : 'var(--bg-card)',
+                  color: weights.dist === 0.30 && weights.gap === 0.25 ? '#fff' : 'var(--text-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                  fontWeight: 600,
+                }}
+              >
+                Balanced ML (0.30 / 0.25 / 0.25 / 0.20)
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeights({ dist: 0.20, time: 0.15, gap: 0.45, type: 0.20 })}
+                style={{
+                  fontSize: 10.5,
+                  padding: '3px 9px',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  background: weights.gap === 0.45 ? 'var(--accent)' : 'var(--bg-card)',
+                  color: weights.gap === 0.45 ? '#fff' : 'var(--text-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                  fontWeight: 600,
+                }}
+              >
+                Dark Ship Blackout Focus (w_gap: 0.45)
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeights({ dist: 0.50, time: 0.20, gap: 0.10, type: 0.20 })}
+                style={{
+                  fontSize: 10.5,
+                  padding: '3px 9px',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  background: weights.dist === 0.50 ? 'var(--accent)' : 'var(--bg-card)',
+                  color: weights.dist === 0.50 ? '#fff' : 'var(--text-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                  fontWeight: 600,
+                }}
+              >
+                Anchorage Proximity Focus (w_dist: 0.50)
+              </button>
+            </div>
+
             <div className="tuner-grid">
               <div className="tuner-slider-wrap">
                 <div className="tuner-lbl">
@@ -469,7 +624,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
             <div className="panel-header">
               <span className="panel-title">
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>format_list_numbered</span>
-                Ranked Candidate Vessels ({candidates.length} Screened) · AOI: {currentScenario ? currentScenario.title : 'Mumbai High Basin'}
+                Ranked Candidate Vessels ({candidates.length} Screened) · AOI: {activeScenario.title.toUpperCase()}
               </span>
               <span className="text-xs text-muted">Spatiotemporal Search Window: T - 72h to 0h</span>
             </div>

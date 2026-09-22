@@ -113,9 +113,20 @@ export const App: React.FC = () => {
         )}
 
 
-        {activeTab === 'drift' && <DriftView onSelectTab={setActiveTab} currentScenario={scenario} />}
+        {activeTab === 'drift' && (
+          <DriftView
+            onSelectTab={setActiveTab}
+            currentScenario={scenario}
+            onSelectScenario={handleSelectScenario}
+          />
+        )}
 
-        {activeTab === 'attribution' && <AttributionView currentScenario={scenario} />}
+        {activeTab === 'attribution' && (
+          <AttributionView
+            currentScenario={scenario}
+            onSelectScenario={handleSelectScenario}
+          />
+        )}
 
         {activeTab === 'evidence' && (
           <EvidenceView onOpenForensicModal={() => setIsForensicOpen(true)} />

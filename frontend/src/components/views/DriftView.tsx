@@ -5,6 +5,7 @@ import { SCENARIOS } from '../../data/scenarios';
 interface DriftViewProps {
   onSelectTab: (tab: TabType) => void;
   currentScenario?: Scenario | null;
+  onSelectScenario?: (key: string) => void;
 }
 
 interface TimestepForecast {
@@ -562,7 +563,7 @@ const DRIFT_PROFILES: Record<string, ScenarioDriftProfile> = {
   },
 };
 
-export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenario }) => {
+export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenario, onSelectScenario }) => {
   // Determine active scenario key
   const defaultKey = currentScenario?.id.includes('002')
     ? 'INC-002'
@@ -680,8 +681,12 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
           <select
             value={selectedKey}
             onChange={(e) => {
-              setSelectedKey(e.target.value);
+              const k = e.target.value;
+              setSelectedKey(k);
               setSelectedStepIndex(2);
+              if (SCENARIOS[k]) {
+                onSelectScenario?.(k);
+              }
             }}
             className="input-select"
             style={{
