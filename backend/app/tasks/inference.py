@@ -1,9 +1,13 @@
 import os
 import onnxruntime as ort
 import numpy as np
-import rasterio
+try:
+    import rasterio
+    from rasterio.features import shapes
+except ImportError:
+    rasterio = None
+    shapes = None
 from shapely.geometry import shape, MultiPolygon
-from rasterio.features import shapes
 from celery import shared_task
 
 @shared_task

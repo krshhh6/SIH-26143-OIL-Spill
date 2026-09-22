@@ -3,7 +3,10 @@ import uuid
 import hashlib
 from datetime import datetime, timezone
 from jinja2 import Environment, FileSystemLoader
-from weasyprint import HTML
+try:
+    from weasyprint import HTML
+except ImportError:
+    HTML = None
 
 class PDFEvidenceGenerator:
     """
@@ -69,8 +72,12 @@ class PDFEvidenceGenerator:
         filename = f"dossier_{incident_data.get('incident_id', 'unknown')}_{int(datetime.now().timestamp())}.pdf"
         output_path = os.path.join(self.output_dir, filename)
         
-        # Generate PDF
-        HTML(string=html_out).write_pdf(output_path)
+        # Generate PDF (or HTML fallback)
+        if HTML:
+            HTML(string=html_out).write_pdf(output_path)
+        else:
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(html_out)
         
         # Calculate SHA-256 of the generated file
         sha256_hash = self._calculate_file_hash(output_path)
