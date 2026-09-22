@@ -102,73 +102,130 @@ export function validateSarImage(data: Uint8ClampedArray, width: number, height:
   const totalPixels = width * height;
   let sumBrightness = 0;
   let brightCount = 0;
+  let coloredPixels = 0;
   let colorDiffSum = 0;
 
   const grayValues = new Float32Array(totalPixels);
+  const histogram = new Int32Array(256);
 
   for (let i = 0; i < totalPixels; i++) {
     const r = data[i * 4];
     const g = data[i * 4 + 1];
     const b = data[i * 4 + 2];
 
-    colorDiffSum += Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
+    const maxC = Math.max(r, Math.max(g, b));
+    const minC = Math.min(r, Math.min(g, b));
+    const chroma = maxC - minC;
+    if (chroma > 18) coloredPixels++;
+    colorDiffSum += chroma;
 
-    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+    const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
     grayValues[i] = gray;
+    histogram[gray]++;
     sumBrightness += gray;
     if (gray > 190) brightCount++;
   }
 
   const meanBrightness = sumBrightness / totalPixels;
   const brightRatio = brightCount / totalPixels;
+  const coloredRatio = coloredPixels / totalPixels;
   const avgColorDiff = colorDiffSum / totalPixels;
-  const isColor = avgColorDiff > 28;
+  const isColor = coloredRatio > 0.008 || avgColorDiff > 12;
 
-  let sharpTransitions = 0;
-  const stride = 3;
-  for (let y = 0; y < height; y++) {
-    const rowOffset = y * width;
-    for (let x = 0; x < width - stride; x++) {
-      if (Math.abs(grayValues[rowOffset + x + stride] - grayValues[rowOffset + x]) > 85) {
-        sharpTransitions++;
+  // 1. Measure spatial speckle noise via 5x5 blocks (excluding pure satellite NoData borders)
+  // Real coherent microwave SAR radar has Rayleigh/Gamma distributed speckle noise across valid sea pixels.
+  // Software screenshots (terminals, code editors, browser windows, documents) have flat solid background blocks (>70%).
+  const bs = 5;
+  const hb = Math.floor(height / bs);
+  const wb = Math.floor(width / bs);
+  let flatBlocks = 0;
+  let validBlocks = 0;
+
+  for (let by = 0; by < hb; by++) {
+    for (let bx = 0; bx < wb; bx++) {
+      let bSum = 0;
+      let bSumSq = 0;
+      let maxVal = 0;
+      for (let py = 0; py < bs; py++) {
+        for (let px = 0; px < bs; px++) {
+          const val = grayValues[(by * bs + py) * width + (bx * bs + px)];
+          bSum += val;
+          bSumSq += val * val;
+          if (val > maxVal) maxVal = val;
+        }
+      }
+      // Skip pure satellite zero-swath NoData corners
+      if (maxVal === 0) continue;
+
+      validBlocks++;
+      const bMean = bSum / 25;
+      const bVariance = bSumSq / 25 - bMean * bMean;
+      // If block has near-zero variance (< 1.5), it is a synthetic flat digital surface
+      if (bVariance < 1.5) {
+        flatBlocks++;
       }
     }
   }
-  const transitionRatio = sharpTransitions / totalPixels;
+  const flatRatio = validBlocks > 0 ? flatBlocks / validBlocks : 1.0;
 
-  if (brightRatio > 0.30 && transitionRatio > 0.02) {
+  // 2. Check for dominant single background value (terminal background, solid canvas, etc.)
+  let maxModeCount = 0;
+  let maxModeVal = 0;
+  for (let g = 0; g < 256; g++) {
+    if (histogram[g] > maxModeCount) {
+      maxModeCount = histogram[g];
+      maxModeVal = g;
+    }
+  }
+  const maxModeRatio = maxModeCount / totalPixels;
+
+  // REJECTION 1: Software UI / Terminal / Code Editor / IDE Screenshot
+  // Terminals and code windows have massive flat background space (> 30% flat blocks)
+  if (flatRatio > 0.30) {
     return {
       isValid: false,
-      reason: 'Paper Document / Printed Invoice (Non-Marine Scene)',
-      metrics: { meanBrightness, brightRatio, sharpTransitions: transitionRatio, isColor }
+      reason: `Software UI / Terminal / Code Window (Lacks physical radar speckle: ${(flatRatio * 100).toFixed(0)}% flat digital space)`,
+      metrics: { meanBrightness, brightRatio, sharpTransitions: flatRatio, isColor }
     };
   }
 
-  if (brightRatio > 0.50 && meanBrightness > 160) {
+  // REJECTION 2: Artificial Solid Background / Synthetic Graphic
+  if (maxModeRatio > 0.40 && maxModeVal !== 0) {
     return {
       isValid: false,
-      reason: 'High-Luminance Non-Marine Surface (White paper/document)',
-      metrics: { meanBrightness, brightRatio, sharpTransitions: transitionRatio, isColor }
+      reason: `Artificial Solid Canvas (Single background color covers ${(maxModeRatio * 100).toFixed(0)}% of image)`,
+      metrics: { meanBrightness, brightRatio, sharpTransitions: flatRatio, isColor }
     };
   }
 
-  if (meanBrightness < 8) {
+  // REJECTION 3: Color Camera Photo / Syntax-Highlighted Code Window
+  if (isColor) {
+    return {
+      isValid: false,
+      reason: `Optical Color Image / Syntax Highlighting (SAR microwave radar is monochrome/dual-pol)`,
+      metrics: { meanBrightness, brightRatio, sharpTransitions: flatRatio, isColor }
+    };
+  }
+
+  // REJECTION 4: Printed document / paper sheet
+  if (brightRatio > 0.35 && meanBrightness > 150) {
+    return {
+      isValid: false,
+      reason: 'Printed Document / High-Luminance Sheet (Non-Marine Scene)',
+      metrics: { meanBrightness, brightRatio, sharpTransitions: flatRatio, isColor }
+    };
+  }
+
+  // REJECTION 5: Blank / empty black frame
+  if (meanBrightness < 6) {
     return {
       isValid: false,
       reason: 'Empty / Black Frame (Zero radar backscatter signal)',
-      metrics: { meanBrightness, brightRatio, sharpTransitions: transitionRatio, isColor }
+      metrics: { meanBrightness, brightRatio, sharpTransitions: flatRatio, isColor }
     };
   }
 
-  if (isColor && avgColorDiff > 45) {
-    return {
-      isValid: false,
-      reason: 'Optical Color Camera Photo (SAR models require microwave radar imagery)',
-      metrics: { meanBrightness, brightRatio, sharpTransitions: transitionRatio, isColor }
-    };
-  }
-
-  return { isValid: true, metrics: { meanBrightness, brightRatio, sharpTransitions: transitionRatio, isColor } };
+  return { isValid: true, metrics: { meanBrightness, brightRatio, sharpTransitions: flatRatio, isColor } };
 }
 
 export interface DualPolInputRasters {
