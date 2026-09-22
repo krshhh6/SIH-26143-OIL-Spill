@@ -7,7 +7,7 @@ function sigmoid(x: number): number {
 
 let classifierSession: ort.InferenceSession | null = null;
 let segmenterSession: ort.InferenceSession | null = null;
-let optimalThreshold = 0.45; // Default calibrated threshold from model_metadata.json (fine-tuned)
+let optimalThreshold = 0.27; // Default calibrated threshold from full Zenodo dataset training
 let modelInputChannels = 2;
 let modelLoadError: string | null = null;
 
