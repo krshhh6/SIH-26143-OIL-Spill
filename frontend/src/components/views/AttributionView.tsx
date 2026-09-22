@@ -377,6 +377,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
     localStorage.setItem('AISHUB_USERNAME', uname);
   };
 
+
   return (
     <div id="tab-attribution" className="tab-content visible modern-dashboard-root">
       {/* 1. EXECUTIVE HEADER */}
