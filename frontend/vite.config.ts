@@ -23,6 +23,25 @@ function onnxWasmPlugin(): Plugin {
         next();
       });
     },
+    closeBundle() {
+      const srcDir = path.resolve(process.cwd(), 'node_modules/onnxruntime-web/dist');
+      const destDir = path.resolve(process.cwd(), 'dist/onnx-dist');
+      if (fs.existsSync(srcDir)) {
+        if (!fs.existsSync(destDir)) {
+          fs.mkdirSync(destDir, { recursive: true });
+        }
+        const files = fs.readdirSync(srcDir);
+        for (const file of files) {
+          if (file.endsWith('.wasm') || file.endsWith('.mjs') || (file.endsWith('.js') && !file.endsWith('.map'))) {
+            const destFile = path.join(destDir, file);
+            if (!fs.existsSync(destFile)) {
+              fs.copyFileSync(path.join(srcDir, file), destFile);
+            }
+          }
+        }
+        console.log('[onnxWasmPlugin] Copied onnxruntime-web dist files to dist/onnx-dist');
+      }
+    },
   };
 }
 

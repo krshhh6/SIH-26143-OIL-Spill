@@ -48,10 +48,24 @@ export async function loadModel(): Promise<void> {
     console.info('[SAR] Using default threshold 0.27:', err);
   }
 
-  // Attempt to load ONNX WebAssembly sessions
+  // Probe /onnx-dist/ to verify it is serving JS modules rather than HTML fallback (e.g. on SPAs)
+  let selectedWasmPath = '/onnx-dist/';
+  try {
+    const probe = await fetch('/onnx-dist/ort-wasm-simd-threaded.jsep.mjs', { method: 'HEAD' });
+    const ctype = probe.headers.get('content-type') || '';
+    if (!probe.ok || ctype.includes('text/html')) {
+      console.warn('[SAR] /onnx-dist/ not available or returned HTML, falling back to jsdelivr CDN');
+      selectedWasmPath = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
+    }
+  } catch {
+    selectedWasmPath = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
+  }
+
   const wasmLocations = [
-    '/onnx-dist/',
-    'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.29.0/dist/',
+    selectedWasmPath,
+    selectedWasmPath === '/onnx-dist/'
+      ? 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/'
+      : 'https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.30.0/',
   ];
 
   for (const wasmPath of wasmLocations) {
@@ -61,7 +75,7 @@ export async function loadModel(): Promise<void> {
 
       // Load classifier session
       classifierSession = await ort.InferenceSession.create('/models/oil_classifier.onnx', {
-        executionProviders: ['wasm', 'webgl'],
+        executionProviders: ['wasm'],
       });
 
       console.log(`[SAR] Classifier session initialized via ${wasmPath} (input: ${classifierSession.inputNames[0]})`);
@@ -70,7 +84,7 @@ export async function loadModel(): Promise<void> {
       // Try loading segmenter session
       try {
         segmenterSession = await ort.InferenceSession.create('/models/oil_segmenter.onnx', {
-          executionProviders: ['wasm', 'webgl'],
+          executionProviders: ['wasm'],
         });
         console.log(`[SAR] SpillSegNet segmenter session ready`);
       } catch (segErr) {
