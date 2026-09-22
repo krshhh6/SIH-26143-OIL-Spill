@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Scenario, TabType } from '../../types/dashboard';
 import { MapPanel } from '../MapPanel';
 
@@ -17,6 +17,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onUpdateCoords,
   onSelectScenario,
 }) => {
+  const [activeWorkflowTab, setActiveWorkflowTab] = useState<'map' | 'sensors' | 'ais' | 'drift'>('map');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   const statusColor = !currentScenario
     ? '#2563EB'
     : currentScenario.sev.includes('CRITICAL')
@@ -28,96 +31,176 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div
       id="tab-dashboard"
-      className="tab-content visible"
-      style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', minHeight: 0, overflow: 'hidden' }}
+      className={`tab-content visible modern-dashboard-root ${isFullscreen ? 'fullscreen-canvas' : ''}`}
     >
-      {/* EXECUTIVE OPERATIONAL HEADER */}
-      <div
-        className="page-header"
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '6px 14px',
-          borderBottom: '1px solid var(--border-subtle)',
-          background: 'var(--bg-surface)',
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: '50%',
-              background: statusColor,
-              display: 'inline-block',
-            }}
-          ></span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-            {currentScenario ? currentScenario.title : 'Indian Ocean & EEZ Maritime Surveillance'}
-          </span>
-          {currentScenario && (
-            <>
-              <span
-                style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: 10,
-                  fontWeight: 600,
-                  padding: '1px 5px',
-                  borderRadius: 3,
-                  background: 'var(--bg-raised)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                {currentScenario.id}
-              </span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                {currentScenario.oilType} · {currentScenario.area || 'Active'} · Intercept: <strong style={{ color: 'var(--text-secondary)' }}>{currentScenario.topVessel}</strong>
-              </span>
-            </>
-          )}
+      {/* 1. EXECUTIVE HEADER */}
+      <div className="workspace-header-bar">
+        <div>
+          <h1 className="workspace-main-title">Dashboard</h1>
+          <p className="workspace-sub-title">All Maritime Workflows, Sensors And Active Spill Incidents</p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="workspace-header-actions">
           {currentScenario && onSelectScenario && (
             <button
-              className="btn btn-secondary"
+              className="action-pill-btn secondary"
               onClick={() => onSelectScenario('')}
-              style={{ padding: '4px 10px', fontSize: 11, gap: 5 }}
               title="Return to National Indian Ocean Overview"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>zoom_out_map</span>
-              Overview
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>zoom_out_map</span>
+              <span>National Overview</span>
             </button>
           )}
+
           <button
-            className="btn btn-primary"
+            className="action-pill-btn primary"
             onClick={() => onSelectTab('detection')}
-            style={{ padding: '4px 12px', fontSize: 11, gap: 5 }}
-            title="Launch Nitin's Dual-Pol SAR Detection & Classification Lab"
+            title="Open Dual-Pol SAR Detection & Classification Lab"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>science</span>
-            SAR Detection Lab
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>science</span>
+            <span>SAR Detection Lab</span>
           </button>
         </div>
       </div>
 
-      {/* FULL-WIDTH TACTICAL MAP PANEL */}
-      <div
-        className="content-area"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          width: '100%',
-          flex: 1,
-          padding: '4px 16px 8px',
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        <MapPanel scenario={currentScenario} onUpdateCoords={onUpdateCoords} onSelectScenario={onSelectScenario} />
+      {/* 2. EXECUTIVE METRIC CARDS (Matches reference screenshot 340 +204%) */}
+      {!isFullscreen && (
+        <div className="executive-metrics-grid">
+          {/* Card 1: Active Slicks */}
+          <div className="metric-card-neumorphic" onClick={() => onSelectScenario && onSelectScenario('INC-001')}>
+            <div className="metric-card-header">
+              <span className="metric-card-label">Active Slicks</span>
+            </div>
+            <div className="metric-card-body">
+              <span className="metric-number">4</span>
+              <span className="metric-trend-pill positive">↑ 100%</span>
+            </div>
+            <div className="metric-card-footer">
+              <span>See Incidents</span>
+              <span className="material-symbols-outlined arrow-icon">arrow_forward</span>
+            </div>
+          </div>
+
+          {/* Card 2: EEZ Surveillance Area */}
+          <div className="metric-card-neumorphic">
+            <div className="metric-card-header">
+              <span className="metric-card-label">EEZ Surveillance</span>
+            </div>
+            <div className="metric-card-body">
+              <span className="metric-number">2.02M <span className="metric-unit">km²</span></span>
+              <span className="metric-trend-pill neutral">100% Active</span>
+            </div>
+            <div className="metric-card-footer" onClick={() => onSelectTab('analytics')}>
+              <span>Sensors & Feeds</span>
+              <span className="material-symbols-outlined arrow-icon">arrow_forward</span>
+            </div>
+          </div>
+
+          {/* Card 3: AI Detection Accuracy */}
+          <div className="metric-card-neumorphic" onClick={() => onSelectTab('detection')}>
+            <div className="metric-card-header">
+              <span className="metric-card-label">AI Detection (Zenodo)</span>
+            </div>
+            <div className="metric-card-body">
+              <span className="metric-number">97.4% <span className="metric-unit">F1</span></span>
+              <span className="metric-trend-pill positive">Dual-Pol ONNX</span>
+            </div>
+            <div className="metric-card-footer">
+              <span>SAR Detection Lab</span>
+              <span className="material-symbols-outlined arrow-icon">arrow_forward</span>
+            </div>
+          </div>
+
+          {/* Card 4: Vessel Attribution */}
+          <div className="metric-card-neumorphic" onClick={() => onSelectTab('attribution')}>
+            <div className="metric-card-header">
+              <span className="metric-card-label">Vessel Attribution</span>
+            </div>
+            <div className="metric-card-body">
+              <span className="metric-number">14 <span className="metric-unit">Ships</span></span>
+              <span className="metric-trend-pill neutral">AISHub Live</span>
+            </div>
+            <div className="metric-card-footer">
+              <span>View Suspect Vessels</span>
+              <span className="material-symbols-outlined arrow-icon">arrow_forward</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. SECTION HEADER & WORKFLOW TABS */}
+      <div className="workflow-nav-bar">
+        <div className="workflow-title-area">
+          <h2 className="workflow-title">
+            {currentScenario ? currentScenario.title : 'Maritime Operations & Surveillance'}
+          </h2>
+          {currentScenario && (
+            <span className="scenario-chip" style={{ borderColor: statusColor, color: statusColor }}>
+              {currentScenario.id} · {currentScenario.oilType}
+            </span>
+          )}
+        </div>
+
+        <div className="workflow-tabs-strip">
+          <button
+            className={`workflow-tab-btn ${activeWorkflowTab === 'map' ? 'active' : ''}`}
+            onClick={() => setActiveWorkflowTab('map')}
+          >
+            Maritime Chart
+            {activeWorkflowTab === 'map' && <span className="tab-underline" />}
+          </button>
+          <button
+            className={`workflow-tab-btn ${activeWorkflowTab === 'sensors' ? 'active' : ''}`}
+            onClick={() => onSelectTab('detection')}
+          >
+            SAR Radar
+          </button>
+          <button
+            className={`workflow-tab-btn ${activeWorkflowTab === 'drift' ? 'active' : ''}`}
+            onClick={() => onSelectTab('drift')}
+          >
+            Drift Physics
+          </button>
+          <button
+            className={`workflow-tab-btn ${activeWorkflowTab === 'ais' ? 'active' : ''}`}
+            onClick={() => onSelectTab('attribution')}
+          >
+            AIS Tracking
+          </button>
+        </div>
+      </div>
+
+      {/* 4. LARGE ROUNDED CANVAS CONTAINER (Houses MapPanel with floating controls) */}
+      <div className="canvas-rounded-container">
+        <div className="canvas-map-wrapper">
+          <MapPanel
+            scenario={currentScenario}
+            onUpdateCoords={onUpdateCoords}
+            onSelectScenario={onSelectScenario}
+          />
+        </div>
+
+        {/* Floating Bottom-Right Corner Controls (Matches reference screenshot ⤢ and ↻) */}
+        <div className="canvas-floating-controls">
+          <button
+            className="canvas-corner-btn"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Expand Fullscreen'}
+            aria-label="Toggle Fullscreen"
+          >
+            <span className="material-symbols-outlined">
+              {isFullscreen ? 'fullscreen_exit' : 'open_in_full'}
+            </span>
+          </button>
+          <button
+            className="canvas-corner-btn"
+            onClick={() => onSelectScenario && onSelectScenario('')}
+            title="Recenter Chart Overview"
+            aria-label="Recenter"
+          >
+            <span className="material-symbols-outlined">refresh</span>
+          </button>
+        </div>
       </div>
     </div>
   );

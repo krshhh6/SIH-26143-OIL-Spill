@@ -77,65 +77,73 @@ export const App: React.FC = () => {
 
   return (
     <div className="app-shell">
-      {/* TOPBAR */}
-      <Topbar
-        currentScenario={scenario}
+      {/* PRIMARY NAVIGATION DRAWER */}
+      <Sidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
         currentScenarioKey={currentScenarioKey}
         onSelectScenario={handleSelectScenario}
-        coordinates={coordinates}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        onOpenForensicModal={() => setIsForensicOpen(true)}
-        onOpenSentinelHubModal={() => setIsSentinelHubOpen(true)}
-        onOpenBhoonidhiModal={() => setIsBhoonidhiOpen(true)}
-        onSearchPlace={handleSearchPlace}
+        onOpenSettings={() => setIsForensicOpen(true)}
       />
 
-      {/* SIDEBAR */}
-      <Sidebar activeTab={activeTab} onSelectTab={setActiveTab} />
+      {/* MAIN WORKSPACE CANVAS */}
+      <div className="workspace-container">
+        {/* WORKSPACE HEADER */}
+        <Topbar
+          currentScenario={scenario}
+          currentScenarioKey={currentScenarioKey}
+          onSelectScenario={handleSelectScenario}
+          coordinates={coordinates}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onOpenForensicModal={() => setIsForensicOpen(true)}
+          onOpenSentinelHubModal={() => setIsSentinelHubOpen(true)}
+          onOpenBhoonidhiModal={() => setIsBhoonidhiOpen(true)}
+          onSearchPlace={handleSearchPlace}
+        />
 
-      {/* MAIN CONTAINER */}
-      <main
-        className="main"
-        id="main-content"
-        style={{
-          overflow: activeTab === 'dashboard' ? 'hidden' : 'auto',
-        }}
-      >
-        {activeTab === 'dashboard' && (
-          <DashboardView
-            currentScenario={scenario}
-            onSelectTab={setActiveTab}
-            onOpenForensicModal={() => setIsForensicOpen(true)}
-            onUpdateCoords={setCoordinates}
-            onSelectScenario={handleSelectScenario}
-          />
-        )}
+        {/* WORKSPACE MAIN VIEW */}
+        <main
+          className="main"
+          id="main-content"
+          style={{
+            overflow: activeTab === 'dashboard' ? 'hidden' : 'auto',
+          }}
+        >
+          {activeTab === 'dashboard' && (
+            <DashboardView
+              currentScenario={scenario}
+              onSelectTab={setActiveTab}
+              onOpenForensicModal={() => setIsForensicOpen(true)}
+              onUpdateCoords={setCoordinates}
+              onSelectScenario={handleSelectScenario}
+            />
+          )}
 
+          {activeTab === 'drift' && (
+            <DriftView
+              onSelectTab={setActiveTab}
+              currentScenario={scenario}
+              onSelectScenario={handleSelectScenario}
+            />
+          )}
 
-        {activeTab === 'drift' && (
-          <DriftView
-            onSelectTab={setActiveTab}
-            currentScenario={scenario}
-            onSelectScenario={handleSelectScenario}
-          />
-        )}
+          {activeTab === 'attribution' && (
+            <AttributionView
+              currentScenario={scenario}
+              onSelectScenario={handleSelectScenario}
+            />
+          )}
 
-        {activeTab === 'attribution' && (
-          <AttributionView
-            currentScenario={scenario}
-            onSelectScenario={handleSelectScenario}
-          />
-        )}
+          {activeTab === 'evidence' && (
+            <EvidenceView onOpenForensicModal={() => setIsForensicOpen(true)} />
+          )}
 
-        {activeTab === 'evidence' && (
-          <EvidenceView onOpenForensicModal={() => setIsForensicOpen(true)} />
-        )}
+          {activeTab === 'analytics' && <AnalyticsView />}
 
-        {activeTab === 'analytics' && <AnalyticsView />}
-
-        {activeTab === 'detection' && <DetectionView onSelectTab={setActiveTab} />}
-      </main>
+          {activeTab === 'detection' && <DetectionView onSelectTab={setActiveTab} />}
+        </main>
+      </div>
 
       {/* MODALS */}
       <ForensicModal

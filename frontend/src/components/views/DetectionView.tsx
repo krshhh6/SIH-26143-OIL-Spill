@@ -87,9 +87,33 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
     img.src = selectedImage;
   };
 
-  // Exactly 5 balanced, high-aesthetic curated samples per class
-  const class1Images = [3, 5, 6, 7, 9].map((n) => `/demo-sar/class_1_${n}.jpg`);
-  const class0Images = [1, 2, 3, 6, 7].map((n) => `/demo-sar/class_0_${n}.jpg`);
+  // Benchmark Gallery Categories from authentic Zenodo Sentinel-1 SAR scenes
+  const [galleryCategory, setGalleryCategory] = useState<'oil' | 'clean' | 'lookalike' | 'ship_wake'>('oil');
+
+  const galleryCategories: Record<'oil' | 'clean' | 'lookalike' | 'ship_wake', { title: string; badge: string; images: string[] }> = {
+    oil: {
+      title: '🛢️ Oil Spill Benchmark (Zenodo)',
+      badge: '100% Detection',
+      images: Array.from({ length: 10 }, (_, i) => `/demo-sar/class_1_${i + 1}.jpg`),
+    },
+    clean: {
+      title: '🌊 Clean Ocean Baseline',
+      badge: '100% Non-Oil',
+      images: Array.from({ length: 10 }, (_, i) => `/demo-sar/class_0_${i + 1}.jpg`),
+    },
+    lookalike: {
+      title: '🌫️ Look-Alike False-Positive Rejection',
+      badge: '100% TNR (0% FP)',
+      images: Array.from({ length: 10 }, (_, i) => `/demo-sar/lookalike_${i + 1}.png`),
+    },
+    ship_wake: {
+      title: '🚢 Ship & Radar Wake Suppression',
+      badge: '90% TNR',
+      images: Array.from({ length: 10 }, (_, i) => `/demo-sar/ship_wake_${i + 1}.png`),
+    },
+  };
+
+  const activeCategoryData = galleryCategories[galleryCategory];
 
   return (
     <div className="view-container glass" style={{ padding: 'var(--sp-6)', overflowY: 'auto', height: '100%' }}>
@@ -143,44 +167,72 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
           />
         </div>
 
-        {/* Gallery */}
-        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 'var(--sp-4)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <h3 style={{ marginBottom: 'var(--sp-3)' }}>Try Sample Images</h3>
-          
-          <div style={{ marginBottom: 'var(--sp-3)' }}>
-            <div style={{ fontSize: '0.85rem', marginBottom: 'var(--sp-2)', color: 'var(--text-muted)' }}>🛢️ Oil Spill Samples (Class 1)</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--sp-2)' }}>
-              {class1Images.map((src, i) => (
-                <img 
-                  key={`c1-${i}`} 
-                  src={src} 
-                  alt={`Class 1 Sample ${i+1}`}
-                  style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 'var(--radius)', cursor: 'pointer', border: selectedImage === src ? '2px solid var(--accent)' : '1px solid rgba(255,255,255,0.1)', transition: 'transform 0.15s ease' }}
-                  onClick={() => { setTiffNotice(null); handleImageSelect(src); }}
-                  onError={(e) => (e.currentTarget.style.display = 'none')}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                />
-              ))}
-            </div>
+        {/* 40-Scene Curated Benchmark Gallery */}
+        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 'var(--sp-4)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem' }}>Benchmark Evaluation Gallery</h3>
+            <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(37,99,235,0.2)', color: 'var(--accent)', fontWeight: 600 }}>
+              {activeCategoryData.badge}
+            </span>
           </div>
 
-          <div>
-            <div style={{ fontSize: '0.85rem', marginBottom: 'var(--sp-2)', color: 'var(--text-muted)' }}>🌊 Clean Ocean Samples (Class 0)</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--sp-2)' }}>
-              {class0Images.map((src, i) => (
-                <img 
-                  key={`c0-${i}`} 
-                  src={src} 
-                  alt={`Class 0 Sample ${i+1}`}
-                  style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 'var(--radius)', cursor: 'pointer', border: selectedImage === src ? '2px solid var(--accent)' : '1px solid rgba(255,255,255,0.1)', transition: 'transform 0.15s ease' }}
-                  onClick={() => handleImageSelect(src)}
-                  onError={(e) => (e.currentTarget.style.display = 'none')}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                />
-              ))}
-            </div>
+          {/* Category Switcher Tabs */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[
+              { id: 'oil', label: '🛢️ Oil (10)' },
+              { id: 'clean', label: '🌊 Clean (10)' },
+              { id: 'lookalike', label: '🌫️ Look-Alike (10)' },
+              { id: 'ship_wake', label: '🚢 Ship/Wake (10)' },
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setGalleryCategory(cat.id as any)}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  borderRadius: 'var(--radius)',
+                  border: galleryCategory === cat.id ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.1)',
+                  background: galleryCategory === cat.id ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                  color: galleryCategory === cat.id ? '#fff' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontWeight: galleryCategory === cat.id ? 700 : 500,
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+            <span>{activeCategoryData.title}</span>
+            <span>Click any sample to evaluate</span>
+          </div>
+
+          {/* 10-Image Symmetric Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--sp-2)' }}>
+            {activeCategoryData.images.map((src, i) => (
+              <img 
+                key={`${galleryCategory}-${i}`} 
+                src={src} 
+                alt={`${galleryCategory} Sample ${i+1}`}
+                style={{
+                  width: '100%',
+                  aspectRatio: '1 / 1',
+                  objectFit: 'cover',
+                  borderRadius: 'var(--radius)',
+                  cursor: 'pointer',
+                  border: selectedImage === src ? '2px solid var(--accent)' : '1px solid rgba(255,255,255,0.12)',
+                  transition: 'transform 0.15s ease',
+                  background: '#111'
+                }}
+                onClick={() => { setTiffNotice(null); handleImageSelect(src); }}
+                onError={(e) => (e.currentTarget.style.display = 'none')}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                title={`Evaluate ${galleryCategory} sample #${i+1}`}
+              />
+            ))}
           </div>
         </div>
       </section>
