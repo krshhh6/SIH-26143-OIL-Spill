@@ -55,6 +55,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     const initialCenter: [number, number] = scenario ? [scenario.lat, scenario.lng] : [15.5, 79.0];
     const initialZoom = scenario ? 11 : 4.25;
 
+    const maxWorldBounds = L.latLngBounds(L.latLng(-85.0, -180.0), L.latLng(85.0, 180.0));
+
     const map = L.map(containerRef.current, {
       center: initialCenter,
       zoom: initialZoom,
@@ -65,6 +67,9 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       zoomControl: false,
       attributionControl: false,
       keyboard: false,
+      maxBounds: maxWorldBounds,
+      maxBoundsViscosity: 1.0,
+      worldCopyJump: false,
     });
 
     L.control.zoom({ position: 'topright' }).addTo(map);
@@ -79,6 +84,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         maxZoom: 22,
         attribution: '© ISRO Bhoonidhi / GEBCO / NOAA Ocean Bathymetry Relief',
         className: 'bhuvan-satellite-tiles',
+        noWrap: true,
+        bounds: maxWorldBounds,
       }
     );
 
@@ -90,25 +97,45 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         maxZoom: 22,
         attribution: '© ESRI World Imagery / Maxar / Earthstar Geographics',
         className: 'eo-satellite-tiles',
+        noWrap: true,
+        bounds: maxWorldBounds,
       }
     );
 
     // 3. Sentinel-1 SAR Radar Composite
     baseLayersRef.current.sar = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      { maxNativeZoom: 18, maxZoom: 22, className: 'eo-sar-radar-tiles' }
+      {
+        maxNativeZoom: 18,
+        maxZoom: 22,
+        className: 'eo-sar-radar-tiles',
+        noWrap: true,
+        bounds: maxWorldBounds,
+      }
     );
 
     // 4. Hydrographic & Nautical Chart (Carto Voyager)
     baseLayersRef.current['carto-voyager'] = L.tileLayer(
       'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      { subdomains: ['a', 'b', 'c', 'd'], maxNativeZoom: 19, maxZoom: 22 }
+      {
+        subdomains: ['a', 'b', 'c', 'd'],
+        maxNativeZoom: 19,
+        maxZoom: 22,
+        noWrap: true,
+        bounds: maxWorldBounds,
+      }
     );
 
     // 5. Tactical Dark Night Chart (Carto Dark)
     baseLayersRef.current['carto-dark'] = L.tileLayer(
       'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      { subdomains: ['a', 'b', 'c', 'd'], maxNativeZoom: 19, maxZoom: 22 }
+      {
+        subdomains: ['a', 'b', 'c', 'd'],
+        maxNativeZoom: 19,
+        maxZoom: 22,
+        noWrap: true,
+        bounds: maxWorldBounds,
+      }
     );
 
     baseLayersRef.current.opensea = baseLayersRef.current['carto-voyager'];
@@ -124,11 +151,15 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         maxZoom: 19,
         attribution: '© ISRO Bhuvan / Survey of India National Basemap',
         className: 'bhuvan-vector-tiles',
+        noWrap: true,
+        bounds: maxWorldBounds,
       }
     );
 
     seamarksLayerRef.current = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
       maxZoom: 18,
+      noWrap: true,
+      bounds: maxWorldBounds,
     });
 
     const initialLayer = baseLayersRef.current[baseLayer] || baseLayersRef.current.satellite;
@@ -147,6 +178,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         maxZoom: 22,
         opacity: 0.85,
         attribution: '© ESRI World Boundaries & Places',
+        noWrap: true,
+        bounds: maxWorldBounds,
       }
     );
 
