@@ -113,7 +113,7 @@ export const App: React.FC = () => {
         )}
 
 
-        {activeTab === 'drift' && <DriftView onSelectTab={setActiveTab} />}
+        {activeTab === 'drift' && <DriftView onSelectTab={setActiveTab} currentScenario={scenario} />}
 
         {activeTab === 'attribution' && <AttributionView currentScenario={scenario} />}
 
