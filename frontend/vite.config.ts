@@ -17,8 +17,6 @@ function onnxWasmPlugin(): Plugin {
             } else if (fileName.endsWith('.mjs') || fileName.endsWith('.js')) {
               res.setHeader('Content-Type', 'application/javascript');
             }
-            res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-            res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
             return fs.createReadStream(filePath).pipe(res);
           }
         }
@@ -37,15 +35,6 @@ export default defineConfig({
     hmr: {
       overlay: false,
     },
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-    },
   },
-  preview: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-    },
-  },
+  preview: {},
 })

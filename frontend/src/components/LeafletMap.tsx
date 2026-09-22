@@ -158,7 +158,23 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
     mapRef.current = map;
 
+    // Ensure map tiles layout and render properly
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (containerRef.current && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        map.invalidateSize();
+      });
+      resizeObserver.observe(containerRef.current);
+    }
+
     return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       map.remove();
       mapRef.current = null;
     };
