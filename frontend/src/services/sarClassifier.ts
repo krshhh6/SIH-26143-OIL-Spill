@@ -50,7 +50,7 @@ export async function loadModel(): Promise<void> {
 
   // Attempt to load ONNX WebAssembly sessions
   const wasmLocations = [
-    '/wasm/',
+    '/onnx-dist/',
     'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.29.0/dist/',
   ];
 
