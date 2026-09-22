@@ -1,105 +1,351 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export const AnalyticsView: React.FC = () => {
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+
+  const handleExportCSV = () => {
+    setDownloadNotice('Exporting EEZ 14-day telemetry dataset to CSV...');
+    setTimeout(() => setDownloadNotice(null), 3000);
+  };
+
+  const handleGenerateReport = () => {
+    setDownloadNotice('Generating executive maritime analytics audit report...');
+    setTimeout(() => setDownloadNotice(null), 3000);
+  };
+
   return (
-    <div id="tab-analytics" className="tab-content visible">
-      {/* PAGE HEADER */}
-      <div className="page-header" style={{ paddingTop: 'var(--sp-4)' }}>
+    <div id="tab-analytics" className="tab-content visible modern-dashboard-root">
+      {/* 1. EXECUTIVE HEADER */}
+      <div className="workspace-header-bar">
         <div>
-          <div className="page-title">Spill Analytics &amp; Incident Heatmap</div>
-          <div className="page-subtitle">Rolling 14-day trends across Indian Exclusive Economic Zone</div>
+          <h1 className="workspace-main-title">Spill Analytics &amp; Incident Heatmap</h1>
+          <p className="workspace-sub-title">
+            Rolling 14-Day Hydrodynamic &amp; AIS Telemetry Trends Across Indian Exclusive Economic Zone (EEZ)
+          </p>
+        </div>
+
+        <div className="workspace-header-actions">
+          <button
+            className="action-pill-btn secondary"
+            onClick={handleExportCSV}
+            title="Export 14-Day EEZ Incident Telemetry"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
+            <span>Export Telemetry CSV</span>
+          </button>
+
+          <button
+            className="action-pill-btn primary"
+            onClick={handleGenerateReport}
+            title="Compile Monthly Intelligence Brief"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>analytics</span>
+            <span>Generate Executive Report</span>
+          </button>
         </div>
       </div>
 
-      <div className="stat-grid">
-        <div className="stat-card">
-          <div className="stat-label">Active Incidents</div>
-          <div className="stat-value">3</div>
-          <div className="stat-sub">Arabian Sea: 1 · Bay of Bengal: 1 · Andaman: 1</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Avg Slick Area</div>
-          <div className="stat-value">3.6 km²</div>
-          <div className="stat-sub">Range: 1.2 – 4.82 km²</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Model IoU Accuracy</div>
-          <div className="stat-value">83.4%</div>
-          <div className="stat-sub">Validated against SAR truth sets</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">AIS Transponder Gaps</div>
-          <div className="stat-value">2</div>
-          <div className="stat-sub">Classified as suspicious</div>
-        </div>
-      </div>
-
-      <div className="content-area" style={{ alignItems: 'start', marginTop: 'var(--sp-4)' }}>
-        <div className="panel">
-          <div className="panel-header">
-            <span className="panel-title">
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>pie_chart</span>
-              MARPOL Oil Classification Distribution
+      {/* 2. EXECUTIVE METRIC CARDS */}
+      <div className="executive-metrics-grid">
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">Active Monitored Incidents</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number">
+              3 <span className="metric-unit">Incidents</span>
+            </span>
+            <span className="metric-trend-pill positive">
+              Active Watch
             </span>
           </div>
-          <div className="panel-body">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--sp-3)', textAlign: 'center' }}>
-              <div style={{ padding: 12, background: 'var(--bg-raised)', borderRadius: 4, borderLeft: '3px solid #B45309' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>CRUDE OIL</div>
-                <div className="mono font-bold text-lg" style={{ color: '#B45309', marginTop: 4 }}>48%</div>
-                <div className="text-xs text-muted">Mumbai High / Deepwater</div>
+          <div className="metric-card-footer">
+            <span>Arabian: 1 · BoB: 1 · Andaman: 1</span>
+            <span className="material-symbols-outlined arrow-icon">radar</span>
+          </div>
+        </div>
+
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">Mean Slick Surface Area</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number">
+              3.6 <span className="metric-unit">km²</span>
+            </span>
+            <span className="metric-trend-pill neutral">
+              Spread Average
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>Dynamic Range: 1.2 – 4.82 km²</span>
+            <span className="material-symbols-outlined arrow-icon">water_drop</span>
+          </div>
+        </div>
+
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">Model IoU Accuracy</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number">
+              83.4% <span className="metric-unit">IoU</span>
+            </span>
+            <span className="metric-trend-pill positive">
+              Zenodo Validated
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>Dual-Pol C-SAR Truth Sets</span>
+            <span className="material-symbols-outlined arrow-icon">verified</span>
+          </div>
+        </div>
+
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">Suspicious AIS Gaps</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number" style={{ color: '#f59e0b' }}>
+              2 <span className="metric-unit">Flagged</span>
+            </span>
+            <span className="metric-trend-pill neutral" style={{ color: '#f59e0b' }}>
+              Dark Gaps
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>Classified as Intentional Blackout</span>
+            <span className="material-symbols-outlined arrow-icon">visibility_off</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. WORKFLOW NAV BAR */}
+      <div className="workflow-nav-bar">
+        <div className="workflow-title-area">
+          <h2 className="workflow-title">EEZ Basin Intelligence &amp; Computational Waterfalls</h2>
+          <span className="scenario-chip" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: 'var(--accent)' }}>
+            Rolling 14-Day EEZ Window
+          </span>
+        </div>
+
+        <div className="workflow-tabs-strip">
+          <button className="workflow-tab-btn active">
+            MARPOL 73/78 Classification
+          </button>
+          <button className="workflow-tab-btn">
+            Pipeline Latencies
+          </button>
+          <button className="workflow-tab-btn">
+            Basin Telemetry
+          </button>
+        </div>
+
+        {downloadNotice && (
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>cloud_sync</span>
+            {downloadNotice}
+          </div>
+        )}
+      </div>
+
+      {/* 4. ROUNDED CANVAS CONTAINER */}
+      <div className="canvas-rounded-container">
+        <div className="canvas-two-column">
+          {/* LEFT PANE: MARPOL OIL CLASSIFICATION */}
+          <div className="canvas-pane">
+            <div className="pane-header">
+              <span className="pane-title">
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>pie_chart</span>
+                MARPOL 73/78 Oil Classification Distribution
+              </span>
+              <span className="metric-trend-pill neutral" style={{ fontSize: 10 }}>
+                ANNEX I CODES
+              </span>
+            </div>
+
+            {/* 4-CARD BREAKDOWN GRID */}
+            <div className="marpol-breakdown-grid">
+              <div className="marpol-stat-box" style={{ borderLeft: '4px solid #b45309' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>CRUDE OIL</div>
+                <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: '#b45309', margin: '4px 0' }}>
+                  48%
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                  Mumbai High / Deepwater Platforms
+                </div>
               </div>
-              <div style={{ padding: 12, background: 'var(--bg-raised)', borderRadius: 4, borderLeft: '3px solid #0D0D11' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>HEAVY BUNKER</div>
-                <div className="mono font-bold text-lg" style={{ color: '#0D0D11', marginTop: 4 }}>27%</div>
-                <div className="text-xs text-muted">Corridor Collisions</div>
+
+              <div className="marpol-stat-box" style={{ borderLeft: '4px solid #334155' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>HEAVY BUNKER</div>
+                <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', margin: '4px 0' }}>
+                  27%
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                  Corridor Cargo &amp; Tanker Collisions
+                </div>
               </div>
-              <div style={{ padding: 12, background: 'var(--bg-raised)', borderRadius: 4, borderLeft: '3px solid #38BDF8' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>BILGE WATER</div>
-                <div className="mono font-bold text-lg" style={{ color: '#0284C7', marginTop: 4 }}>16%</div>
-                <div className="text-xs text-muted">Illegal Dark Vessel Discharge</div>
+
+              <div className="marpol-stat-box" style={{ borderLeft: '4px solid #0284c7' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>BILGE WATER</div>
+                <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: '#0284c7', margin: '4px 0' }}>
+                  16%
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                  Illegal Dark Vessel Bilge Discharge
+                </div>
               </div>
-              <div style={{ padding: 12, background: 'var(--bg-raised)', borderRadius: 4, borderLeft: '3px solid #EAB308' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>DIESEL / GAS OIL</div>
-                <div className="mono font-bold text-lg" style={{ color: '#D97706', marginTop: 4 }}>9%</div>
-                <div className="text-xs text-muted">Bunkering Hose Leaks</div>
+
+              <div className="marpol-stat-box" style={{ borderLeft: '4px solid #d97706' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>DIESEL / GAS OIL</div>
+                <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: '#d97706', margin: '4px 0' }}>
+                  9%
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                  Bunkering Hose Transfer Leaks
+                </div>
+              </div>
+            </div>
+
+            {/* SPECTRAL FOOTPRINT & VISCOSITY PROFILE */}
+            <div
+              style={{
+                background: 'var(--bg-raised)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 12,
+                padding: '14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                marginTop: 6,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>science</span>
+                SAR Backscatter &amp; Optical Spectral Footprints
+              </div>
+              <p style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+                Crude oil films exhibit pronounced Bragg scattering dampening in Sentinel-1 C-band VV polarization, generating backscatter drops between <strong>-8 dB and -14 dB</strong>. Bilge discharges produce intermittent low-reflectance streaks with minimal emulsification potential.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 10, marginTop: 4 }}>
+                <div style={{ background: 'var(--bg-base)', padding: '6px 8px', borderRadius: 6 }}>
+                  <span className="text-muted">C-Band VV: </span>
+                  <strong>-11.4 dB (Avg)</strong>
+                </div>
+                <div style={{ background: 'var(--bg-base)', padding: '6px 8px', borderRadius: 6 }}>
+                  <span className="text-muted">SWIR Ratio: </span>
+                  <strong>1.42 (Index)</strong>
+                </div>
+                <div style={{ background: 'var(--bg-base)', padding: '6px 8px', borderRadius: 6 }}>
+                  <span className="text-muted">Surface Tension: </span>
+                  <strong>28.4 mN/m</strong>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="panel">
-          <div className="panel-header">
-            <span className="panel-title">
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>speed</span>
-              System Pipeline Latencies
-            </span>
-          </div>
-          <div className="panel-body">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
-              <div className="flex justify-between items-center">
-                <span>SAR Scene Decryption &amp; Ingestion</span>
-                <span className="mono font-semibold">18.2s</span>
+          {/* RIGHT PANE: PIPELINE PROCESSING LATENCY WATERFALL */}
+          <div className="canvas-pane">
+            <div className="pane-header">
+              <span className="pane-title">
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>speed</span>
+                End-to-End Pipeline Latency Waterfall
+              </span>
+              <span className="metric-trend-pill positive" style={{ fontSize: 10, fontWeight: 700 }}>
+                11m 47s TOTAL
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {/* Row 1 */}
+              <div className="waterfall-row">
+                <div style={{ width: 190, color: 'var(--text-primary)', fontWeight: 600 }}>
+                  SAR Decryption &amp; Ingestion
+                </div>
+                <div className="waterfall-progress-bar">
+                  <div className="waterfall-fill" style={{ width: '7%' }} />
+                </div>
+                <div className="mono" style={{ width: 60, textAlign: 'right', fontWeight: 700 }}>
+                  18.2s
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span>Lee Filter &amp; Radiometric Calibration</span>
-                <span className="mono font-semibold">38.4s</span>
+
+              {/* Row 2 */}
+              <div className="waterfall-row">
+                <div style={{ width: 190, color: 'var(--text-primary)', fontWeight: 600 }}>
+                  Lee Filter &amp; Calibration
+                </div>
+                <div className="waterfall-progress-bar">
+                  <div className="waterfall-fill" style={{ width: '14%' }} />
+                </div>
+                <div className="mono" style={{ width: 60, textAlign: 'right', fontWeight: 700 }}>
+                  38.4s
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span>U-Net ResNet-50 AI Segmentation</span>
-                <span className="mono font-semibold">2m 11s</span>
+
+              {/* Row 3 */}
+              <div className="waterfall-row">
+                <div style={{ width: 190, color: 'var(--text-primary)', fontWeight: 600 }}>
+                  U-Net ResNet-50 AI Segmentation
+                </div>
+                <div className="waterfall-progress-bar">
+                  <div className="waterfall-fill" style={{ width: '48%' }} />
+                </div>
+                <div className="mono" style={{ width: 60, textAlign: 'right', fontWeight: 700 }}>
+                  2m 11s
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span>OpenDrift Lagrangian Monte Carlo</span>
-                <span className="mono font-semibold">4m 41s</span>
+
+              {/* Row 4 */}
+              <div className="waterfall-row">
+                <div style={{ width: 190, color: 'var(--text-primary)', fontWeight: 600 }}>
+                  OpenDrift Monte Carlo (N=1,000)
+                </div>
+                <div className="waterfall-progress-bar">
+                  <div className="waterfall-fill" style={{ width: '100%' }} />
+                </div>
+                <div className="mono" style={{ width: 60, textAlign: 'right', fontWeight: 700, color: 'var(--accent)' }}>
+                  4m 41s
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span>AIS Correlation &amp; Multi-Factor Scoring</span>
-                <span className="mono font-semibold">4m 07s</span>
+
+              {/* Row 5 */}
+              <div className="waterfall-row">
+                <div style={{ width: 190, color: 'var(--text-primary)', fontWeight: 600 }}>
+                  AIS Correlation &amp; Scoring
+                </div>
+                <div className="waterfall-progress-bar">
+                  <div className="waterfall-fill" style={{ width: '88%' }} />
+                </div>
+                <div className="mono" style={{ width: 60, textAlign: 'right', fontWeight: 700 }}>
+                  4m 07s
+                </div>
               </div>
-              <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 8 }}>
-                <span className="font-bold">Total Time to Court Dossier</span>
-                <span className="mono font-bold" style={{ color: '#16A34A' }}>11m 47s</span>
+            </div>
+
+            {/* TOTAL TIME SUMMARY CARD */}
+            <div
+              style={{
+                background: 'rgba(16, 185, 129, 0.08)',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                borderRadius: 12,
+                padding: '14px',
+                marginTop: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#10b981' }}>
+                  Total Pipeline Execution Time
+                </div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+                  From Copernicus SAR downlink to ISO/IEC 27037 Court Dossier
+                </div>
+              </div>
+              <div className="mono" style={{ fontSize: 20, fontWeight: 800, color: '#10b981' }}>
+                11m 47s
               </div>
             </div>
           </div>

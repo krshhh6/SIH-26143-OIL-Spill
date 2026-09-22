@@ -695,33 +695,17 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
   };
 
   return (
-    <div id="tab-drift" className="tab-content visible">
-      {/* PAGE HEADER */}
-      <div className="page-header" style={{ paddingTop: 'var(--sp-4)' }}>
+    <div id="tab-drift" className="tab-content visible modern-dashboard-root">
+      {/* 1. EXECUTIVE HEADER */}
+      <div className="workspace-header-bar">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="page-title">Lagrangian Hydrodynamic Drift Simulation</div>
-            <span className="id-tag">OpenDrift / OpenOil</span>
-            <span
-              className="chip"
-              style={{
-                background: 'rgba(56, 189, 248, 0.15)',
-                color: 'var(--accent)',
-                borderColor: 'rgba(56, 189, 248, 0.3)',
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-            >
-              CMEMS &amp; ERA5 10m FORCING
-            </span>
-          </div>
-          <div className="page-subtitle">
-            Bidirectional Monte Carlo Dispersion (N=1,000 particles) · Reverse Origin Backtracking &amp; Forward Future Impact Projection
-          </div>
+          <h1 className="workspace-main-title">Lagrangian Hydrodynamic Drift Simulation</h1>
+          <p className="workspace-sub-title">
+            OpenDrift / OpenOil Framework · Bidirectional Monte Carlo Dispersion (N=1,000 Particles) · CMEMS &amp; ERA5 10m Forcing
+          </p>
         </div>
 
-        <div className="page-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
-          {/* SCENARIO SELECTOR */}
+        <div className="workspace-header-actions">
           <select
             value={selectedKey}
             onChange={(e) => {
@@ -732,16 +716,12 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                 onSelectScenario?.(k);
               }
             }}
-            className="input-select"
+            className="action-pill-btn secondary"
             style={{
-              padding: '6px 12px',
-              fontSize: 12,
+              padding: '6px 14px',
               fontWeight: 600,
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
+              appearance: 'auto',
             }}
           >
             {Object.entries(SCENARIOS).map(([key, sc]) => (
@@ -752,10 +732,9 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
           </select>
 
           <button
-            className="btn btn-secondary"
+            className="action-pill-btn secondary"
             onClick={() => refreshLiveDriftData(selectedKey)}
             disabled={isLoadingLive}
-            style={{ gap: 6, fontSize: 12 }}
             title="Fetch real-time ocean currents and wind from live Copernicus/Open-Meteo API"
           >
             <span
@@ -768,14 +747,13 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
             >
               satellite_alt
             </span>
-            {isLoadingLive ? 'Syncing API...' : 'Refresh Live Met-Ocean'}
+            <span>{isLoadingLive ? 'Syncing...' : 'Refresh Met-Ocean'}</span>
           </button>
 
           <button
-            className="btn btn-secondary"
+            className="action-pill-btn secondary"
             onClick={handleRunSimulation}
             disabled={isSimulating}
-            style={{ gap: 6, fontSize: 12 }}
           >
             <span
               className="material-symbols-outlined"
@@ -786,18 +764,15 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
             >
               {isSimulating ? 'sync' : 'play_circle'}
             </span>
-            {isSimulating ? `Calculating (${simProgress}%)` : 'Run OpenDrift'}
+            <span>{isSimulating ? `Calculating (${simProgress}%)` : 'Run OpenDrift'}</span>
           </button>
 
           <button
-            className="btn btn-primary"
+            className="action-pill-btn primary"
             onClick={() => onSelectTab('attribution')}
-            style={{ gap: 6, fontSize: 12 }}
           >
-            Vessel Attribution
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-              arrow_forward
-            </span>
+            <span>Vessel Attribution</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_forward</span>
           </button>
         </div>
       </div>
@@ -805,11 +780,11 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
       {exportNotice && (
         <div
           style={{
+            margin: '0 0 12px',
             padding: '8px 14px',
-            marginBottom: 'var(--sp-3)',
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(16, 185, 129, 0.12)',
+            border: '1px solid rgba(16, 185, 129, 0.28)',
+            borderRadius: 8,
             fontSize: 12,
             color: '#10b981',
             fontWeight: 600,
@@ -823,131 +798,156 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
         </div>
       )}
 
-      {/* SIMULATION MODE TOGGLE */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--sp-2)',
-          marginBottom: 'var(--sp-4)',
-          borderBottom: '1px solid var(--border-subtle)',
-          paddingBottom: 'var(--sp-2)',
-        }}
-      >
-        <button
-          onClick={() => setActiveMode('forward')}
-          style={{
-            padding: '8px 16px',
-            fontSize: 12,
-            fontWeight: 700,
-            borderRadius: 'var(--radius-sm)',
-            cursor: 'pointer',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            background: activeMode === 'forward' ? 'var(--accent)' : 'var(--bg-raised)',
-            color: activeMode === 'forward' ? '#fff' : 'var(--text-muted)',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>trending_up</span>
-          Future Drift &amp; Shoreline Forecast (T0 → T+48h)
-        </button>
+      {/* 2. EXECUTIVE METRIC CARDS */}
+      <div className="executive-metrics-grid">
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">Origin Probability Core</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number" style={{ fontSize: 19 }}>
+              {activeOriginCoords.split(',')[0]}
+              <span className="metric-unit" style={{ fontSize: 13, marginLeft: 4 }}>
+                {activeOriginCoords.split(',')[1]}
+              </span>
+            </span>
+            <span className="metric-trend-pill positive">
+              50% Probability
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>{profile.originWindow}</span>
+            <span className="material-symbols-outlined arrow-icon">history</span>
+          </div>
+        </div>
 
-        <button
-          onClick={() => setActiveMode('backward')}
-          style={{
-            padding: '8px 16px',
-            fontSize: 12,
-            fontWeight: 700,
-            borderRadius: 'var(--radius-sm)',
-            cursor: 'pointer',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            background: activeMode === 'backward' ? 'var(--drift-color)' : 'var(--bg-raised)',
-            color: activeMode === 'backward' ? '#fff' : 'var(--text-muted)',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>history</span>
-          Origin Probability Backtracking (T-24h → T0)
-        </button>
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">Dispersion Envelope</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number">
+              {activeOriginAreaKm2} <span className="metric-unit">km²</span>
+            </span>
+            <span className="metric-trend-pill neutral">
+              75% Uncertainty
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>N=1,000 Lagrangian Particles</span>
+            <span className="material-symbols-outlined arrow-icon">grain</span>
+          </div>
+        </div>
 
-        <button
-          onClick={() => setActiveMode('unified')}
-          style={{
-            padding: '8px 16px',
-            fontSize: 12,
-            fontWeight: 700,
-            borderRadius: 'var(--radius-sm)',
-            cursor: 'pointer',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            background: activeMode === 'unified' ? 'var(--text-primary)' : 'var(--bg-raised)',
-            color: activeMode === 'unified' ? 'var(--bg-base)' : 'var(--text-muted)',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>alt_route</span>
-          Unified Spatiotemporal Lifecycle (T-24h → T+48h)
-        </button>
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">Shoreline Landfall ETA</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number" style={{ color: currentForecast.distanceToCoastKm < 15 ? '#ef4444' : 'inherit' }}>
+              {activeLandfallEta.split(' ')[0]} <span className="metric-unit">{activeLandfallEta.includes('h') ? 'h' : ''}</span>
+            </span>
+            <span className={`metric-trend-pill ${currentForecast.threatLevel === 'CRITICAL' ? 'positive' : 'neutral'}`} style={{ color: currentForecast.threatLevel === 'CRITICAL' ? '#ef4444' : undefined }}>
+              {currentForecast.threatLevel} THREAT
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>{profile.coastalZoneName}</span>
+            <span className="material-symbols-outlined arrow-icon">warning</span>
+          </div>
+        </div>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button
-            className="btn btn-secondary"
-            onClick={handleExportGeoJSON}
-            style={{ padding: '4px 10px', fontSize: 11, gap: 5 }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>download</span>
-            Export GeoJSON Trajectory
-          </button>
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">CMEMS Surface Jet</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number">
+              {liveResult ? `${liveResult.metOcean.currentSpeedKnots}` : '0.82'} <span className="metric-unit">kn</span>
+            </span>
+            <span className="metric-trend-pill neutral">
+              {liveResult ? `${liveResult.metOcean.currentCompassLabel} (${liveResult.metOcean.currentDirectionDeg}°)` : 'ENE @ 065°'}
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>Stokes Windage: {liveResult ? `${liveResult.metOcean.windSpeedKnots} kn` : '13.2 kn'}</span>
+            <span className="material-symbols-outlined arrow-icon">air</span>
+          </div>
         </div>
       </div>
 
-      {/* MAIN TWO-COLUMN CONTENT AREA */}
-      <div className="content-area" style={{ alignItems: 'start' }}>
-        {/* LEFT COLUMN: ACTIVE MODE INTELLIGENCE */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
-          {/* ========================================================================= */}
-          {/* MODE: FORWARD FUTURE FORECAST RESULTS (REQUESTED FEATURE)                 */}
-          {/* ========================================================================= */}
-          {(activeMode === 'forward' || activeMode === 'unified') && (
-            <div className="panel">
-              <div className="panel-header">
-                <span className="panel-title">
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>
-                    radar
-                  </span>
-                  Future Slick Dispersion &amp; Trajectory Forecast (Forward Time)
-                </span>
-                <span
-                  className="chip"
-                  style={{
-                    background:
-                      currentForecast.threatLevel === 'CRITICAL'
-                        ? 'rgba(239, 68, 68, 0.15)'
-                        : 'rgba(245, 158, 11, 0.15)',
-                    color: currentForecast.threatLevel === 'CRITICAL' ? '#ef4444' : '#f59e0b',
-                    borderColor:
-                      currentForecast.threatLevel === 'CRITICAL'
-                        ? 'rgba(239, 68, 68, 0.3)'
-                        : 'rgba(245, 158, 11, 0.3)',
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                >
-                  LANDFALL THREAT: {currentForecast.threatLevel}
-                </span>
-              </div>
+      {/* 3. WORKFLOW NAV BAR */}
+      <div className="workflow-nav-bar">
+        <div className="workflow-title-area">
+          <h2 className="workflow-title">Hydrodynamic Simulation Scenarios</h2>
+          <span className="scenario-chip" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: 'var(--accent)' }}>
+            {profile.incidentName} · {currentForecast.label}
+          </span>
+        </div>
 
-              <div className="panel-body">
+        <div className="workflow-tabs-strip">
+          <button
+            className={`workflow-tab-btn ${activeMode === 'forward' ? 'active' : ''}`}
+            onClick={() => setActiveMode('forward')}
+          >
+            Future Forecast (T0 → T+48h)
+          </button>
+          <button
+            className={`workflow-tab-btn ${activeMode === 'backward' ? 'active' : ''}`}
+            onClick={() => setActiveMode('backward')}
+          >
+            Origin Backtrack (T-24h → T0)
+          </button>
+          <button
+            className={`workflow-tab-btn ${activeMode === 'unified' ? 'active' : ''}`}
+            onClick={() => setActiveMode('unified')}
+          >
+            Unified Spatiotemporal
+          </button>
+        </div>
+
+        <button
+          className="action-pill-btn secondary"
+          onClick={handleExportGeoJSON}
+          style={{ fontSize: 11, padding: '4px 12px' }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>download</span>
+          <span>Export GeoJSON</span>
+        </button>
+      </div>
+
+      {/* 4. ROUNDED CANVAS CONTAINER */}
+      <div className="canvas-rounded-container">
+        <div className="canvas-two-column">
+          {/* LEFT PANE: ACTIVE HYDRODYNAMIC SIMULATION */}
+          <div className="canvas-pane">
+            {(activeMode === 'forward' || activeMode === 'unified') && (
+              <>
+                <div className="pane-header">
+                  <span className="pane-title">
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>
+                      radar
+                    </span>
+                    Future Slick Dispersion &amp; Trajectory Forecast
+                  </span>
+                  <span
+                    className="metric-trend-pill"
+                    style={{
+                      background:
+                        currentForecast.threatLevel === 'CRITICAL'
+                          ? 'rgba(239, 68, 68, 0.12)'
+                          : 'rgba(245, 158, 11, 0.12)',
+                      color: currentForecast.threatLevel === 'CRITICAL' ? '#ef4444' : '#f59e0b',
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                  >
+                    LANDFALL THREAT: {currentForecast.threatLevel}
+                  </span>
+                </div>
+
                 {/* TIMESTEP STEP SELECTOR / SCRUBBER */}
-                <div style={{ marginBottom: 'var(--sp-4)' }}>
+                <div>
                   <div
                     style={{
                       fontSize: 11,
@@ -971,7 +971,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                           key={f.label}
                           onClick={() => setSelectedStepIndex(idx)}
                           style={{
-                            padding: '10px 8px',
+                            padding: '8px 6px',
                             borderRadius: 'var(--radius-sm)',
                             border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border-subtle)',
                             background: isSelected ? 'rgba(56, 189, 248, 0.12)' : 'var(--bg-raised)',
@@ -980,10 +980,10 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                             transition: 'all 0.15s ease',
                           }}
                         >
-                          <div style={{ fontSize: 12, fontWeight: 700, color: isSelected ? 'var(--accent)' : 'var(--text-primary)' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? 'var(--accent)' : 'var(--text-primary)' }}>
                             {f.label}
                           </div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
+                          <div style={{ fontSize: 9.5, color: 'var(--text-muted)', marginTop: 2 }}>
                             {f.areaKm2} km² · {f.distanceToCoastKm > 0 ? `${f.distanceToCoastKm} km` : 'Coast'}
                           </div>
                         </button>
@@ -993,62 +993,55 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                 </div>
 
                 {/* CRITICAL FUTURE SUMMARY METRICS */}
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: 'var(--sp-3)',
-                    marginBottom: 'var(--sp-4)',
-                  }}
-                >
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--sp-2)' }}>
                   <div
                     style={{
                       background: 'var(--bg-raised)',
-                      padding: 12,
-                      borderRadius: 4,
+                      padding: 10,
+                      borderRadius: 10,
                       border: '1px solid var(--border-subtle)',
                     }}
                   >
-                    <div className="text-xs text-muted fw-600">Projected Centroid ({currentForecast.label})</div>
-                    <div className="text-base fw-700" style={{ color: 'var(--accent)', marginTop: 2 }}>
+                    <div className="text-xs text-muted fw-600">Projected Centroid</div>
+                    <div className="text-sm fw-700" style={{ color: 'var(--accent)', marginTop: 2 }}>
                       {currentForecast.lat.toFixed(3)}°N, {currentForecast.lng.toFixed(3)}°E
                     </div>
-                    <div className="text-xs text-muted" style={{ marginTop: 2 }}>
-                      Drift: {currentForecast.driftSpeedKnots} kn @ {currentForecast.headingDeg}° (ENE)
+                    <div className="text-xs text-muted" style={{ marginTop: 2, fontSize: 10 }}>
+                      Drift: {currentForecast.driftSpeedKnots} kn @ {currentForecast.headingDeg}°
                     </div>
                   </div>
 
                   <div
                     style={{
                       background: 'var(--bg-raised)',
-                      padding: 12,
-                      borderRadius: 4,
+                      padding: 10,
+                      borderRadius: 10,
                       border: '1px solid var(--border-subtle)',
                     }}
                   >
-                    <div className="text-xs text-muted fw-600">Fay Spreading Area Expansion</div>
-                    <div className="text-base fw-700" style={{ marginTop: 2 }}>
+                    <div className="text-xs text-muted fw-600">Fay Spreading Area</div>
+                    <div className="text-sm fw-700" style={{ marginTop: 2 }}>
                       {currentForecast.areaKm2} km²
-                      <span style={{ fontSize: 11, color: '#ef4444', marginLeft: 6, fontWeight: 600 }}>
+                      <span style={{ fontSize: 10, color: '#ef4444', marginLeft: 4, fontWeight: 600 }}>
                         (+{((currentForecast.areaKm2 / profile.initialAreaKm2 - 1) * 100).toFixed(0)}%)
                       </span>
                     </div>
-                    <div className="text-xs text-muted" style={{ marginTop: 2 }}>
-                      Equiv. Slick Radius: {currentForecast.slickRadiusKm} km
+                    <div className="text-xs text-muted" style={{ marginTop: 2, fontSize: 10 }}>
+                      Radius: {currentForecast.slickRadiusKm} km
                     </div>
                   </div>
 
                   <div
                     style={{
                       background: 'var(--bg-raised)',
-                      padding: 12,
-                      borderRadius: 4,
+                      padding: 10,
+                      borderRadius: 10,
                       border: '1px solid var(--border-subtle)',
                     }}
                   >
-                    <div className="text-xs text-muted fw-600">Shoreline Distance &amp; ETA</div>
+                    <div className="text-xs text-muted fw-600">Shoreline Distance</div>
                     <div
-                      className="text-base fw-700"
+                      className="text-sm fw-700"
                       style={{
                         marginTop: 2,
                         color: currentForecast.distanceToCoastKm < 15 ? '#ef4444' : 'var(--text-primary)',
@@ -1056,7 +1049,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                     >
                       {currentForecast.distanceToCoastKm > 0 ? `${currentForecast.distanceToCoastKm} km to coast` : 'SHORELINE LANDFALL'}
                     </div>
-                    <div className="text-xs text-muted" style={{ marginTop: 2 }}>
+                    <div className="text-xs text-muted" style={{ marginTop: 2, fontSize: 10 }}>
                       Target: {profile.coastalZoneName}
                     </div>
                   </div>
@@ -1066,7 +1059,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                 <div
                   style={{
                     padding: '12px 14px',
-                    borderRadius: 'var(--radius-sm)',
+                    borderRadius: 10,
                     background:
                       currentForecast.threatLevel === 'CRITICAL'
                         ? 'rgba(239, 68, 68, 0.08)'
@@ -1074,7 +1067,6 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                     borderLeft: `4px solid ${
                       currentForecast.threatLevel === 'CRITICAL' ? '#ef4444' : '#f59e0b'
                     }`,
-                    marginBottom: 'var(--sp-4)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -1092,7 +1084,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                     </span>
                   </div>
 
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 6 }}>
                     Slick advection driven by combined CMEMS current ({profile.currentVector}) and ERA5 Stokes windage ({profile.windVector}).
                     Targeting sensitive coastal shelf zone: <strong>{profile.coastalZoneName}</strong>.
                   </div>
@@ -1100,26 +1092,25 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                   <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
                     Vulnerable Marine Receptors in Projected Cone:
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
                     {profile.vulnerableHabitats.map((hab, idx) => (
                       <li key={idx}>{hab}</li>
                     ))}
                   </ul>
                 </div>
 
-                {/* OIL WEATHERING & MASS BALANCE (OPENOIL MODEL) */}
-                <div style={{ marginBottom: 'var(--sp-3)' }}>
+                {/* OIL WEATHERING & MASS BALANCE */}
+                <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
                     <span>OpenOil Weathering &amp; Mass Balance at {currentForecast.label}</span>
                     <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>
-                      Viscosity: {currentForecast.viscosityCSt} cSt (Initial: 15 cSt) · Water Content: {currentForecast.waterContentPct}%
+                      Viscosity: {currentForecast.viscosityCSt} cSt · Water Content: {currentForecast.waterContentPct}%
                     </span>
                   </div>
 
-                  {/* MULTI-SEGMENT PROGRESS BAR */}
                   <div
                     style={{
-                      height: 18,
+                      height: 16,
                       borderRadius: 4,
                       overflow: 'hidden',
                       display: 'flex',
@@ -1128,37 +1119,12 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                       marginBottom: 8,
                     }}
                   >
-                    <div
-                      title="Evaporated"
-                      style={{
-                        width: `${currentForecast.evaporatedPct}%`,
-                        background: '#38bdf8',
-                      }}
-                    />
-                    <div
-                      title="Emulsified Mousse"
-                      style={{
-                        width: `${currentForecast.emulsifiedPct}%`,
-                        background: '#d97706',
-                      }}
-                    />
-                    <div
-                      title="Naturally Dispersed"
-                      style={{
-                        width: `${currentForecast.dispersedPct}%`,
-                        background: '#10b981',
-                      }}
-                    />
-                    <div
-                      title="Persistent Surface Slick"
-                      style={{
-                        width: `${currentForecast.remainingSurfacePct}%`,
-                        background: '#ef4444',
-                      }}
-                    />
+                    <div title="Evaporated" style={{ width: `${currentForecast.evaporatedPct}%`, background: '#38bdf8' }} />
+                    <div title="Emulsified Mousse" style={{ width: `${currentForecast.emulsifiedPct}%`, background: '#d97706' }} />
+                    <div title="Naturally Dispersed" style={{ width: `${currentForecast.dispersedPct}%`, background: '#10b981' }} />
+                    <div title="Persistent Surface Slick" style={{ width: `${currentForecast.remainingSurfacePct}%`, background: '#ef4444' }} />
                   </div>
 
-                  {/* LEGEND */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, fontSize: 11 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ width: 10, height: 10, borderRadius: 2, background: '#38bdf8', display: 'inline-block' }} />
@@ -1177,7 +1143,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} />
-                      <span className="text-muted">Surface Slick:</span>
+                      <span className="text-muted">Surface:</span>
                       <strong className="mono">{currentForecast.remainingSurfacePct}%</strong>
                     </div>
                   </div>
@@ -1188,7 +1154,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                   style={{
                     background: 'var(--bg-raised)',
                     padding: '10px 12px',
-                    borderRadius: 4,
+                    borderRadius: 10,
                     border: '1px solid var(--border-subtle)',
                     display: 'flex',
                     alignItems: 'center',
@@ -1207,84 +1173,57 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
+              </>
+            )}
 
-          {/* ========================================================================= */}
-          {/* MODE: BACKWARD ORIGIN ENVELOPE ANALYSIS (ORIGINAL IMAGE 1 FIDELITY)      */}
-          {/* ========================================================================= */}
-          {(activeMode === 'backward' || activeMode === 'unified') && (
-            <div className="panel">
-              <div className="panel-header">
-                <span className="panel-title">
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>cyclone</span>
-                  Origin Probability Envelope Analysis (Reverse Time)
-                </span>
-                <span
-                  className="chip"
-                  style={{
-                    background: 'rgba(217,119,6,.10)',
-                    color: 'var(--drift-color)',
-                    borderColor: 'rgba(217,119,6,.25)',
-                    fontSize: 9,
-                  }}
-                >
-                  PHYSICS BACKTRACKING
-                </span>
-              </div>
-              <div className="panel-body">
-                <div className="prob-note" style={{ marginBottom: 'var(--sp-4)' }}>
-                  <strong>Operational Hydrodynamic Rule:</strong> Because sea surface currents and wind drift constantly
-                  transport oil films, a detected slick position is NEVER the discharge point. OpenDrift reverses the
-                  advection-diffusion equation to isolate the exact space-time envelope where discharge statistically occurred.
+            {/* BACKWARD ORIGIN ENVELOPE ANALYSIS */}
+            {(activeMode === 'backward' || activeMode === 'unified') && (
+              <div style={{ marginTop: activeMode === 'unified' ? 14 : 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="pane-header">
+                  <span className="pane-title">
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f59e0b' }}>
+                      history
+                    </span>
+                    Origin Probability Envelope Analysis (Reverse Time)
+                  </span>
+                  <span
+                    className="metric-trend-pill"
+                    style={{ background: 'rgba(217,119,6,.12)', color: '#d97706', fontSize: 10, fontWeight: 700 }}
+                  >
+                    PHYSICS BACKTRACKING
+                  </span>
                 </div>
 
                 <div
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: 'var(--sp-3)',
-                    marginBottom: 'var(--sp-4)',
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    borderLeft: '4px solid #f59e0b',
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.5,
                   }}
                 >
-                  <div
-                    style={{
-                      background: 'var(--bg-raised)',
-                      padding: 10,
-                      borderRadius: 4,
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  >
+                  <strong>Operational Hydrodynamic Rule:</strong> Detected slick position is never the discharge point.
+                  OpenDrift reverses the advection-diffusion equation to isolate the exact space-time envelope where discharge statistically occurred.
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                  <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
                     <div className="text-xs text-muted fw-600">50% Core Probability</div>
-                    <div className="text-base fw-700" style={{ color: 'var(--drift-color)' }}>
-                      {activeOriginCoords}
-                    </div>
-                    <div className="text-xs text-muted">{profile.originWindow}</div>
+                    <div className="text-sm fw-700" style={{ color: '#d97706', marginTop: 2 }}>{activeOriginCoords}</div>
+                    <div className="text-xs text-muted" style={{ fontSize: 10 }}>{profile.originWindow}</div>
                   </div>
-                  <div
-                    style={{
-                      background: 'var(--bg-raised)',
-                      padding: 10,
-                      borderRadius: 4,
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  >
+                  <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
                     <div className="text-xs text-muted fw-600">75% Probability Area</div>
-                    <div className="text-base fw-700">{activeOriginAreaKm2} km²</div>
-                    <div className="text-xs text-muted">Spatiotemporal uncertainty radius</div>
+                    <div className="text-sm fw-700" style={{ marginTop: 2 }}>{activeOriginAreaKm2} km²</div>
+                    <div className="text-xs text-muted" style={{ fontSize: 10 }}>Spatiotemporal uncertainty</div>
                   </div>
-                  <div
-                    style={{
-                      background: 'var(--bg-raised)',
-                      padding: 10,
-                      borderRadius: 4,
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  >
-                    <div className="text-xs text-muted fw-600">Total Particles Trailed</div>
-                    <div className="text-base fw-700">1,000 Lagrangian</div>
-                    <div className="text-xs text-muted">Runge-Kutta 4th Order Integrator</div>
+                  <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+                    <div className="text-xs text-muted fw-600">Total Particles</div>
+                    <div className="text-sm fw-700" style={{ marginTop: 2 }}>1,000 Lagrangian</div>
+                    <div className="text-xs text-muted" style={{ fontSize: 10 }}>Runge-Kutta 4th Order</div>
                   </div>
                 </div>
 
@@ -1296,7 +1235,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                     justifyContent: 'space-between',
                     padding: '10px 14px',
                     background: 'var(--bg-raised)',
-                    borderRadius: 'var(--radius-sm)',
+                    borderRadius: 10,
                     border: '1px solid var(--border-subtle)',
                   }}
                 >
@@ -1314,126 +1253,118 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                     </div>
                   </div>
                   <button
-                    className="btn btn-secondary"
+                    className="action-pill-btn secondary"
                     onClick={() => onSelectTab('attribution')}
                     style={{ padding: '4px 10px', fontSize: 11, gap: 4 }}
                   >
-                    View AIS Track
+                    <span>View AIS Track</span>
                     <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
                   </button>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT COLUMN: HYDRODYNAMIC ENGINE PARAMETERS & OCEAN FORCING */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
-          {/* HYDRODYNAMIC ENGINE PARAMETERS (IMAGE 1 FIDELITY) */}
-          <div className="panel">
-            <div className="panel-header">
-              <span className="panel-title">
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>tune</span>
-                Hydrodynamic Engine Parameters
-              </span>
-              <span className="id-tag">ODE SOLVER: RK4</span>
-            </div>
-            <div className="panel-body">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-3)', marginBottom: 'var(--sp-3)' }}>
-                <div>
-                  <div className="text-xs text-muted">Integration Time Step</div>
-                  <div className="mono fw-700">15 minutes</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted">Wind Drag Coefficient</div>
-                  <div className="mono fw-700">3.5% (Stokes Drift)</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted">Horizontal Diffusivity</div>
-                  <div className="mono fw-700">10 m²/s</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted">Current Layer Depth</div>
-                  <div className="mono fw-700">0.0 – 1.0 m (Ekman)</div>
-                </div>
-              </div>
-
-              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--sp-3)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Active Environmental Forcing:
-                  </div>
-                  <span style={{ fontSize: 10, color: liveResult ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
-                    {liveResult ? `🟢 Live API: ${liveResult.metOcean.source.split('(')[0].trim()}` : '🟡 Calibrated CMEMS'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="text-muted">CMEMS Current:</span>
-                    <span className="mono fw-600">
-                      {liveResult
-                        ? `${liveResult.metOcean.currentSpeedMs} m/s (${liveResult.metOcean.currentSpeedKnots} kn) @ ${liveResult.metOcean.currentDirectionDeg}° (${liveResult.metOcean.currentCompassLabel})`
-                        : profile.currentVector}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="text-muted">ERA5 10m Wind:</span>
-                    <span className="mono fw-600">
-                      {liveResult
-                        ? `${liveResult.metOcean.windSpeedMs} m/s (${liveResult.metOcean.windSpeedKnots} kn) @ ${liveResult.metOcean.windDirectionDeg}° (${liveResult.metOcean.windCompassLabel})`
-                        : profile.windVector}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="text-muted">Sea State &amp; Temp:</span>
-                    <span className="mono fw-600">
-                      {liveResult
-                        ? `${liveResult.metOcean.temperatureCelsius}°C · ${liveResult.metOcean.seaStateDescription}`
-                        : `${profile.sstCelsius}°C (${profile.seaState})`}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="text-muted">Net Drift Vector:</span>
-                    <span className="mono fw-700" style={{ color: 'var(--accent)' }}>
-                      {liveResult
-                        ? `${liveResult.metOcean.netDriftSpeedKnots} kn @ ${liveResult.metOcean.netDriftHeadingDeg}° (${liveResult.metOcean.netDriftCompassLabel})`
-                        : `${profile.forecasts[0].driftSpeedKnots} kn @ ${profile.forecasts[0].headingDeg}°`}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="text-muted">Oil Hydrocarbon Grade:</span>
-                    <span className="mono fw-600">{profile.oilType} ({profile.apiGravity})</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border-subtle)', paddingTop: 4 }}>
-                    <span className="text-muted">Met-Ocean Sync Time:</span>
-                    <span className="mono text-muted" style={{ fontSize: 10 }}>
-                      {liveResult ? `Synchronized at ${liveResult.metOcean.fetchedAt}` : 'Calibrated Baseline'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* SPATIOTEMPORAL WAYPOINT TABLE */}
-          <div className="panel">
-            <div className="panel-header">
-              <span className="panel-title">
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>route</span>
-                Simulation Trajectory Table
+          {/* RIGHT PANE: HYDRODYNAMIC ENGINE PARAMETERS & OCEAN FORCING */}
+          <div className="canvas-pane">
+            <div className="pane-header">
+              <span className="pane-title">
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>tune</span>
+                Hydrodynamic Engine Parameters
               </span>
-              <span className="text-xs text-muted">5 Timesteps</span>
+              <span className="metric-trend-pill neutral" style={{ fontSize: 10 }}>
+                ODE SOLVER: RK4
+              </span>
             </div>
-            <div className="panel-body" style={{ padding: 0 }}>
-              <div style={{ overflowX: 'auto' }}>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8 }}>
+                <div className="text-xs text-muted">Integration Time Step</div>
+                <div className="mono fw-700" style={{ fontSize: 13, marginTop: 2 }}>15 minutes</div>
+              </div>
+              <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8 }}>
+                <div className="text-xs text-muted">Wind Drag Coefficient</div>
+                <div className="mono fw-700" style={{ fontSize: 13, marginTop: 2 }}>3.5% (Stokes Drift)</div>
+              </div>
+              <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8 }}>
+                <div className="text-xs text-muted">Horizontal Diffusivity</div>
+                <div className="mono fw-700" style={{ fontSize: 13, marginTop: 2 }}>10 m²/s</div>
+              </div>
+              <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8 }}>
+                <div className="text-xs text-muted">Current Layer Depth</div>
+                <div className="mono fw-700" style={{ fontSize: 13, marginTop: 2 }}>0.0 – 1.0 m (Ekman)</div>
+              </div>
+            </div>
+
+            {/* ACTIVE ENVIRONMENTAL FORCING */}
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Active Environmental Forcing:
+                </div>
+                <span style={{ fontSize: 10, color: liveResult ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
+                  {liveResult ? `🟢 Live API: ${liveResult.metOcean.source.split('(')[0].trim()}` : '🟡 Calibrated CMEMS'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="text-muted">CMEMS Current:</span>
+                  <span className="mono fw-600">
+                    {liveResult
+                      ? `${liveResult.metOcean.currentSpeedMs} m/s (${liveResult.metOcean.currentSpeedKnots} kn) @ ${liveResult.metOcean.currentDirectionDeg}°`
+                      : profile.currentVector}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="text-muted">ERA5 10m Wind:</span>
+                  <span className="mono fw-600">
+                    {liveResult
+                      ? `${liveResult.metOcean.windSpeedMs} m/s (${liveResult.metOcean.windSpeedKnots} kn) @ ${liveResult.metOcean.windDirectionDeg}°`
+                      : profile.windVector}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="text-muted">Sea State &amp; Temp:</span>
+                  <span className="mono fw-600">
+                    {liveResult
+                      ? `${liveResult.metOcean.temperatureCelsius}°C · ${liveResult.metOcean.seaStateDescription}`
+                      : `${profile.sstCelsius}°C (${profile.seaState})`}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="text-muted">Net Drift Vector:</span>
+                  <span className="mono fw-700" style={{ color: 'var(--accent)' }}>
+                    {liveResult
+                      ? `${liveResult.metOcean.netDriftSpeedKnots} kn @ ${liveResult.metOcean.netDriftHeadingDeg}°`
+                      : `${profile.forecasts[0].driftSpeedKnots} kn @ ${profile.forecasts[0].headingDeg}°`}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="text-muted">Oil Grade:</span>
+                  <span className="mono fw-600">{profile.oilType} ({profile.apiGravity})</span>
+                </div>
+              </div>
+            </div>
+
+            {/* SIMULATION TRAJECTORY TABLE */}
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Simulation Trajectory Waypoints (5 Steps)
+                </div>
+                <span className="text-xs text-muted">Click step to inspect</span>
+              </div>
+
+              <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                   <thead>
                     <tr style={{ background: 'var(--bg-raised)', borderBottom: '1px solid var(--border-subtle)', textAlign: 'left' }}>
-                      <th style={{ padding: '8px 10px' }}>Step</th>
-                      <th style={{ padding: '8px 10px' }}>Coordinates</th>
-                      <th style={{ padding: '8px 10px' }}>Area</th>
-                      <th style={{ padding: '8px 10px' }}>Coast Dist</th>
-                      <th style={{ padding: '8px 10px' }}>Threat</th>
+                      <th style={{ padding: '6px 8px' }}>Step</th>
+                      <th style={{ padding: '6px 8px' }}>Coordinates</th>
+                      <th style={{ padding: '6px 8px' }}>Area</th>
+                      <th style={{ padding: '6px 8px' }}>Coast</th>
+                      <th style={{ padding: '6px 8px' }}>Threat</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1447,22 +1378,22 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
                           background: selectedStepIndex === idx ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
                         }}
                       >
-                        <td style={{ padding: '8px 10px', fontWeight: 600, color: 'var(--accent)' }}>{f.label}</td>
-                        <td style={{ padding: '8px 10px', fontFamily: 'monospace' }}>
+                        <td style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--accent)' }}>{f.label}</td>
+                        <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>
                           {f.lat.toFixed(2)}°, {f.lng.toFixed(2)}°
                         </td>
-                        <td style={{ padding: '8px 10px' }}>{f.areaKm2} km²</td>
-                        <td style={{ padding: '8px 10px' }}>{f.distanceToCoastKm > 0 ? `${f.distanceToCoastKm} km` : '0 km (Landfall)'}</td>
-                        <td style={{ padding: '8px 10px' }}>
+                        <td style={{ padding: '6px 8px' }}>{f.areaKm2} km²</td>
+                        <td style={{ padding: '6px 8px' }}>{f.distanceToCoastKm > 0 ? `${f.distanceToCoastKm} km` : '0 km'}</td>
+                        <td style={{ padding: '6px 8px' }}>
                           <span
-                            className="chip"
+                            className="metric-trend-pill"
                             style={{
                               fontSize: 9,
-                              padding: '2px 6px',
+                              padding: '1px 5px',
                               background:
                                 f.threatLevel === 'CRITICAL'
-                                  ? 'rgba(239, 68, 68, 0.15)'
-                                  : 'rgba(245, 158, 11, 0.15)',
+                                  ? 'rgba(239, 68, 68, 0.12)'
+                                  : 'rgba(245, 158, 11, 0.12)',
                               color: f.threatLevel === 'CRITICAL' ? '#ef4444' : '#f59e0b',
                             }}
                           >
@@ -1481,3 +1412,4 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
     </div>
   );
 };
+

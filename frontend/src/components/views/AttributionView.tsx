@@ -378,20 +378,17 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
   };
 
   return (
-    <div id="tab-attribution" className="tab-content visible">
-      {/* PAGE HEADER */}
-      <div className="page-header" style={{ paddingTop: 'var(--sp-4)' }}>
+    <div id="tab-attribution" className="tab-content visible modern-dashboard-root">
+      {/* 1. EXECUTIVE HEADER */}
+      <div className="workspace-header-bar">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="page-title">Vessel Attribution &amp; AIS Sensitivity Tuner</div>
-            <span className="id-tag">EXPLAINABLE ML</span>
-          </div>
-          <div className="page-subtitle">
-            Spatiotemporal intersection between AISHub live trajectories and OpenDrift reverse origin envelopes
-          </div>
+          <h1 className="workspace-main-title">Vessel Attribution &amp; AIS Sensitivity Tuner</h1>
+          <p className="workspace-sub-title">
+            Spatiotemporal Intersection Between AISHub Live Trajectories &amp; OpenDrift Reverse Origin Envelopes
+          </p>
         </div>
 
-        <div className="page-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+        <div className="workspace-header-actions">
           <select
             value={selectedKey}
             onChange={(e) => {
@@ -401,16 +398,12 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                 onSelectScenario?.(k);
               }
             }}
-            className="input-select"
+            className="action-pill-btn secondary"
             style={{
-              padding: '6px 12px',
-              fontSize: 12,
+              padding: '6px 14px',
               fontWeight: 600,
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
+              appearance: 'auto',
             }}
           >
             {Object.entries(SCENARIOS).map(([key, sc]) => (
@@ -419,161 +412,180 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
               </option>
             ))}
           </select>
-        </div>
-      </div>
-
-      {/* AISHUB INTEGRATION STATUS BAR */}
-      <div
-        style={{
-          margin: '0 16px 12px',
-          padding: '10px 14px',
-          background: 'rgba(15, 23, 42, 0.75)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 6,
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#38BDF8' }}>
-            satellite_alt
-          </span>
-          <div>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-              AISHub Live Webservice Integration
-            </div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-              Endpoint: <code style={{ color: '#00E5FF', background: 'rgba(0,0,0,0.3)', padding: '1px 4px', borderRadius: 3 }}>data.aishub.net/ws.php</code> · {feedSource} · Updated: {lastUpdated}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 10.5, color: 'var(--text-secondary)' }}>AISHub Username:</span>
-            <input
-              type="text"
-              placeholder="Optional Username..."
-              value={aishubUsername}
-              onChange={(e) => handleSaveUsername(e.target.value)}
-              style={{
-                fontSize: 10.5,
-                padding: '3px 8px',
-                borderRadius: 4,
-                border: '1px solid var(--border-subtle)',
-                background: 'var(--bg-card)',
-                color: 'var(--text-primary)',
-                width: 140,
-              }}
-            />
-          </div>
 
           <button
-            className="btn btn-secondary"
+            className="action-pill-btn secondary"
             onClick={handleRecalculate}
             disabled={isLoading}
-            style={{ fontSize: 10.5, padding: '3px 10px', display: 'flex', alignItems: 'center', gap: 4 }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: 16,
+                animation: isLoading ? 'spin 1s linear infinite' : 'none',
+              }}
+            >
               sync
             </span>
-            {isLoading ? 'Polling...' : 'Refresh Live AIS'}
+            <span>{isLoading ? 'Polling AIS...' : 'Refresh Live AIS'}</span>
+          </button>
+
+          <button
+            className="action-pill-btn primary"
+            onClick={handleRecalculate}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>calculate</span>
+            <span>Recalculate Ranking</span>
           </button>
         </div>
       </div>
 
-      <div className="content-area" style={{ alignItems: 'start', padding: '0 16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)', width: '100%' }}>
-          {/* WHAT-IF ATTRIBUTION WEIGHT TUNER */}
-          <div className="weight-tuner">
-            <div className="tuner-header">
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>tune</span>
-                Attribution Sensitivity Weights: S = Σ (wi · Si)
+      {/* 2. EXECUTIVE METRIC CARDS */}
+      <div className="executive-metrics-grid">
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">Screened Vessels</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number">
+              {candidates.length} <span className="metric-unit">Vessels</span>
+            </span>
+            <span className="metric-trend-pill neutral">
+              T - 72h Window
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>AOI: {activeScenario.title.toUpperCase()}</span>
+            <span className="material-symbols-outlined arrow-icon">radar</span>
+          </div>
+        </div>
+
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">Prime Culprit Suspect</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number" style={{ fontSize: 18, color: '#ef4444' }}>
+              {candidates[0]?.name || 'CRUDE ATLAS'}
+            </span>
+            <span className="metric-trend-pill positive" style={{ color: '#ef4444' }}>
+              {candidates[0]?.risk || 'CRITICAL'} RISK
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>MMSI: {candidates[0]?.mmsi || '419001234'} · Flag: {candidates[0]?.flag || 'India'}</span>
+            <span className="material-symbols-outlined arrow-icon">directions_boat</span>
+          </div>
+        </div>
+
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">Closest CPA Distance</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number">
+              {candidates[0]?.cpa_nm ?? 1.2} <span className="metric-unit">nm</span>
+            </span>
+            <span className="metric-trend-pill positive">
+              Centroid Intersect
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>SOG: {candidates[0]?.sog ?? 4.1} kn ({candidates[0]?.sog && candidates[0].sog < 5 ? 'Discharge' : 'Transit'})</span>
+            <span className="material-symbols-outlined arrow-icon">near_me</span>
+          </div>
+        </div>
+
+        <div className="metric-card-neumorphic">
+          <div className="metric-card-header">
+            <span className="metric-card-label">AIS Transponder Silence</span>
+          </div>
+          <div className="metric-card-body">
+            <span className="metric-number" style={{ color: (candidates[0]?.ais_gap_hours ?? 0) > 2 ? '#f59e0b' : 'inherit' }}>
+              {candidates[0]?.ais_gap_hours ?? 4.58} <span className="metric-unit">hrs</span>
+            </span>
+            <span className="metric-trend-pill neutral" style={{ color: (candidates[0]?.ais_gap_hours ?? 0) > 2 ? '#f59e0b' : undefined }}>
+              {(candidates[0]?.ais_gap_hours ?? 0) > 2 ? 'Dark Gap Flagged' : 'Continuous'}
+            </span>
+          </div>
+          <div className="metric-card-footer">
+            <span>Temporal Blackout Correlation</span>
+            <span className="material-symbols-outlined arrow-icon">visibility_off</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. WORKFLOW NAV BAR */}
+      <div className="workflow-nav-bar">
+        <div className="workflow-title-area">
+          <h2 className="workflow-title">Sensitivity Presets &amp; AIS Stream Control</h2>
+          <span className="scenario-chip" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: 'var(--accent)' }}>
+            {feedSource.split('(')[0].trim()}
+          </span>
+        </div>
+
+        <div className="workflow-tabs-strip">
+          <button
+            className={`workflow-tab-btn ${weights.dist === 0.30 && weights.gap === 0.25 ? 'active' : ''}`}
+            onClick={() => setWeights({ dist: 0.30, time: 0.25, gap: 0.25, type: 0.20 })}
+          >
+            Balanced ML (30/25/25/20)
+          </button>
+          <button
+            className={`workflow-tab-btn ${weights.gap === 0.45 ? 'active' : ''}`}
+            onClick={() => setWeights({ dist: 0.20, time: 0.15, gap: 0.45, type: 0.20 })}
+          >
+            Dark Ship Blackout Focus
+          </button>
+          <button
+            className={`workflow-tab-btn ${weights.dist === 0.50 ? 'active' : ''}`}
+            onClick={() => setWeights({ dist: 0.50, time: 0.20, gap: 0.10, type: 0.20 })}
+          >
+            Anchorage Proximity Focus
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="text"
+            placeholder="AISHub Username..."
+            value={aishubUsername}
+            onChange={(e) => handleSaveUsername(e.target.value)}
+            style={{
+              fontSize: 11,
+              padding: '4px 10px',
+              borderRadius: 20,
+              border: '1px solid var(--border-subtle)',
+              background: 'var(--bg-raised)',
+              color: 'var(--text-primary)',
+              width: 140,
+              outline: 'none',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* 4. ROUNDED CANVAS CONTAINER */}
+      <div className="canvas-rounded-container">
+        <div className="canvas-two-column">
+          {/* LEFT PANE: SENSITIVITY WEIGHT TUNERS & ML PRIORS */}
+          <div className="canvas-pane">
+            <div className="pane-header">
+              <span className="pane-title">
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>tune</span>
+                Attribution Sensitivity Weights
               </span>
-              <button
-                className="btn btn-primary"
-                onClick={handleRecalculate}
-                style={{ padding: '4px 12px', fontSize: 11 }}
-              >
-                Recalculate Ranking
-              </button>
+              <span className="metric-trend-pill neutral" style={{ fontSize: 10 }}>
+                Σ (wi · Si)
+              </span>
             </div>
 
-            {/* QUICK PRESET BUTTONS */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 16px 12px', alignItems: 'center' }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginRight: 4 }}>
-                TUNING PRESETS:
-              </span>
-              <button
-                type="button"
-                onClick={() => setWeights({ dist: 0.30, time: 0.25, gap: 0.25, type: 0.20 })}
-                style={{
-                  fontSize: 10.5,
-                  padding: '3px 9px',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  background: weights.dist === 0.30 && weights.gap === 0.25 ? 'var(--accent)' : 'var(--bg-card)',
-                  color: weights.dist === 0.30 && weights.gap === 0.25 ? '#fff' : 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)',
-                  fontWeight: 600,
-                }}
-              >
-                Balanced ML (0.30 / 0.25 / 0.25 / 0.20)
-              </button>
-              <button
-                type="button"
-                onClick={() => setWeights({ dist: 0.20, time: 0.15, gap: 0.45, type: 0.20 })}
-                style={{
-                  fontSize: 10.5,
-                  padding: '3px 9px',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  background: weights.gap === 0.45 ? 'var(--accent)' : 'var(--bg-card)',
-                  color: weights.gap === 0.45 ? '#fff' : 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)',
-                  fontWeight: 600,
-                }}
-              >
-                Dark Ship Blackout Focus (w_gap: 0.45)
-              </button>
-              <button
-                type="button"
-                onClick={() => setWeights({ dist: 0.50, time: 0.20, gap: 0.10, type: 0.20 })}
-                style={{
-                  fontSize: 10.5,
-                  padding: '3px 9px',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  background: weights.dist === 0.50 ? 'var(--accent)' : 'var(--bg-card)',
-                  color: weights.dist === 0.50 ? '#fff' : 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)',
-                  fontWeight: 600,
-                }}
-              >
-                Anchorage Proximity Focus (w_dist: 0.50)
-              </button>
-            </div>
-
-            <div className="tuner-grid">
-              <div className="tuner-slider-wrap">
-                <div className="tuner-lbl">
-                  <span>Spatial Proximity (w_dist)</span>
-                  <span className="mono fw-700">{weights.dist.toFixed(2)}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Slider 1 */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>Spatial Proximity (w_dist)</span>
+                  <span className="mono" style={{ color: 'var(--accent)' }}>{weights.dist.toFixed(2)}</span>
                 </div>
                 <input
                   type="range"
@@ -581,18 +593,19 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   max="1"
                   step="0.05"
                   value={weights.dist}
-                  className="tuner-input"
-                  onChange={(e) => {
-                    const nw = { ...weights, dist: parseFloat(e.target.value) };
-                    setWeights(nw);
-                  }}
+                  className="macos-slider"
+                  onChange={(e) => setWeights({ ...weights, dist: parseFloat(e.target.value) })}
                 />
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Inverse CPA penalty: distance to reverse OpenDrift centroid.
+                </div>
               </div>
 
-              <div className="tuner-slider-wrap">
-                <div className="tuner-lbl">
-                  <span>Temporal Alignment (w_time)</span>
-                  <span className="mono fw-700">{weights.time.toFixed(2)}</span>
+              {/* Slider 2 */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>Temporal Alignment (w_time)</span>
+                  <span className="mono" style={{ color: 'var(--accent)' }}>{weights.time.toFixed(2)}</span>
                 </div>
                 <input
                   type="range"
@@ -600,18 +613,19 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   max="1"
                   step="0.05"
                   value={weights.time}
-                  className="tuner-input"
-                  onChange={(e) => {
-                    const nw = { ...weights, time: parseFloat(e.target.value) };
-                    setWeights(nw);
-                  }}
+                  className="macos-slider"
+                  onChange={(e) => setWeights({ ...weights, time: parseFloat(e.target.value) })}
                 />
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Time delta relative to OpenDrift reverse discharge window.
+                </div>
               </div>
 
-              <div className="tuner-slider-wrap">
-                <div className="tuner-lbl">
-                  <span>AIS Silence Gap (w_gap)</span>
-                  <span className="mono fw-700">{weights.gap.toFixed(2)}</span>
+              {/* Slider 3 */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>AIS Silence Gap (w_gap)</span>
+                  <span className="mono" style={{ color: '#f59e0b' }}>{weights.gap.toFixed(2)}</span>
                 </div>
                 <input
                   type="range"
@@ -619,18 +633,19 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   max="1"
                   step="0.05"
                   value={weights.gap}
-                  className="tuner-input"
-                  onChange={(e) => {
-                    const nw = { ...weights, gap: parseFloat(e.target.value) };
-                    setWeights(nw);
-                  }}
+                  className="macos-slider"
+                  onChange={(e) => setWeights({ ...weights, gap: parseFloat(e.target.value) })}
                 />
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Flag deliberate transponder shutdowns during transit through AOI.
+                </div>
               </div>
 
-              <div className="tuner-slider-wrap">
-                <div className="tuner-lbl">
-                  <span>Vessel Type Risk Prior (w_type)</span>
-                  <span className="mono fw-700">{weights.type.toFixed(2)}</span>
+              {/* Slider 4 */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-primary)' }}>Vessel Type Risk Prior (w_type)</span>
+                  <span className="mono" style={{ color: 'var(--accent)' }}>{weights.type.toFixed(2)}</span>
                 </div>
                 <input
                   type="range"
@@ -638,97 +653,182 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   max="1"
                   step="0.05"
                   value={weights.type}
-                  className="tuner-input"
-                  onChange={(e) => {
-                    const nw = { ...weights, type: parseFloat(e.target.value) };
-                    setWeights(nw);
-                  }}
+                  className="macos-slider"
+                  onChange={(e) => setWeights({ ...weights, type: parseFloat(e.target.value) })}
                 />
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Cargo hazard prior: VLCC &gt; Aframax &gt; Chemical Tanker &gt; Cargo.
+                </div>
               </div>
+            </div>
+
+            {/* NORMALIZATION FORMULA CARD */}
+            <div
+              style={{
+                background: 'var(--bg-raised)',
+                padding: '12px 14px',
+                borderRadius: 10,
+                border: '1px solid var(--border-subtle)',
+                marginTop: 4,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+                Kinematic Normalization Formula:
+              </div>
+              <div className="mono" style={{ fontSize: 11, color: 'var(--accent)', background: 'var(--bg-base)', padding: '6px 10px', borderRadius: 6 }}>
+                Score = (w_dist·S_dist + w_time·S_time + w_gap·S_gap + w_type·S_type) / Σ(w)
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>
+                Weights dynamically re-normalize before applying Bayesian posterior estimation.
+              </div>
+            </div>
+
+            {/* LEGAL EVIDENCE FRAMEWORK */}
+            <div
+              style={{
+                background: 'rgba(37, 99, 235, 0.06)',
+                borderLeft: '4px solid var(--accent)',
+                padding: '12px 14px',
+                borderRadius: 10,
+                fontSize: 11,
+                color: 'var(--text-secondary)',
+                lineHeight: 1.5,
+              }}
+            >
+              <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>gavel</span>
+                Legal Admissibility Framework
+              </div>
+              Under <strong>MARPOL 73/78 Annex I</strong> and <strong>Section 356 of the Merchant Shipping Act 1958</strong>,
+              spatiotemporal correlation between satellite SAR masks and AIS telemetry provides prima-facie evidence for Indian Coast Guard enforcement actions.
             </div>
           </div>
 
-          {/* DYNAMIC RANKED CANDIDATES TABLE */}
-          <div className="panel">
-            <div className="panel-header">
-              <span className="panel-title">
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>format_list_numbered</span>
-                Ranked Candidate Vessels ({candidates.length} Screened) · AOI: {activeScenario.title.toUpperCase()}
+          {/* RIGHT PANE: RANKED CANDIDATE VESSELS */}
+          <div className="canvas-pane">
+            <div className="pane-header">
+              <span className="pane-title">
+                <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>format_list_numbered</span>
+                Ranked Suspect Vessels ({candidates.length} Screened)
               </span>
-              <span className="text-xs text-muted">Spatiotemporal Search Window: T - 72h to 0h</span>
+              <span className="text-xs text-muted">
+                Updated: {lastUpdated}
+              </span>
             </div>
-            <div className="panel-body" style={{ padding: 0 }}>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto' }}>
               {candidates.map((v, idx) => {
-                const rankClass = idx === 0 ? 'r1' : idx === 1 ? 'r2' : 'r3';
-                const scoreClass = v.attribution_score >= 0.75 ? 'sc-h' : v.attribution_score >= 0.5 ? 'sc-m' : 'sc-l';
+                const riskClass = v.risk.toLowerCase();
+                const scoreColor = v.attribution_score >= 0.75 ? '#ef4444' : v.attribution_score >= 0.5 ? '#f59e0b' : '#10b981';
 
                 return (
-                  <div key={v.mmsi} className="vessel-row bb" style={{ padding: '12px 16px' }}>
-                    <div className={`v-rank ${rankClass}`}>{idx + 1}</div>
-                    <div className="vessel-info" style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                        <span className="v-name" style={{ color: idx === 0 ? '#EF4444' : 'var(--text-primary)', fontWeight: 700, fontSize: 13 }}>
-                          {v.name}
-                        </span>
-                        <span
-                          className="chip"
+                  <div
+                    key={v.mmsi}
+                    className={`vessel-candidate-card ${riskClass}`}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div
                           style={{
-                            fontSize: 9,
-                            padding: '1px 6px',
-                            background: v.risk === 'CRITICAL' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(56, 189, 248, 0.15)',
-                            color: v.risk === 'CRITICAL' ? '#EF4444' : '#38BDF8',
-                            border: `1px solid ${v.risk === 'CRITICAL' ? '#EF4444' : '#38BDF8'}`,
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            background: idx === 0 ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-raised)',
+                            color: idx === 0 ? '#ef4444' : 'var(--text-muted)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 800,
+                            fontSize: 12,
                           }}
                         >
-                          {v.risk} SUSPICION
-                        </span>
-                      </div>
-
-                      <div className="v-mmsi" style={{ fontSize: 10.5, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                        MMSI: <span className="mono">{v.mmsi}</span> · IMO: <span className="mono">{v.imo}</span> · Flag: {v.flag} · {v.type}
-                      </div>
-
-                      <div className="v-meta" style={{ fontSize: 10, color: 'var(--text-muted)', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                        <span>📍 CPA: <strong>{v.cpa_nm} nm</strong> from envelope centroid</span>
-                        <span>⚡ SOG: <strong>{v.sog} kn</strong> ({v.sog < 5.0 ? 'Discharge Speed' : 'Transit'})</span>
-                        <span>🧭 Heading: <strong>{v.cog}°</strong></span>
-                        <span style={{ color: v.ais_gap_hours > 2.0 ? '#F59E0B' : 'inherit' }}>
-                          ⏱️ AIS Gap: <strong>{v.ais_gap_hours}h</strong> {v.ais_gap_hours > 2.0 ? '(Suspicious Blackout)' : '(Normal)'}
-                        </span>
-                      </div>
-
-                      {v.metrics && (
-                        <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 9.5 }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>Spatial: <strong>{v.metrics.spatial_match_pct}%</strong></span>
-                          <span style={{ color: 'var(--text-secondary)' }}>Time: <strong>{v.metrics.temporal_alignment_pct}%</strong></span>
-                          <span style={{ color: '#F59E0B' }}>Dark Gap: <strong>{v.metrics.dark_gap_suspicion_pct}%</strong></span>
-                          <span style={{ color: 'var(--text-secondary)' }}>Vessel Risk: <strong>{v.metrics.vessel_risk_prior_pct}%</strong></span>
+                          {idx + 1}
                         </div>
-                      )}
+                        <div>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: idx === 0 ? '#ef4444' : 'var(--text-primary)' }}>
+                            {v.name}
+                          </span>
+                          <span
+                            className="metric-trend-pill"
+                            style={{
+                              marginLeft: 8,
+                              fontSize: 9,
+                              padding: '1px 6px',
+                              background: v.risk === 'CRITICAL' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(56, 189, 248, 0.12)',
+                              color: v.risk === 'CRITICAL' ? '#ef4444' : '#38bdf8',
+                            }}
+                          >
+                            {v.risk} SUSPICION
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: scoreColor, fontFamily: 'monospace' }}>
+                          {v.attribution_score.toFixed(2)}
+                        </div>
+                        <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>Attribution Score</div>
+                      </div>
                     </div>
 
-                    <div className="score-col" style={{ textAlign: 'center', minWidth: 90 }}>
-                      <div className={`score-val ${scoreClass}`} style={{ fontSize: 18, fontWeight: 800 }}>
-                        {v.attribution_score.toFixed(2)}
-                      </div>
-                      <div className="score-lbl" style={{ fontSize: 9 }}>Attribution Score</div>
+                    <div style={{ fontSize: 10.5, color: 'var(--text-secondary)' }}>
+                      MMSI: <span className="mono">{v.mmsi}</span> · IMO: <span className="mono">{v.imo}</span> · Flag: {v.flag} · {v.type}
                     </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, fontSize: 10, background: 'var(--bg-raised)', padding: '6px 8px', borderRadius: 6 }}>
+                      <div>
+                        <span className="text-muted">CPA: </span>
+                        <strong>{v.cpa_nm} nm</strong>
+                      </div>
+                      <div>
+                        <span className="text-muted">SOG: </span>
+                        <strong>{v.sog} kn</strong>
+                      </div>
+                      <div>
+                        <span className="text-muted">Heading: </span>
+                        <strong>{v.cog}°</strong>
+                      </div>
+                      <div style={{ color: v.ais_gap_hours > 2.0 ? '#f59e0b' : 'inherit' }}>
+                        <span className="text-muted">AIS Gap: </span>
+                        <strong>{v.ais_gap_hours}h</strong>
+                      </div>
+                    </div>
+
+                    {v.metrics && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, fontSize: 9.5 }}>
+                        <div>
+                          <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Spatial Match</div>
+                          <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
+                            <div style={{ width: `${v.metrics.spatial_match_pct}%`, height: '100%', background: '#38bdf8' }} />
+                          </div>
+                          <span className="mono">{v.metrics.spatial_match_pct}%</span>
+                        </div>
+                        <div>
+                          <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Time Align</div>
+                          <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
+                            <div style={{ width: `${v.metrics.temporal_alignment_pct}%`, height: '100%', background: '#10b981' }} />
+                          </div>
+                          <span className="mono">{v.metrics.temporal_alignment_pct}%</span>
+                        </div>
+                        <div>
+                          <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Dark Silence</div>
+                          <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
+                            <div style={{ width: `${v.metrics.dark_gap_suspicion_pct}%`, height: '100%', background: '#f59e0b' }} />
+                          </div>
+                          <span className="mono">{v.metrics.dark_gap_suspicion_pct}%</span>
+                        </div>
+                        <div>
+                          <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Vessel Prior</div>
+                          <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
+                            <div style={{ width: `${v.metrics.vessel_risk_prior_pct}%`, height: '100%', background: '#8b5cf6' }} />
+                          </div>
+                          <span className="mono">{v.metrics.vessel_risk_prior_pct}%</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          {/* LEGAL NOTICE */}
-          <div className="panel">
-            <div className="panel-header">
-              <span className="panel-title">
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>gavel</span>
-                Legal &amp; Evidentiary Chain of Custody
-              </span>
-            </div>
-            <div className="panel-body" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Spill Sense attribution scores correlate AIS transponder pings from the AISHub network with backward Lagrangian drift origin envelopes. Under <strong>MARPOL 73/78 Annex I</strong> and <strong>Section 356 of the Indian Merchant Shipping Act 1958</strong>, these records along with the SHA-256 sealed digital dossier provide legal prima-facie evidence for Indian Coast Guard port state inspections.
             </div>
           </div>
         </div>
