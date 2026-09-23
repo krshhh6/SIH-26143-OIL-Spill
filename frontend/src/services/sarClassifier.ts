@@ -480,7 +480,8 @@ async function runSegmentation(
       const x = i % 512;
       const y = Math.floor(i / 512);
       const intensity = Math.min(1.0, prob);
-      maskCtx.fillStyle = `rgba(255, 50, 0, ${intensity * 0.6})`;
+      // Standard Benchmark Color: Cyan (#00FFFF) for Class 1 (Oil Spill)
+      maskCtx.fillStyle = `rgba(0, 240, 255, ${intensity * 0.75})`;
       maskCtx.fillRect(x, y, 1, 1);
     }
   }
