@@ -47,6 +47,18 @@ STATIC_INCIDENTS: List[IncidentSummary] = [
     IncidentSummary(id="INC-004", title="Goa Coastal Waters (Bunkering Leak)",
         lat=15.420, lng=73.650, severity="LOW", oil_type="Diesel / Marine Gas Oil",
         oil_color="#EAB308", area="1.75 km²", top_vessel="SEA PEARL", attribution_score=0.55),
+    IncidentSummary(id="INC-005", title="Gulf of Kutch / Vadinar Deepwater Terminal",
+        lat=22.480, lng=69.520, severity="HIGH", oil_type="Crude Oil",
+        oil_color="#B45309", area="3.85 km²", top_vessel="AL KHALEEJ STAR", attribution_score=0.78),
+    IncidentSummary(id="INC-006", title="Cochin Port SPM Anchorage",
+        lat=9.960, lng=76.080, severity="MEDIUM", oil_type="Heavy Bunker Fuel",
+        oil_color="#0D0D11", area="2.10 km²", top_vessel="OCEAN VOYAGER", attribution_score=0.63),
+    IncidentSummary(id="INC-007", title="Paradip Port Offshore Basin",
+        lat=20.250, lng=86.720, severity="HIGH", oil_type="Crude Oil",
+        oil_color="#B45309", area="3.45 km²", top_vessel="EASTERN GLORY", attribution_score=0.72),
+    IncidentSummary(id="INC-008", title="Lakshadweep Sea 9-Degree Channel",
+        lat=8.500, lng=73.000, severity="LOW", oil_type="Oil Bilge Water",
+        oil_color="#38BDF8", area="1.30 km²", top_vessel="UNKNOWN (TRANSIT)", attribution_score=0.59),
 ]
 
 @router.get("/incidents/static", response_model=List[IncidentSummary])

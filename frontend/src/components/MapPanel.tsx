@@ -11,6 +11,7 @@ interface MapPanelProps {
   scenario: Scenario | null;
   onUpdateCoords: (coords: string) => void;
   onSelectScenario?: (key: string) => void;
+  scenarios?: Record<string, Scenario>;
 }
 
 const COPERNICUS_LAYERS: CopernicusLayerInfo[] = [
@@ -97,14 +98,14 @@ const COPERNICUS_LAYERS: CopernicusLayerInfo[] = [
   },
 ];
 
-export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, onSelectScenario }) => {
+export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, onSelectScenario, scenarios }) => {
   const [baseLayer2D, setBaseLayer2D] = useState<BaseLayerType>('satellite');
   const [showSeamarks, setShowSeamarks] = useState<boolean>(true);
   const [selectedCopernicusLayer, setSelectedCopernicusLayer] = useState<CopernicusLayerId>('true-color');
   const [activeSatellite, setActiveSatellite] = useState<string>('Sentinel-2A');
   const [showSpillOverlay, setShowSpillOverlay] = useState<boolean>(true);
-  const [showIndiaOutline, setShowIndiaOutline] = useState<boolean>(false);
-  const [showEezBoundary, setShowEezBoundary] = useState<boolean>(false);
+  const [showIndiaOutline, setShowIndiaOutline] = useState<boolean>(true);
+  const [showEezBoundary, setShowEezBoundary] = useState<boolean>(true);
   const [satelliteToast, setSatelliteToast] = useState<string | null>(null);
   const [isSideLayersOpen, setIsSideLayersOpen] = useState<boolean>(false);
 
@@ -897,6 +898,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
           onUpdateCoords={onUpdateCoords}
           onSelectScenario={onSelectScenario}
           mapRef={leafletMapRef}
+          scenarios={scenarios}
         />
 
         {/* Cartographic Legend (Superhuman Glassmorphic HUD at Bottom-Right) */}

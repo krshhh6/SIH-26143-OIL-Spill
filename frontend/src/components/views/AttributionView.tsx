@@ -203,6 +203,119 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       risk: 'LOW',
     },
   ],
+  'INC-2026-005': [
+    {
+      mmsi: '419008811',
+      imo: '9512399',
+      name: 'AL KHALEEJ STAR',
+      flag: 'India',
+      type: 'Crude Oil Tanker (VLCC)',
+      lat: 22.495,
+      lng: 69.450,
+      sog: 3.2,
+      cog: 75.0,
+      cpa_nm: 1.1,
+      ais_gap_hours: 3.8,
+      attribution_score: 0.78,
+      risk: 'HIGH',
+    },
+    {
+      mmsi: '419007733',
+      imo: '9488112',
+      name: 'SAURASHTRA PRIDE',
+      flag: 'India',
+      type: 'Aframax Crude Tanker',
+      lat: 22.520,
+      lng: 69.380,
+      sog: 12.1,
+      cog: 82.0,
+      cpa_nm: 4.8,
+      ais_gap_hours: 0.8,
+      attribution_score: 0.44,
+      risk: 'MEDIUM',
+    },
+  ],
+  'INC-2026-006': [
+    {
+      mmsi: '419004455',
+      imo: '9398812',
+      name: 'OCEAN VOYAGER',
+      flag: 'India',
+      type: 'Product Tanker (Aframax)',
+      lat: 10.020,
+      lng: 76.050,
+      sog: 1.8,
+      cog: 162.0,
+      cpa_nm: 1.4,
+      ais_gap_hours: 3.1,
+      attribution_score: 0.72,
+      risk: 'HIGH',
+    },
+    {
+      mmsi: '419005522',
+      imo: '9432109',
+      name: 'MALABAR PIONEER',
+      flag: 'Panama',
+      type: 'Container Ship',
+      lat: 10.150,
+      lng: 75.980,
+      sog: 14.6,
+      cog: 158.0,
+      cpa_nm: 7.2,
+      ais_gap_hours: 0.5,
+      attribution_score: 0.38,
+      risk: 'LOW',
+    },
+  ],
+  'INC-2026-007': [
+    {
+      mmsi: '419006677',
+      imo: '9456781',
+      name: 'EASTERN GLORY',
+      flag: 'India',
+      type: 'Crude Oil Tanker (VLCC)',
+      lat: 20.280,
+      lng: 86.780,
+      sog: 2.4,
+      cog: 35.0,
+      cpa_nm: 1.2,
+      ais_gap_hours: 2.8,
+      attribution_score: 0.76,
+      risk: 'HIGH',
+    },
+    {
+      mmsi: '419007711',
+      imo: '9389922',
+      name: 'KALINGA VOYAGER',
+      flag: 'Liberia',
+      type: 'Bulk Carrier',
+      lat: 20.350,
+      lng: 86.850,
+      sog: 11.8,
+      cog: 40.0,
+      cpa_nm: 6.5,
+      ais_gap_hours: 0.6,
+      attribution_score: 0.35,
+      risk: 'LOW',
+    },
+  ],
+  'INC-2026-008': [
+    {
+      mmsi: '636019944',
+      imo: '9511200',
+      name: 'PACIFIC ORCHID',
+      flag: 'Liberia',
+      type: 'Crude Oil Tanker (VLCC)',
+      lat: 8.520,
+      lng: 72.850,
+      sog: 13.5,
+      cog: 95.0,
+      cpa_nm: 2.1,
+      ais_gap_hours: 2.2,
+      attribution_score: 0.68,
+      risk: 'MEDIUM',
+    },
+  ],
 };
 
 export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenario, onSelectScenario }) => {
@@ -212,6 +325,14 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
     ? 'INC-003'
     : currentScenario?.id.includes('004')
     ? 'INC-004'
+    : currentScenario?.id.includes('005')
+    ? 'INC-005'
+    : currentScenario?.id.includes('006')
+    ? 'INC-006'
+    : currentScenario?.id.includes('007')
+    ? 'INC-007'
+    : currentScenario?.id.includes('008')
+    ? 'INC-008'
     : 'INC-001';
 
   const [selectedKey, setSelectedKey] = useState<string>(defaultKey);

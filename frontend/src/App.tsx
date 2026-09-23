@@ -54,6 +54,10 @@ export const App: React.FC = () => {
     else if (q.includes('chennai') || q.includes('ennore')) handleSelectScenario('INC-002');
     else if (q.includes('andaman') || q.includes('malacca')) handleSelectScenario('INC-003');
     else if (q.includes('goa')) handleSelectScenario('INC-004');
+    else if (q.includes('kutch') || q.includes('vadinar') || q.includes('gujarat')) handleSelectScenario('INC-005');
+    else if (q.includes('cochin') || q.includes('kochi') || q.includes('kerala')) handleSelectScenario('INC-006');
+    else if (q.includes('paradip') || q.includes('odisha') || q.includes('bengal')) handleSelectScenario('INC-007');
+    else if (q.includes('lakshadweep') || q.includes('channel')) handleSelectScenario('INC-008');
     else {
       alert(`Maritime Place Search: Found location coordinates for "${query}". Navigating chart.`);
     }
@@ -124,6 +128,7 @@ export const App: React.FC = () => {
               onUpdateCoords={setCoordinates}
               onSelectScenario={handleSelectScenario}
               incidents={incidents}
+              scenarios={scenarios}
             />
           )}
 

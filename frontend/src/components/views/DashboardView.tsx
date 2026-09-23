@@ -10,6 +10,7 @@ interface DashboardViewProps {
   onUpdateCoords: (coords: string) => void;
   onSelectScenario?: (key: string) => void;
   incidents?: LiveIncident[];
+  scenarios?: Record<string, Scenario>;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -19,6 +20,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onUpdateCoords,
   onSelectScenario,
   incidents,
+  scenarios,
 }) => {
   const [activeWorkflowTab, setActiveWorkflowTab] = useState<'map' | 'sensors' | 'ais' | 'drift'>('map');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -182,6 +184,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             scenario={currentScenario}
             onUpdateCoords={onUpdateCoords}
             onSelectScenario={onSelectScenario}
+            scenarios={scenarios}
           />
         </div>
 
