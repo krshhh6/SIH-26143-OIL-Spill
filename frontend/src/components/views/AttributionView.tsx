@@ -345,6 +345,38 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
     type: 0.20,
   });
 
+  const handleWeightChange = (changedKey: keyof AttributionWeights, newValue: number) => {
+    const oldWeights = { ...weights };
+    const diff = newValue - oldWeights[changedKey];
+    
+    let otherKeys = (Object.keys(oldWeights) as (keyof AttributionWeights)[]).filter(k => k !== changedKey);
+    let sumOthers = 0;
+    otherKeys.forEach(k => { sumOthers += oldWeights[k]; });
+    
+    const newWeights = { ...oldWeights, [changedKey]: newValue };
+    
+    if (sumOthers > 0) {
+      otherKeys.forEach(k => {
+        let adjustment = diff * (oldWeights[k] / sumOthers);
+        newWeights[k] = Math.max(0, oldWeights[k] - adjustment);
+      });
+    } else {
+      otherKeys.forEach(k => {
+        newWeights[k] = Math.max(0, -diff / 3);
+      });
+    }
+    
+    let total = Object.values(newWeights).reduce((a, b) => a + b, 0);
+    if (total > 0 && Math.abs(total - 1.0) > 0.001) {
+        Object.keys(newWeights).forEach(k => {
+            newWeights[k as keyof AttributionWeights] /= total;
+        });
+    }
+    
+    setWeights(newWeights);
+  };
+
+
   const [aishubUsername, setAishubUsername] = useState<string>(() => {
     return localStorage.getItem('AISHUB_USERNAME') || '';
   });
@@ -484,10 +516,26 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
     setIsLoading(false);
   };
 
-  // Re-run attribution when scenario or weights change
+  // Re-run attribution when scenario changes
   useEffect(() => {
     loadAttributionData();
-  }, [incidentId, weights]);
+  }, [incidentId]);
+
+  // Live real-time scoring updates when weights change
+  useEffect(() => {
+    setCandidates((prev) => {
+      if (prev.length === 0) return prev;
+      const reScored = prev.map(v => {
+        const { score, metrics } = computeVesselScore(v, weights);
+        return {
+          ...v,
+          attribution_score: score,
+          metrics,
+        };
+      });
+      return [...reScored].sort((a, b) => b.attribution_score - a.attribution_score);
+    });
+  }, [weights]);
 
   const handleRecalculate = () => {
     loadAttributionData();
@@ -716,7 +764,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   step="0.05"
                   value={weights.dist}
                   className="macos-slider"
-                  onChange={(e) => setWeights({ ...weights, dist: parseFloat(e.target.value) })}
+                  onChange={(e) => handleWeightChange('dist', parseFloat(e.target.value))}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
                   Inverse CPA penalty: distance to reverse OpenDrift centroid.
@@ -736,7 +784,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   step="0.05"
                   value={weights.time}
                   className="macos-slider"
-                  onChange={(e) => setWeights({ ...weights, time: parseFloat(e.target.value) })}
+                  onChange={(e) => handleWeightChange('time', parseFloat(e.target.value))}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
                   Time delta relative to OpenDrift reverse discharge window.
@@ -756,7 +804,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   step="0.05"
                   value={weights.gap}
                   className="macos-slider"
-                  onChange={(e) => setWeights({ ...weights, gap: parseFloat(e.target.value) })}
+                  onChange={(e) => handleWeightChange('gap', parseFloat(e.target.value))}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
                   Flag deliberate transponder shutdowns during transit through AOI.
@@ -776,7 +824,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   step="0.05"
                   value={weights.type}
                   className="macos-slider"
-                  onChange={(e) => setWeights({ ...weights, type: parseFloat(e.target.value) })}
+                  onChange={(e) => handleWeightChange('type', parseFloat(e.target.value))}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
                   Cargo hazard prior: VLCC &gt; Aframax &gt; Chemical Tanker &gt; Cargo.
