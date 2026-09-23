@@ -97,6 +97,8 @@ Maritime oil spills pose catastrophic threats to marine ecology and coastal econ
 | 🗺️ **ECDIS & OpenSeaMap Nautical Engine** | Full nautical chart with OpenSeaMap seamarks (buoys, TSS shipping channels, lighthouses, harbor approaches), MSN aerial satellite imagery, and ECDIS Day/Night hydrographic modes. |
 | ⏱️ **4D Spatiotemporal Time Scrubber** | Drag a persistent `T − 72h → T₀` timeline to animate particle back-dispersion and vessel movement together, pinpointing the exact interception moment. |
 | 🛰️ **Dual-Pane SAR Split Inspector** | Interactive before/after split slider comparing raw calibrated radar backscatter (σ₀ in dB) against the AI segmentation mask and wind-exclusion zones. |
+| 🧠 **D-Elicio 5-Class Segmentation** | High-precision pixel-wise classification that isolates 5 morphological slick classes (Core, Tail, Lookalike, Emulsion, Clean) directly inside the browser using ONNX WebAssembly. |
+| 📊 **Live Spill Analytics Engine** | Instantly calculates real-world environmental impact metrics including physical slick area (ha), **MARPOL 73/78 Annex I** classification, and estimated **Bonn Agreement Discharged Volume**. |
 | 🎛️ **Explainable What-If Sensitivity Tuner** | Live sliders to adjust attribution weights and watch the suspect-vessel ranking re-rank in real time — full transparency, no black-box scoring. |
 | 📑 **Forensic PDF Generator & SHA-256 Verifier** | One-click export of a courtroom-ready evidence dossier, plus an interactive modal to verify the file's cryptographic integrity hasn't been tampered with. |
 
