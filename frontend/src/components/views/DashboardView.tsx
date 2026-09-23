@@ -68,7 +68,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => onSelectScenario('')}
               title="Return to National Indian Ocean Overview"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>zoom_out_map</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>zoom_out_map</span>
               <span>National Overview</span>
             </button>
           )}
@@ -78,7 +78,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => onSelectTab('detection')}
             title="Open Dual-Pol SAR Detection & Classification Lab"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>science</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>science</span>
             <span>SAR Detection Lab</span>
           </button>
         </div>

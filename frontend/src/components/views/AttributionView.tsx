@@ -457,6 +457,45 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
     type: 0.20,
   });
 
+  type WeightKey = 'dist' | 'time' | 'gap' | 'type';
+
+  const handleWeightChange = (changedKey: WeightKey, newValue: number) => {
+    const oldWeights: Record<WeightKey, number> = {
+      dist: weights.dist,
+      time: weights.time,
+      gap: weights.gap,
+      type: weights.type,
+    };
+    const diff = newValue - oldWeights[changedKey];
+    
+    let otherKeys: WeightKey[] = (['dist', 'time', 'gap', 'type'] as WeightKey[]).filter(k => k !== changedKey);
+    let sumOthers = 0;
+    otherKeys.forEach(k => { sumOthers += oldWeights[k]; });
+    
+    const newWeights: Record<WeightKey, number> = { ...oldWeights, [changedKey]: newValue };
+    
+    if (sumOthers > 0) {
+      otherKeys.forEach(k => {
+        let adjustment = diff * (oldWeights[k] / sumOthers);
+        newWeights[k] = Math.max(0, oldWeights[k] - adjustment);
+      });
+    } else {
+      otherKeys.forEach(k => {
+        newWeights[k] = Math.max(0, -diff / 3);
+      });
+    }
+    
+    let total = Object.values(newWeights).reduce((a, b) => a + b, 0);
+    if (total > 0 && Math.abs(total - 1.0) > 0.001) {
+      (['dist', 'time', 'gap', 'type'] as WeightKey[]).forEach(k => {
+        newWeights[k] /= total;
+      });
+    }
+    
+    setWeights(newWeights);
+  };
+
+
   const [aishubUsername, setAishubUsername] = useState<string>(() => {
     return localStorage.getItem('AISHUB_USERNAME') || '';
   });
@@ -822,7 +861,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   style={{
                     background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${Math.min(100, weights.dist * 100)}%, var(--border-default) ${Math.min(100, weights.dist * 100)}%, var(--border-default) 100%)`
                   }}
-                  onChange={(e) => setWeights({ ...weights, dist: parseFloat(e.target.value) })}
+                  onChange={(e) => handleWeightChange('dist', parseFloat(e.target.value))}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
                   Inverse CPA penalty: distance to reverse OpenDrift centroid.
@@ -848,7 +887,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   style={{
                     background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${Math.min(100, weights.time * 100)}%, var(--border-default) ${Math.min(100, weights.time * 100)}%, var(--border-default) 100%)`
                   }}
-                  onChange={(e) => setWeights({ ...weights, time: parseFloat(e.target.value) })}
+                  onChange={(e) => handleWeightChange('time', parseFloat(e.target.value))}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
                   Time delta relative to OpenDrift reverse discharge window.
@@ -874,7 +913,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   style={{
                     background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${Math.min(100, weights.gap * 100)}%, var(--border-default) ${Math.min(100, weights.gap * 100)}%, var(--border-default) 100%)`
                   }}
-                  onChange={(e) => setWeights({ ...weights, gap: parseFloat(e.target.value) })}
+                  onChange={(e) => handleWeightChange('gap', parseFloat(e.target.value))}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
                   Flag deliberate transponder shutdowns during transit through AOI.
@@ -900,7 +939,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   style={{
                     background: `linear-gradient(to right, #8b5cf6 0%, #8b5cf6 ${Math.min(100, weights.type * 100)}%, var(--border-default) ${Math.min(100, weights.type * 100)}%, var(--border-default) 100%)`
                   }}
-                  onChange={(e) => setWeights({ ...weights, type: parseFloat(e.target.value) })}
+                  onChange={(e) => handleWeightChange('type', parseFloat(e.target.value))}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
                   Cargo hazard prior: VLCC &gt; Aframax &gt; Chemical Tanker &gt; Cargo.

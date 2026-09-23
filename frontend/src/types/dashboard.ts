@@ -113,3 +113,26 @@ export interface SarClassificationResult {
     isColor: boolean;
   };
 }
+
+export interface SarDriftPayload {
+  imageSrc: string;
+  maskSrc?: string;
+  fileName: string;
+  prediction: 'oil_spill' | 'no_oil' | 'invalid_sar';
+  confidence: number;
+  spillAreaPercent: number;
+  estimatedAreaKm2: number;
+  inferenceTimeMs: number;
+  segmentationTimeMs?: number;
+  timestamp: string;
+  lat: number;
+  lng: number;
+  locationName: string;
+  metrics?: {
+    meanBrightness?: number;
+    brightRatio?: number;
+    sharpTransitions?: number;
+    isColor?: boolean;
+  };
+}
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import type { TabType } from './types/dashboard';
+import type { TabType, SarDriftPayload } from './types/dashboard';
 import { SCENARIOS } from './data/scenarios';
 import { useIncidents, type LiveIncident } from './hooks/useIncidents';
 import { Topbar } from './components/Topbar';
@@ -36,6 +36,7 @@ export const App: React.FC = () => {
     sub?: string;
     category?: string;
   } | null>(null);
+  const [sarDriftPayload, setSarDriftPayload] = useState<SarDriftPayload | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -89,6 +90,14 @@ export const App: React.FC = () => {
 
   const handleSelectTab = (tab: TabType) => {
     setActiveTab(tab);
+    if (isMapFullscreen) {
+      setIsMapFullscreen(false);
+    }
+  };
+
+  const handleFeedIntoDrift = (payload: SarDriftPayload) => {
+    setSarDriftPayload(payload);
+    setActiveTab('drift');
     if (isMapFullscreen) {
       setIsMapFullscreen(false);
     }
@@ -210,6 +219,8 @@ export const App: React.FC = () => {
       <div className={`workspace-container ${isMapFullscreen ? 'map-fullscreen-active' : ''}`}>
         {/* WORKSPACE HEADER */}
         <Topbar
+          activeTab={activeTab}
+          onSelectTab={handleSelectTab}
           currentScenario={scenario}
           currentScenarioKey={currentScenarioKey}
           onSelectScenario={handleSelectScenario}
@@ -252,6 +263,7 @@ export const App: React.FC = () => {
               onSelectTab={setActiveTab}
               currentScenario={scenario}
               onSelectScenario={handleSelectScenario}
+              sarDriftPayload={sarDriftPayload}
             />
           )}
 
@@ -274,7 +286,9 @@ export const App: React.FC = () => {
           {activeTab === 'detection' && (
             <DetectionView
               onSelectTab={setActiveTab}
+              currentScenario={scenario}
               onApplyLabDetection={handleApplyLabDetection}
+              onFeedIntoDrift={handleFeedIntoDrift}
             />
           )}
         </main>
