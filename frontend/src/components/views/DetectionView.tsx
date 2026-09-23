@@ -193,9 +193,9 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
   };
 
   // Benchmark Gallery Categories from authentic Zenodo Sentinel-1 SAR scenes
-  const [galleryCategory, setGalleryCategory] = useState<'oil' | 'clean' | 'lookalike' | 'ship_wake'>('oil');
+  const [galleryCategory, setGalleryCategory] = useState<'oil' | 'clean'>('oil');
 
-  const galleryCategories: Record<'oil' | 'clean' | 'lookalike' | 'ship_wake', { title: string; badge: string; images: string[] }> = {
+  const galleryCategories: Record<'oil' | 'clean', { title: string; badge: string; images: string[] }> = {
     oil: {
       title: '🛢️ Oil Spill Benchmark (Zenodo)',
       badge: '100% Detection',
@@ -206,22 +206,12 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
       badge: '100% Non-Oil',
       images: Array.from({ length: 10 }, (_, i) => `/demo-sar/class_0_${i + 1}.jpg`),
     },
-    lookalike: {
-      title: '🌫️ Look-Alike False-Positive Rejection',
-      badge: '100% TNR (0% FP)',
-      images: Array.from({ length: 10 }, (_, i) => `/demo-sar/lookalike_${i + 1}.png`),
-    },
-    ship_wake: {
-      title: '🚢 Ship & Radar Wake Suppression',
-      badge: '90% TNR',
-      images: Array.from({ length: 10 }, (_, i) => `/demo-sar/ship_wake_${i + 1}.png`),
-    },
   };
 
   const activeCategoryData = galleryCategories[galleryCategory];
 
   return (
-    <div className="tab-content visible" style={{ padding: '20px 24px', overflowY: 'auto', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20, minHeight: '100%', boxSizing: 'border-box' }}>
       {/* 1. EXECUTIVE HEADER */}
       <div className="workspace-header-bar" style={{ flexShrink: 0 }}>
         <div>
@@ -341,8 +331,6 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
             {[
               { id: 'oil', label: '🛢️ Oil (10)' },
               { id: 'clean', label: '🌊 Clean (10)' },
-              { id: 'lookalike', label: '🌫️ Look-Alike (10)' },
-              { id: 'ship_wake', label: '🚢 Ship/Wake (10)' },
             ].map((cat) => {
               const isSelected = galleryCategory === cat.id;
               return (
