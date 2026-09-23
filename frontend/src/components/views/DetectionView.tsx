@@ -402,15 +402,15 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab, curre
               };
 
               // Inject real-world coordinates if a benchmark is selected
-              if (currentFileName && currentFileName.includes('oil_00000')) {
+              if (currentFileName && (currentFileName.includes('oil_00000') || currentFileName.includes('00_oil'))) {
                 payload.lat = 18.74;
                 payload.lng = 71.21;
                 payload.locationName = 'Mumbai High Basin';
-              } else if (currentFileName && currentFileName.includes('oil_00001')) {
+              } else if (currentFileName && (currentFileName.includes('oil_00001') || currentFileName.includes('01_oil'))) {
                 payload.lat = 22.45;
                 payload.lng = 69.12;
                 payload.locationName = 'Gulf of Kutch Fairway';
-              } else if (currentFileName && currentFileName.includes('oil_00002')) {
+              } else if (currentFileName && (currentFileName.includes('oil_00002') || currentFileName.includes('02_oil'))) {
                 payload.lat = 13.26;
                 payload.lng = 80.47;
                 payload.locationName = 'Chennai Port Anchorage';
