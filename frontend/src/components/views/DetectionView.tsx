@@ -527,63 +527,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab, curre
             </div>
           </div>
 
-          {/* Dark Spot Morphological Feature Extraction Table (from d-elicio repo) */}
-          {segResult && segResult.features.length > 0 && (
-            <div style={{ padding: '14px 16px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  🔬 Morphological Dark Spot Feature Extraction ({segResult.features.length} Blobs Isolated)
-                </div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Latency: {segResult.executionTimeMs} ms · Ground Sampling: 10m/pixel
-                </span>
-              </div>
 
-              <div style={{ overflowX: 'auto', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                  <thead>
-                    <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'left' }}>
-                      <th style={{ padding: '6px 10px' }}>#</th>
-                      <th style={{ padding: '6px 10px' }}>Classification</th>
-                      <th style={{ padding: '6px 10px' }}>Area (km²)</th>
-                      <th style={{ padding: '6px 10px' }}>Area (px)</th>
-                      <th style={{ padding: '6px 10px' }}>Perimeter</th>
-                      <th style={{ padding: '6px 10px' }}>Complexity (P²/4πA)</th>
-                      <th style={{ padding: '6px 10px' }}>Contrast (ΔdB)</th>
-                      <th style={{ padding: '6px 10px' }}>Centroid</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {segResult.features.map(f => (
-                      <tr key={f.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td style={{ padding: '6px 10px', color: 'var(--text-muted)' }}>{f.id}</td>
-                        <td style={{ padding: '6px 10px' }}>
-                          <span style={{
-                            padding: '2px 6px',
-                            borderRadius: 4,
-                            background: f.label === 'Oil Spill' ? 'rgba(0,255,255,0.15)' : 'rgba(255,0,0,0.15)',
-                            color: f.colorHex,
-                            fontWeight: 700,
-                            fontSize: '0.72rem',
-                          }}>
-                            {f.label}
-                          </span>
-                        </td>
-                        <td style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--accent)' }}>{f.areaKm2} km²</td>
-                        <td style={{ padding: '6px 10px', fontFamily: 'monospace' }}>{f.areaPixels.toLocaleString()}</td>
-                        <td style={{ padding: '6px 10px' }}>{f.perimeterKm} km</td>
-                        <td style={{ padding: '6px 10px', fontFamily: 'monospace' }}>{f.complexity}</td>
-                        <td style={{ padding: '6px 10px', color: '#10b981' }}>+{f.meanContrastDb} dB</td>
-                        <td style={{ padding: '6px 10px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-                          [{f.centroid[0]}, {f.centroid[1]}]
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
           
           {/* Dynamic Action Controls */}
           {(() => {
