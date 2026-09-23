@@ -22,6 +22,17 @@ export const App: React.FC = () => {
   const [isForensicOpen, setIsForensicOpen] = useState<boolean>(false);
   const [isSentinelHubOpen, setIsSentinelHubOpen] = useState<boolean>(false);
   const [isBhoonidhiOpen, setIsBhoonidhiOpen] = useState<boolean>(false);
+  const [isMapFullscreen, setIsMapFullscreen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMapFullscreen) {
+        setIsMapFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMapFullscreen]);
 
   // Live incident data — falls back to static SCENARIOS when backend is offline
   const { incidents, scenarios: liveScenarios } = useIncidents();
@@ -36,6 +47,13 @@ export const App: React.FC = () => {
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
+  const handleSelectTab = (tab: TabType) => {
+    setActiveTab(tab);
+    if (isMapFullscreen) {
+      setIsMapFullscreen(false);
+    }
   };
 
   const handleSelectScenario = (key: string) => {
@@ -89,7 +107,7 @@ export const App: React.FC = () => {
       {/* PRIMARY NAVIGATION DRAWER */}
       <Sidebar
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={handleSelectTab}
         currentScenarioKey={currentScenarioKey}
         onSelectScenario={handleSelectScenario}
         onOpenSettings={() => setIsForensicOpen(true)}
@@ -97,7 +115,7 @@ export const App: React.FC = () => {
       />
 
       {/* MAIN WORKSPACE CANVAS */}
-      <div className="workspace-container">
+      <div className={`workspace-container ${isMapFullscreen ? 'map-fullscreen-active' : ''}`}>
         {/* WORKSPACE HEADER */}
         <Topbar
           currentScenario={scenario}
@@ -123,12 +141,14 @@ export const App: React.FC = () => {
           {activeTab === 'dashboard' && (
             <DashboardView
               currentScenario={scenario}
-              onSelectTab={setActiveTab}
+              onSelectTab={handleSelectTab}
               onOpenForensicModal={() => setIsForensicOpen(true)}
               onUpdateCoords={setCoordinates}
               onSelectScenario={handleSelectScenario}
               incidents={incidents}
               scenarios={scenarios}
+              isFullscreen={isMapFullscreen}
+              onToggleFullscreen={() => setIsMapFullscreen((prev) => !prev)}
             />
           )}
 

@@ -11,6 +11,8 @@ interface DashboardViewProps {
   onSelectScenario?: (key: string) => void;
   incidents?: LiveIncident[];
   scenarios?: Record<string, Scenario>;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -21,8 +23,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectScenario,
   incidents,
   scenarios,
+  isFullscreen: externalFullscreen,
+  onToggleFullscreen: externalToggleFullscreen,
 }) => {
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [internalFullscreen, setInternalFullscreen] = useState(false);
+  const isFullscreen = externalFullscreen !== undefined ? externalFullscreen : internalFullscreen;
+  const toggleFullscreen = externalToggleFullscreen || (() => setInternalFullscreen(!internalFullscreen));
 
   const activeSlicksCount = incidents && incidents.length > 0 ? incidents.length : 4;
 
@@ -163,7 +169,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="canvas-floating-controls">
           <button
             className="canvas-corner-btn"
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={toggleFullscreen}
             title={isFullscreen ? 'Exit Fullscreen' : 'Expand Fullscreen'}
             aria-label="Toggle Fullscreen"
           >
