@@ -34,12 +34,21 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
   const [analyticsResult, setAnalyticsResult] = useState<CalculatedSpillAnalytics | null>(null);
   const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resultRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     loadModel().then(() => {
       setModelStatus(isModelLoaded() ? 'loaded' : 'demo');
     });
   }, []);
+
+  useEffect(() => {
+    if (result && selectedImage) {
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [result, selectedImage]);
 
   const handleImageUpload = async (file: File) => {
     setCurrentFileName(file.name);
@@ -158,9 +167,9 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
   const activeCategoryData = galleryCategories[galleryCategory];
 
   return (
-    <div className="tab-content visible modern-dashboard-root" style={{ padding: '20px 24px', overflowY: 'auto', height: '100%', boxSizing: 'border-box' }}>
+    <div className="tab-content visible" style={{ padding: '20px 24px', overflowY: 'auto', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* 1. EXECUTIVE HEADER */}
-      <div className="workspace-header-bar" style={{ marginBottom: 20 }}>
+      <div className="workspace-header-bar" style={{ flexShrink: 0 }}>
         <div>
           <h1 className="workspace-main-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span>🛰️</span> SAR Oil Spill Detection Lab
@@ -181,7 +190,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
         </div>
       </div>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flexShrink: 0 }}>
         {/* Upload Zone (Stock White Panel) */}
         <div 
           style={{ 
@@ -312,13 +321,15 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
 
       {result && selectedImage && (
         <section 
+          ref={resultRef}
           style={{ 
             background: 'var(--bg-surface)', 
             border: '1px solid var(--border-subtle)', 
             borderRadius: 16, 
             overflow: 'hidden', 
             boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
-            marginBottom: 20 
+            flexShrink: 0,
+            marginBottom: 24 
           }}
         >
           {/* Header banner with light translucent tint */}
