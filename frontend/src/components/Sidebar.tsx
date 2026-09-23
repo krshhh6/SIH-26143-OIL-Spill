@@ -112,7 +112,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="material-symbols-outlined nav-icon">science</span>
                 <span className="nav-label">SAR Detection Lab</span>
               </div>
-              <span className="nav-pill-badge accent-badge">AI ONNX</span>
             </button>
 
             <button
