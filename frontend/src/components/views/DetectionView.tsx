@@ -158,13 +158,20 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
   const activeCategoryData = galleryCategories[galleryCategory];
 
   return (
-    <div className="view-container glass" style={{ padding: 'var(--sp-6)', overflowY: 'auto', height: '100%' }}>
-      <header style={{ marginBottom: 'var(--sp-6)' }}>
-        <h1 style={{ fontSize: '2rem', marginBottom: 'var(--sp-2)' }}>🛰️ SAR Oil Spill Detection Lab</h1>
-        <p style={{ color: 'var(--text-muted)' }}>CSIRO Sentinel-1 SAR Binary Classification • ONNX Runtime WebAssembly Inference</p>
-        <div style={{ marginTop: 'var(--sp-3)', display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-2)', padding: 'var(--sp-2) var(--sp-3)', borderRadius: 'var(--radius)', background: 'rgba(255,255,255,0.05)' }}>
+    <div className="tab-content visible modern-dashboard-root" style={{ padding: '20px 24px', overflowY: 'auto', height: '100%', boxSizing: 'border-box' }}>
+      {/* 1. EXECUTIVE HEADER */}
+      <div className="workspace-header-bar" style={{ marginBottom: 20 }}>
+        <div>
+          <h1 className="workspace-main-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span>🛰️</span> SAR Oil Spill Detection Lab
+          </h1>
+          <p className="workspace-sub-title">
+            CSIRO Sentinel-1 SAR Dual-Pol Classification • ONNX Runtime WebAssembly Inference • Real-time Physics Validation
+          </p>
+        </div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 20, background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', boxShadow: '0 1px 4px rgba(0,0,0,0.03)' }}>
           <div className={`sd ${modelStatus === 'loaded' ? 'ok' : modelStatus === 'demo' ? 'warn' : ''}`}></div>
-          <span style={{ fontSize: '0.85rem' }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
             {modelStatus === 'loading'
               ? 'Loading Neural Network...'
               : modelStatus === 'loaded'
@@ -172,18 +179,24 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
               : `Deterministic Radar Physics Engine (${getModelLoadError() ? 'ONNX fallback: ' + getModelLoadError() : 'Physics fallback active'})`}
           </span>
         </div>
-      </header>
+      </div>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-6)', marginBottom: 'var(--sp-6)' }}>
-        {/* Upload Zone */}
+      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+        {/* Upload Zone (Stock White Panel) */}
         <div 
           style={{ 
-            border: '2px dashed rgba(255,255,255,0.2)', 
-            borderRadius: 'var(--radius-lg)', 
-            padding: 'var(--sp-8)', 
+            background: 'var(--bg-surface)',
+            border: '2px dashed var(--border-default)', 
+            borderRadius: 16, 
+            padding: '32px 24px', 
             textAlign: 'center',
             cursor: 'pointer',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)'
           }}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={e => e.preventDefault()}
@@ -192,11 +205,11 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
             if (e.dataTransfer.files?.[0]) handleImageUpload(e.dataTransfer.files[0]);
           }}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '3rem', opacity: 0.5, marginBottom: 'var(--sp-3)' }}>cloud_upload</span>
-          <p>Drop a SAR image or GeoTIFF (.tif) here or click to upload</p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 'var(--sp-2)' }}>Accepts .tif, .tiff, .jpg, .png (Auto-calibrates 32-bit Sentinel-1 dB)</p>
+          <span className="material-symbols-outlined" style={{ fontSize: 42, color: 'var(--accent)', opacity: 0.8, marginBottom: 10 }}>cloud_upload</span>
+          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>Drop a SAR image or GeoTIFF (.tif) here or click to upload</p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5, marginBottom: 0 }}>Accepts .tif, .tiff, .jpg, .png (Auto-calibrates 32-bit Sentinel-1 dB)</p>
           {tiffNotice && (
-            <div style={{ marginTop: 'var(--sp-2)', padding: '4px 8px', borderRadius: 'var(--radius)', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.3)', color: '#00E5FF', fontSize: '0.78rem' }}>
+            <div style={{ marginTop: 10, padding: '5px 12px', borderRadius: 8, background: 'rgba(6, 182, 212, 0.1)', border: '1px solid rgba(6, 182, 212, 0.3)', color: '#0891B2', fontSize: 11, fontWeight: 600 }}>
               {tiffNotice}
             </div>
           )}
@@ -209,50 +222,56 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
           />
         </div>
 
-        {/* 40-Scene Curated Benchmark Gallery */}
-        <div style={{ background: 'rgba(0,0,0,0.2)', padding: 'var(--sp-4)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
+        {/* 40-Scene Curated Benchmark Gallery (Stock White Panel) */}
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: 16, borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, fontSize: '1rem' }}>Benchmark Evaluation Gallery</h3>
-            <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(37,99,235,0.2)', color: 'var(--accent)', fontWeight: 600 }}>
+            <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Benchmark Evaluation Gallery</h3>
+            <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 8, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', color: 'var(--accent)', fontWeight: 700, backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
               {activeCategoryData.badge}
             </span>
           </div>
 
-          {/* Category Switcher Tabs */}
+          {/* Category Switcher Tabs - GLASSMORPHIC SELECTABLE BUTTONS */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[
               { id: 'oil', label: '🛢️ Oil (10)' },
               { id: 'clean', label: '🌊 Clean (10)' },
               { id: 'lookalike', label: '🌫️ Look-Alike (10)' },
               { id: 'ship_wake', label: '🚢 Ship/Wake (10)' },
-            ].map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setGalleryCategory(cat.id as any)}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '0.75rem',
-                  borderRadius: 'var(--radius)',
-                  border: galleryCategory === cat.id ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.1)',
-                  background: galleryCategory === cat.id ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
-                  color: galleryCategory === cat.id ? '#fff' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontWeight: galleryCategory === cat.id ? 700 : 500,
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {cat.label}
-              </button>
-            ))}
+            ].map((cat) => {
+              const isSelected = galleryCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setGalleryCategory(cat.id as any)}
+                  style={{
+                    padding: '5px 10px',
+                    fontSize: 11,
+                    borderRadius: 8,
+                    border: isSelected ? '1px solid var(--accent)' : '1px solid rgba(203, 213, 225, 0.7)',
+                    background: isSelected ? 'var(--accent)' : 'rgba(255, 255, 255, 0.75)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontWeight: isSelected ? 700 : 500,
+                    boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.03)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
           </div>
 
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-            <span>{activeCategoryData.title}</span>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontWeight: 600 }}>{activeCategoryData.title}</span>
             <span>Click any sample to evaluate</span>
           </div>
 
           {/* 10-Image Symmetric Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--sp-2)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
             {activeCategoryData.images.map((src, i) => (
               <img 
                 key={`${galleryCategory}-${i}`} 
@@ -262,11 +281,12 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
                   width: '100%',
                   aspectRatio: '1 / 1',
                   objectFit: 'cover',
-                  borderRadius: 'var(--radius)',
+                  borderRadius: 8,
                   cursor: 'pointer',
-                  border: selectedImage === src ? '2px solid var(--accent)' : '1px solid rgba(255,255,255,0.12)',
-                  transition: 'transform 0.15s ease',
-                  background: '#111'
+                  border: selectedImage === src ? '2px solid var(--accent)' : '1px solid var(--border-default)',
+                  boxShadow: selectedImage === src ? '0 0 10px rgba(37, 99, 235, 0.4)' : '0 1px 3px rgba(0, 0, 0, 0.05)',
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                  background: '#0F172A',
                 }}
                 onClick={() => {
                   const fileName = src.split('/').pop() || `${galleryCategory}_sample_${i + 1}.jpg`;
@@ -274,7 +294,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
                   handleImageSelect(src, undefined, fileName);
                 }}
                 onError={(e) => (e.currentTarget.style.display = 'none')}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                 title={`Evaluate ${galleryCategory} sample #${i+1}`}
               />
@@ -284,115 +304,148 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
       </section>
 
       {isProcessing && (
-        <div style={{ textAlign: 'center', padding: 'var(--sp-8)' }}>
-          <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite', fontSize: '2rem' }}>autorenew</span>
-          <p style={{ marginTop: 'var(--sp-2)' }}>Classifying Image...</p>
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite', fontSize: '2rem', color: 'var(--accent)' }}>autorenew</span>
+          <p style={{ marginTop: 8, fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>Classifying Image with Radar Neural Network...</p>
         </div>
       )}
 
       {result && selectedImage && (
-        <section style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+        <section 
+          style={{ 
+            background: 'var(--bg-surface)', 
+            border: '1px solid var(--border-subtle)', 
+            borderRadius: 16, 
+            overflow: 'hidden', 
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
+            marginBottom: 20 
+          }}
+        >
+          {/* Header banner with light translucent tint */}
           <div style={{ 
-            padding: 'var(--sp-4)', 
+            padding: '16px 20px', 
             background: result.prediction === 'oil_spill' 
-              ? 'linear-gradient(90deg, rgba(220, 38, 38, 0.25) 0%, transparent 100%)' 
+              ? 'linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(255, 255, 255, 0) 100%)' 
               : result.prediction === 'invalid_sar'
-              ? 'linear-gradient(90deg, rgba(239, 68, 68, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%)'
-              : 'linear-gradient(90deg, rgba(22, 163, 74, 0.2) 0%, transparent 100%)',
+              ? 'linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, rgba(255, 255, 255, 0) 100%)' 
+              : 'linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(255, 255, 255, 0) 100%)',
+            borderBottom: '1px solid var(--border-subtle)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
             <div>
               <h2 style={{ 
-                fontSize: '1.5rem', 
-                color: result.prediction === 'oil_spill' ? '#ef4444' : result.prediction === 'invalid_sar' ? '#f59e0b' : '#4ade80', 
-                margin: '0 0 var(--sp-1) 0',
+                fontSize: '1.25rem', 
+                color: result.prediction === 'oil_spill' ? '#DC2626' : result.prediction === 'invalid_sar' ? '#D97706' : '#16A34A', 
+                margin: '0 0 4px 0',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: 8,
+                fontWeight: 800,
               }}>
                 {result.prediction === 'oil_spill' && '🛢️ OIL SPILL DETECTED'}
                 {result.prediction === 'no_oil' && '✅ CLEAN OCEAN'}
                 {result.prediction === 'invalid_sar' && '⚠️ INVALID INPUT: NOT AN OCEAN / SAR RADAR IMAGE'}
               </h2>
-              <div style={{ display: 'flex', gap: 'var(--sp-4)', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', gap: 14, fontSize: 12, color: 'var(--text-muted)' }}>
                 {result.prediction === 'invalid_sar' ? (
                   <>
-                    <span style={{ color: '#f87171', fontWeight: 600 }}>Reason: {result.rejectionReason}</span>
+                    <span style={{ color: '#DC2626', fontWeight: 600 }}>Reason: {result.rejectionReason}</span>
                     <span>Domain: Out of Distribution (OOD)</span>
                   </>
                 ) : (
                   <>
-                    <span>Confidence: {(result.confidence * 100).toFixed(1)}%</span>
-                    <span>Classifier: {result.inferenceTimeMs}ms</span>
+                    <span>Confidence: <strong style={{ color: 'var(--text-primary)' }}>{(result.confidence * 100).toFixed(1)}%</strong></span>
+                    <span>Classifier: <strong style={{ color: 'var(--text-primary)' }}>{result.inferenceTimeMs}ms</strong></span>
                     {result.spillAreaPercent !== undefined && result.spillAreaPercent > 0 && (
-                      <span style={{ color: '#ef4444', fontWeight: 600 }}>Spill Area: {result.spillAreaPercent}%</span>
+                      <span style={{ color: '#DC2626', fontWeight: 600 }}>Spill Area: {result.spillAreaPercent}%</span>
                     )}
                     {result.segmentationTimeMs !== undefined && (
-                      <span>Segmenter: {result.segmentationTimeMs}ms</span>
+                      <span>Segmenter: <strong style={{ color: 'var(--text-primary)' }}>{result.segmentationTimeMs}ms</strong></span>
                     )}
                   </>
                 )}
               </div>
             </div>
             <div style={{ 
-              fontSize: result.prediction === 'invalid_sar' ? '1.5rem' : '2.5rem', 
-              fontWeight: 'bold',
-              color: result.prediction === 'invalid_sar' ? '#f59e0b' : 'inherit'
+              fontSize: result.prediction === 'invalid_sar' ? '1.25rem' : '2rem', 
+              fontWeight: 800,
+              color: result.prediction === 'oil_spill' ? '#DC2626' : result.prediction === 'invalid_sar' ? '#D97706' : '#16A34A'
             }}>
               {result.prediction === 'invalid_sar' ? 'REJECTED' : `${(result.confidence * 100).toFixed(0)}%`}
             </div>
           </div>
 
           {result.prediction === 'invalid_sar' && (
-            <div style={{ padding: '12px 16px', background: 'rgba(239, 68, 68, 0.12)', borderBottom: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', fontSize: '0.85rem' }}>
+            <div style={{ padding: '10px 20px', background: 'rgba(239, 68, 68, 0.08)', borderBottom: '1px solid rgba(239, 68, 68, 0.2)', color: '#DC2626', fontSize: 12 }}>
               <strong>Notice:</strong> This model is calibrated strictly for Synthetic Aperture Radar (SAR) ocean backscatter imagery (Sentinel-1 / ISRO RISAT/EOS-04). Documents, paper receipts, invoices, and standard optical photos are automatically rejected to prevent false positive/negative classifications.
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '1px', background: 'rgba(255,255,255,0.1)' }}>
-            <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
-              <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem' }}>
+          {/* Diagnostic Image Frames */}
+          <div style={{ display: 'grid', gridTemplateColumns: result.segmentationMask ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 14, padding: 16, background: 'var(--bg-surface)' }}>
+            {/* Panel 1: Original SAR Image */}
+            <div style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
                 {result.prediction === 'invalid_sar' ? 'Uploaded Non-Marine Image' : 'Original SAR Image'}
               </div>
-              <img src={selectedImage} alt="Selected" style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', background: '#000' }} />
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', borderRadius: 8, overflow: 'hidden', background: '#0F172A', border: '1px solid var(--border-subtle)' }}>
+                <img src={selectedImage} alt="Selected" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              </div>
             </div>
 
-            {/* SpillSegNet Segmentation Panel */}
+            {/* Panel 2: SpillSegNet Segmentation Panel */}
             {result.segmentationMask && (
-              <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
-                <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
+              <div style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>🎯 SpillSegNet U-Net Mask</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Coverage: {result.spillAreaPercent}%</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Coverage: {result.spillAreaPercent}%</span>
                 </div>
-                <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#000' }}>
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', borderRadius: 8, overflow: 'hidden', background: '#0F172A', border: '1px solid var(--border-subtle)' }}>
                   <img src={selectedImage} alt="Original" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
                   <img src={result.segmentationMask} alt="SpillSegNet Mask" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 1 }} />
                 </div>
               </div>
             )}
 
-            <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
-              <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
-                Attention Map (Occlusion Sensitivity)
+            {/* Panel 3: Attention Map */}
+            <div style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Attention Map (Occlusion Sensitivity)</span>
                 {result.prediction !== 'invalid_sar' && !heatmapUrl && !isGeneratingHeatmap && (
-                  <button onClick={handleGenerateHeatmap} style={{ background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)', borderRadius: '4px', cursor: 'pointer', padding: '0 4px', fontSize: '0.8rem' }}>Generate</button>
+                  <button 
+                    onClick={handleGenerateHeatmap} 
+                    style={{ 
+                      background: 'rgba(37, 99, 235, 0.08)', 
+                      backdropFilter: 'blur(8px)', 
+                      WebkitBackdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(37, 99, 235, 0.3)', 
+                      color: 'var(--accent)', 
+                      borderRadius: 6, 
+                      cursor: 'pointer', 
+                      padding: '2px 8px', 
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Generate
+                  </button>
                 )}
               </div>
-              <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', borderRadius: 8, overflow: 'hidden', background: '#0F172A', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {result.prediction === 'invalid_sar' ? (
-                  <div style={{ padding: 'var(--sp-4)', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '3rem', color: '#f59e0b', marginBottom: '8px' }}>block</span>
-                    <p style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Attention Map Disabled</p>
-                    <p style={{ marginTop: '4px' }}>Input was flagged as non-marine / document image. Please upload a verified SAR ocean scene.</p>
+                  <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: 11.5 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 36, color: '#F59E0B', marginBottom: 8 }}>block</span>
+                    <p style={{ color: 'var(--text-primary)', fontWeight: 600, margin: '0 0 4px 0' }}>Attention Map Disabled</p>
+                    <p style={{ margin: 0, fontSize: 10.5 }}>Input was flagged as non-marine / document image. Please upload a verified SAR ocean scene.</p>
                   </div>
                 ) : (
                   <>
                     <img src={selectedImage} alt="Selected" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
                     {isGeneratingHeatmap && (
-                      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', zIndex: 2 }}>
-                        <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite', fontSize: '2rem' }}>autorenew</span>
+                      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', zIndex: 2 }}>
+                        <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite', fontSize: 32, color: 'var(--accent)' }}>autorenew</span>
                       </div>
                     )}
                     {heatmapUrl && (
@@ -404,40 +457,42 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
             </div>
           </div>
           
-          {/* LIVE SPILL ANALYTICS & MARPOL CLASSIFICATION PANEL (Computed on the basis of uploaded SAR image) */}
+          {/* LIVE SPILL ANALYTICS & MARPOL CLASSIFICATION PANEL (Stock White Panel) */}
           {result.prediction === 'oil_spill' && analyticsResult && (
             <div
               style={{
-                background: 'rgba(15, 23, 42, 0.85)',
-                borderTop: '1px solid rgba(255, 255, 255, 0.12)',
-                padding: 'var(--sp-4)',
+                background: 'var(--bg-surface)',
+                borderTop: '1px solid var(--border-subtle)',
+                padding: '16px 20px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 'var(--sp-3)',
+                gap: 14,
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--accent)' }}>analytics</span>
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                       Live Spill Analytics (Computed on Basis of Uploaded Scene)
                     </h3>
                     <span
                       style={{
-                        fontSize: '0.72rem',
+                        fontSize: 10,
                         padding: '2px 8px',
                         borderRadius: 12,
-                        background: 'rgba(56, 189, 248, 0.15)',
+                        background: 'rgba(37, 99, 235, 0.08)',
                         color: 'var(--accent)',
-                        border: '1px solid rgba(56, 189, 248, 0.35)',
+                        border: '1px solid rgba(37, 99, 235, 0.25)',
                         fontWeight: 700,
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)'
                       }}
                     >
                       MARPOL 73/78 ANNEX I VALIDATED
                     </span>
                   </div>
-                  <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <p style={{ margin: '3px 0 0', fontSize: 11.5, color: 'var(--text-muted)' }}>
                     Scene: <strong style={{ color: 'var(--text-secondary)' }}>{uploadedFileName}</strong> · Physical spill area, Bonn Code volume, radar backscatter damping, and statutory classification calculated dynamically from this SAR scene.
                   </p>
                 </div>
@@ -445,12 +500,12 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
                 {appliedNotice && (
                   <div
                     style={{
-                      fontSize: '0.82rem',
-                      color: '#10B981',
-                      background: 'rgba(16, 185, 129, 0.15)',
+                      fontSize: 12,
+                      color: '#059669',
+                      background: 'rgba(16, 185, 129, 0.1)',
                       padding: '4px 12px',
-                      borderRadius: 6,
-                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      borderRadius: 8,
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
                       fontWeight: 700,
                       display: 'flex',
                       alignItems: 'center',
@@ -468,58 +523,57 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: 'var(--sp-3)',
-                  marginTop: 4,
+                  gap: 12,
                 }}
               >
                 {/* Metric 1: Slick Surface Area */}
-                <div style={{ background: 'var(--bg-dark)', padding: '12px', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ background: 'var(--bg-raised)', padding: 12, borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Calculated Slick Area
                   </div>
-                  <div className="mono" style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent)', margin: '4px 0' }}>
-                    {analyticsResult.calculatedAreaKm2} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>km²</span>
+                  <div className="mono" style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent)', margin: '4px 0' }}>
+                    {analyticsResult.calculatedAreaKm2} <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>km²</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {analyticsResult.coveragePct}% scene coverage · {analyticsResult.hectares} ha
                   </div>
                 </div>
 
                 {/* Metric 2: MARPOL Classification */}
-                <div style={{ background: 'var(--bg-dark)', padding: '12px', borderRadius: 'var(--radius)', border: `1px solid ${analyticsResult.marpolColor}66` }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ background: 'var(--bg-raised)', padding: 12, borderRadius: 10, border: `1px solid ${analyticsResult.marpolColor}44` }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     MARPOL 73/78 Classification
                   </div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: analyticsResult.marpolColor, margin: '6px 0 2px' }}>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: analyticsResult.marpolColor, margin: '5px 0 2px' }}>
                     {analyticsResult.marpolType}
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.2 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.2 }}>
                     {analyticsResult.marpolCode}
                   </div>
                 </div>
 
                 {/* Metric 3: Estimated Volume & Bonn Code */}
-                <div style={{ background: 'var(--bg-dark)', padding: '12px', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ background: 'var(--bg-raised)', padding: 12, borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Bonn Discharged Volume
                   </div>
-                  <div className="mono" style={{ fontSize: '1.45rem', fontWeight: 800, color: '#F59E0B', margin: '4px 0' }}>
-                    ~{analyticsResult.estimatedVolumeMT} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>MT</span>
+                  <div className="mono" style={{ fontSize: '1.35rem', fontWeight: 800, color: '#D97706', margin: '4px 0' }}>
+                    ~{analyticsResult.estimatedVolumeMT} <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>MT</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     ~{analyticsResult.estimatedBarrels} bbls · {analyticsResult.bonnLabel.split('·')[0].trim()}
                   </div>
                 </div>
 
                 {/* Metric 4: Radar Damping & Physical Signal */}
-                <div style={{ background: 'var(--bg-dark)', padding: '12px', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ background: 'var(--bg-raised)', padding: 12, borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Radar Backscatter Damping
                   </div>
-                  <div className="mono" style={{ fontSize: '1.45rem', fontWeight: 800, color: '#10B981', margin: '4px 0' }}>
-                    {analyticsResult.meanDampingDb} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>dB</span>
+                  <div className="mono" style={{ fontSize: '1.35rem', fontWeight: 800, color: '#059669', margin: '4px 0' }}>
+                    {analyticsResult.meanDampingDb} <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>dB</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     C-Band VV depression · SWIR Ratio: {analyticsResult.swirRatio}
                   </div>
                 </div>
@@ -527,7 +581,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
             </div>
           )}
           
-          {/* Dynamic Action Controls */}
+          {/* Dynamic Action Controls (Glassmorphic Buttons) */}
           {(() => {
             const sceneAreaKm2 = 25.0; // standard Sentinel-1 IW 5km x 5km scene cutout at 10m/pixel
             const coveragePercent = typeof result.spillAreaPercent === 'number' && result.spillAreaPercent > 0
@@ -556,15 +610,15 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
               };
 
               // Inject real-world coordinates if a benchmark is selected
-              if (currentFileName && (currentFileName.includes('oil_00000') || currentFileName.includes('00_oil'))) {
+              if (currentFileName && (currentFileName.includes('oil_00000') || currentFileName.includes('00_oil') || currentFileName.includes('class_1_1'))) {
                 payload.lat = 18.74;
                 payload.lng = 71.21;
                 payload.locationName = 'Mumbai High Basin';
-              } else if (currentFileName && (currentFileName.includes('oil_00001') || currentFileName.includes('01_oil'))) {
+              } else if (currentFileName && (currentFileName.includes('oil_00001') || currentFileName.includes('01_oil') || currentFileName.includes('class_1_2'))) {
                 payload.lat = 22.45;
                 payload.lng = 69.12;
                 payload.locationName = 'Gulf of Kutch Fairway';
-              } else if (currentFileName && (currentFileName.includes('oil_00002') || currentFileName.includes('02_oil'))) {
+              } else if (currentFileName && (currentFileName.includes('oil_00002') || currentFileName.includes('02_oil') || currentFileName.includes('class_1_3'))) {
                 payload.lat = 13.26;
                 payload.lng = 80.47;
                 payload.locationName = 'Chennai Port Anchorage';
@@ -578,29 +632,16 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
             };
 
             return (
-              <div style={{ padding: 'var(--sp-4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', flexWrap: 'wrap', gap: 'var(--sp-3)' }}>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', flexWrap: 'wrap', gap: 12 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                   {result.prediction === 'oil_spill' && (
                     <span>
-                      Dynamic Physical Slick Area: <strong style={{ color: '#ef4444' }}>{dynamicAreaKm2} km²</strong> ({coveragePercent}% SAR coverage) · <span className="mono">{currentFileName}</span>
+                      Dynamic Physical Slick Area: <strong style={{ color: '#DC2626' }}>{dynamicAreaKm2} km²</strong> ({coveragePercent}% SAR coverage) · <span className="mono">{currentFileName}</span>
                     </span>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--sp-3)', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                   <button
-                    className="btn"
-                    style={{
-                      background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
-                      color: '#FFFFFF',
-                      border: '1px solid rgba(56, 189, 248, 0.6)',
-                      boxShadow: '0 0 16px rgba(2, 132, 199, 0.4)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      fontWeight: 700,
-                      cursor: result.prediction === 'oil_spill' ? 'pointer' : 'not-allowed',
-                      opacity: result.prediction === 'oil_spill' ? 1 : 0.5,
-                    }}
                     onClick={() => {
                       if (!analyticsResult) return;
                       const inc = analyticsToIncident(analyticsResult);
@@ -611,40 +652,81 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
                       }, 600);
                     }}
                     disabled={result.prediction !== 'oil_spill'}
+                    style={{
+                      background: 'rgba(2, 132, 199, 0.85)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      color: '#FFFFFF',
+                      border: '1px solid rgba(56, 189, 248, 0.6)',
+                      boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+                      borderRadius: 8,
+                      padding: '7px 14px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontWeight: 700,
+                      fontSize: 12,
+                      cursor: result.prediction === 'oil_spill' ? 'pointer' : 'not-allowed',
+                      opacity: result.prediction === 'oil_spill' ? 1 : 0.5,
+                      transition: 'all 0.15s ease',
+                    }}
                     title="Apply this detection directly into Spill Analytics & Incident Registry"
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>analytics</span>
-                    <span>📈 Apply to Spill Analytics</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>analytics</span>
+                    <span>Apply to Spill Analytics</span>
                   </button>
 
                   <button 
-                    className="btn" 
                     onClick={handleFeedDrift} 
                     disabled={result.prediction !== 'oil_spill'}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 18px',
-                      fontWeight: 600,
-                      background: result.prediction === 'oil_spill' ? 'var(--accent)' : undefined,
-                      color: result.prediction === 'oil_spill' ? '#fff' : undefined,
+                      gap: 6,
+                      padding: '7px 16px',
+                      fontWeight: 700,
+                      fontSize: 12,
+                      borderRadius: 8,
+                      background: result.prediction === 'oil_spill' ? 'rgba(37, 99, 235, 0.85)' : 'rgba(255, 255, 255, 0.6)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(37, 99, 235, 0.5)',
+                      color: result.prediction === 'oil_spill' ? '#FFFFFF' : 'var(--text-muted)',
+                      boxShadow: result.prediction === 'oil_spill' ? '0 2px 8px rgba(37, 99, 235, 0.3)' : 'none',
                       cursor: result.prediction === 'oil_spill' ? 'pointer' : 'not-allowed',
+                      opacity: result.prediction === 'oil_spill' ? 1 : 0.5,
+                      transition: 'all 0.15s ease',
                     }}
                     title="Feed this evaluated image and its specific computed slick area into the Lagrangian hydrodynamic drift model"
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>waves</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>waves</span>
                     <span>Feed into Drift Model ({dynamicAreaKm2} km²)</span>
                   </button>
 
                   <button 
-                    className="btn btn-secondary" 
                     onClick={() => onSelectTab && onSelectTab('attribution')} 
                     disabled={result.prediction !== 'oil_spill'}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: 6,
+                      padding: '7px 14px',
+                      fontWeight: 600,
+                      fontSize: 12,
+                      borderRadius: 8,
+                      background: 'rgba(255, 255, 255, 0.75)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(203, 213, 225, 0.8)',
+                      color: 'var(--text-secondary)',
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+                      cursor: result.prediction === 'oil_spill' ? 'pointer' : 'not-allowed',
+                      opacity: result.prediction === 'oil_spill' ? 1 : 0.5,
+                      transition: 'all 0.15s ease',
+                    }}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>radar</span>
-                    <span>🚢 Correlate AIS Suspects</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>radar</span>
+                    <span>Correlate AIS Suspects</span>
                   </button>
                 </div>
               </div>
