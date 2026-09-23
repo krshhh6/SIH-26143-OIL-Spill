@@ -180,21 +180,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* HISTORY */}
-        <div className="drawer-section">
-          <div className="drawer-sec-label">History</div>
-          <div className="drawer-history-list">
-            <div className="drawer-history-row" onClick={() => onSelectScenario && onSelectScenario('INC-001')}>
-              <span className="material-symbols-outlined history-icon">schedule</span>
-              <span>Recently Monitored</span>
-            </div>
-            <div className="drawer-history-row">
-              <span className="material-symbols-outlined history-icon">archive</span>
-              <span>EEZ Archive</span>
-            </div>
-          </div>
-        </div>
-
         {/* INCIDENT EXPLORER / DOCUMENTS FOLDER TREE */}
         <div className="drawer-section incident-tree-section">
           <div className="drawer-sec-header">
