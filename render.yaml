@@ -1,11 +1,10 @@
 services:
   # -------------------------------------------------------------
-  # 1. FRONTEND (React + Vite + ONNX WebAssembly)
+  # 1. FRONTEND (React 19 + Vite + ONNX WebAssembly)
   # -------------------------------------------------------------
-  - type: static
+  - type: web
     name: spill-sense-frontend
-    repo: https://github.com/krshhh6/SIH-26143-OIL-Spill
-    branch: main
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
@@ -15,21 +14,16 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: spill-sense-backend
-          property: host
+        value: https://spill-sense-backend.onrender.com
 
   # -------------------------------------------------------------
-  # 2. BACKEND (FastAPI C2 Engine + Socket.IO)
+  # 2. BACKEND (FastAPI C2 Platform + Socket.IO)
   # -------------------------------------------------------------
   - type: web
     name: spill-sense-backend
     runtime: docker
-    repo: https://github.com/krshhh6/SIH-26143-OIL-Spill
-    branch: main
-    rootDir: backend
-    dockerfilePath: Dockerfile
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: free
     envVars:
       - key: PROJECT_NAME
