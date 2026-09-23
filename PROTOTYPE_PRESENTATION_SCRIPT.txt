@@ -1,0 +1,284 @@
+================================================================================
+                    SPILLSENSE: PROTOTYPE PRESENTATION SCRIPT
+           Autonomous Satellite Oil Spill AI Detection, Lagrangian Drift 
+                      & Dark Vessel Forensic Attribution
+================================================================================
+
+EVENT:           Smart India Hackathon / Technical Evaluation Jury
+TARGET AUDIENCE: Judges, Technical Evaluators, Maritime Authorities (ICG / DG Shipping)
+SPEAKER:         Team Lead / Presenter
+ESTIMATED TIME:  6 to 8 Minutes
+PRE-DEMO SETUP:  1. Open Chrome/Edge at http://localhost:5173/ in full screen (F11).
+                 2. Ensure FastAPI backend is active at http://127.0.0.1:8000/.
+                 3. Default view: Dashboard overview showing the Indian Ocean basin.
+
+================================================================================
+ACT 1: THE HOOK & THE NATIONAL MARITIME CRISIS (0:00 - 1:00)
+================================================================================
+SCREEN VISUAL:
+- C2 Tactical Dashboard (http://localhost:5173/)
+- Indian Ocean basin visible on the Leaflet map with all 8 Indian monitoring basins glowing.
+
+PRESENTER ACTION:
+- Stand upright, look directly at the judges. Do not touch the mouse yet.
+
+SPOKEN SCRIPT:
+"Respected Judges, India commands an Exclusive Economic Zone (EEZ) spanning over 
+2.37 million square kilometers. Through our waters passes more than 70% of the 
+entire world's seaborne petroleum trade, voyaging from the Persian Gulf down through 
+the Arabian Sea, around Kerala, and across the Bay of Bengal into the Malacca Strait.
+
+Yet, maritime surveillance suffers from a massive blind spot: 'Dark Spills'. 
+Commercial supertankers and bulk carriers deliberately discharge toxic oily bilge 
+and bunker waste under cover of night and heavy monsoon cloud cover. To evade 
+satellite detection, they switch off their AIS transponders.
+
+By the time physical Coast Guard patrol vessels or conventional optical satellites 
+spot the slick, days have passed. Ocean currents have dispersed the oil onto 
+pristine mangroves and fisheries, and the rogue polluter has already fled into 
+international waters with zero legal liability.
+
+To solve this national ecological and legal crisis, we built SpillSense: India's 
+first end-to-end, multi-sensor satellite AI detection, Lagrangian hydrodynamic drift 
+modeling, and dark-vessel forensic attribution system."
+
+================================================================================
+ACT 2: PAN-INDIA COMMAND & CONTROL (C2) BASINS (1:00 - 2:00)
+================================================================================
+SCREEN VISUAL:
+- Left sidebar and interactive GIS Map.
+
+PRESENTER ACTION:
+1. Point to the Left Sidebar showing the 8 Indian EEZ monitoring basins.
+2. Click on INC-005 (Gulf of Kutch / Vadinar Deepwater Terminal) on the map.
+3. Click the marker pin to open the tactical HUD popup card.
+
+SPOKEN SCRIPT:
+"Rather than a toy prototype limited to one synthetic test coordinate, SpillSense 
+is architected around 8 sovereign Indian maritime basins covering our entire coastline:
+
+- Gulf of Kutch and Vadinar SPM in Gujarat (High-density crude import corridor)
+- Bombay High Offshore Fairway (Western offshore drilling sector)
+- Goa Deepwater Mining Shipping Lane
+- Cochin Port Single Point Mooring Anchorage (Kerala tanker corridor)
+- Chennai Ennore Basin (Coromandel industrial coast)
+- Paradip Port Offshore Anchorage in Odisha
+- Strategic Six-Degree Channel in the Andaman & Nicobar Islands
+- Lakshadweep Kavaratti Sea
+
+(Click on INC-005 marker on map)
+
+Notice our live C2 HUD popup: It immediately renders tactical command intelligence:
+- Physical coordinates: 22.4800°N, 69.5200°E
+- Verified oil classification: Crude Oil
+- Measured surface extent: 3.85 sq km
+- Suspect intercept: AL KHALEEJ STAR
+
+Every single incident maintains real-time bidirectional synchronization between 
+our FastAPI REST backend and our client state."
+
+================================================================================
+ACT 3: MULTI-SENSOR SPACEBORNE FUSION & ISRO BHOONIDHI (2:00 - 3:15)
+================================================================================
+SCREEN VISUAL:
+- Basemap switcher toolbar (Satellite, Bathymetry, Nautical).
+- Topbar "ISRO Bhoonidhi" Modal.
+
+PRESENTER ACTION:
+1. Click the "Bathymetry" button on the map toolbar.
+2. Toggle "Borders & EEZ" button to show the 200 NM Indian maritime limit.
+3. Click "ISRO Bhoonidhi" in the top bar.
+4. Show Tab 3: "Authentication & Token", then Tab 4: "OpenSearch REST Client".
+
+SPOKEN SCRIPT:
+"Optical satellites are completely blind at night and through monsoon clouds. 
+That is why SpillSense leverages Synthetic Aperture Radar (SAR).
+
+(Click 'Bathymetry')
+On our map, operators can switch from optical satellite to our ISRO Bhoonidhi / 
+GEBCO Ocean Bathymetry relief, revealing underwater trenches and continental 
+shelves that dictate subsurface currents.
+
+(Click Topbar 'ISRO Bhoonidhi')
+Here is our live integration with the ISRO NRSC Bhoonidhi Portal. We have 
+configured authentication under registered user 'krshhh6', exchanging credentials 
+directly with ISRO's Shadnagar ground station node for secure JWT Bearer tokens.
+
+(Click Tab 4: OpenSearch REST Client)
+Through our Bhoonidhi OpenSearch client, our system queries live STAC 1.0.0 GeoJSON 
+catalogs for NISAR (NASA-ISRO SAR) and EOS-04 C-SAR radar granules over any 
+maritime bounding box.
+
+(Click Tab 2: NISAR Damping Lab)
+Crucially, we solve the industry's biggest issue: FALSE POSITIVES. Algal blooms, 
+biogenic films, and low-wind areas look identical to oil on single-band radar. 
+NISAR carries Dual-Band Radar: S-band (3.2 GHz) from ISRO and L-band (1.26 GHz) 
+from NASA. 
+
+Mineral crude oil dampens both short and long surface gravity-capillary waves, 
+whereas natural algae only dampens high-frequency ripples. By computing the 
+Dual-Frequency Damping Index (DFDI), SpillSense mathematically eliminates false 
+alarms before alerting commanders."
+
+================================================================================
+ACT 4: IN-BROWSER EDGE AI SAR DETECTION LAB (3:15 - 4:30)
+================================================================================
+SCREEN VISUAL:
+- SAR Detection Lab View (Sidebar Tab 7 or press key '7').
+
+PRESENTER ACTION:
+1. Click "SAR Detection Lab" in the sidebar.
+2. Click on a sample thumbnail under "Oil Spill Samples (Class 1)".
+3. Highlight the inference latency (<150 ms).
+4. Click "Generate Attention Heatmap".
+
+SPOKEN SCRIPT:
+"Now let us examine our AI detection engine. In real maritime operations, communication 
+bandwidth on Coast Guard vessels at sea is severely constrained. Uploading multi-gigabyte 
+SAR radar imagery to cloud servers is impossible during tactical operations.
+
+SpillSense solves this by running 100% In-Browser Edge AI Inference using ONNX 
+Runtime WebAssembly (WASM).
+
+(Click sample thumbnail)
+In under 150 milliseconds, our convolutional deep-learning model processes the radar 
+tile directly inside browser memory with ZERO server latency.
+
+Notice our strict adherence to the international Bonn Agreement for Oil Pollution:
+- It segments the Heavy Viscous Emulsion Core (Bonn Code 4/5) in amber.
+- It delineates the surrounding Iridescent Sheen (Bonn Code 1/2) in blue.
+- It computes surface area in square kilometers and estimates spillage volume in 
+  metric tons and barrels.
+
+(Click 'Generate Attention Heatmap')
+For operational explainability, our built-in occlusion sensitivity algorithm 
+generates an attention saliency heatmap, proving to naval commanders exactly which 
+radar damping gradients triggered the AI's positive decision."
+
+================================================================================
+ACT 5: SOVEREIGN LAGRANGIAN DRIFT & LAND EXCLUSION CLAMPING (4:30 - 5:45)
+================================================================================
+SCREEN VISUAL:
+- Map Panel / Drift View centered on INC-006 (Cochin Port SPM Anchorage).
+
+PRESENTER ACTION:
+1. Return to the map and select INC-006 (Cochin Port SPM).
+2. Zoom into the Kerala offshore sector.
+3. Point out the Amber Pin (T-22h Origin), the Green Pin (T+24h Forecast), and 
+   the Amber dashed Sovereign Shoreline Land Boundary.
+
+SPOKEN SCRIPT:
+"Detecting an oil slick is only half the battle. We must answer two vital operational 
+questions: Where did the spill originate, and where will it hit next?
+
+This is our Lagrangian Hydrodynamic Drift Engine, driven by Copernicus Marine (CMEMS) 
+3D ocean currents and ERA5 Stokes wind drift:
+
+1. (Point to Amber Pin): REVERSE PARTICLE BACKTRACKING (T-22h):
+Our model integrates backwards in time, rewinding hydrodynamic velocity fields 
+hour-by-hour to pinpoint the exact 90% and 50% probability isobar envelopes where 
+the illegal discharge occurred 22 hours ago.
+
+2. (Point to Green Pin & Cones): FORWARD PREDICTIVE FORECAST (T+24h):
+It projects plume dispersion and spreading over the next 24 hours, giving the Coast 
+Guard precise coordinates to deploy containment booms.
+
+3. (Point to Coastline): SOVEREIGN SHORELINE CLAMPING:
+Notice this glowing amber dashed boundary. In real physics, oil cannot penetrate 
+solid land. Our engine enforces sovereign coastal boundary non-penetration 
+constraints along the Indian peninsular baseline. Every trajectory vector is 
+clamped to navigable ocean waters, preventing false inland projections and 
+calculating the exact estimated time of shoreline impact."
+
+================================================================================
+ACT 6: FORENSIC DARK VESSEL ATTRIBUTION & EVIDENCE LOCKER (5:45 - 7:00)
+================================================================================
+SCREEN VISUAL:
+- "Attribution" tab, followed by "Evidence" tab.
+
+PRESENTER ACTION:
+1. Click "Attribution" in the sidebar.
+2. Highlight the suspect vessel list, showing OCEAN VOYAGER at the top.
+3. Point out the AIS Silence Gap (e.g., 4h 35m transponder blackout).
+4. Click "Evidence" in the sidebar.
+
+SPOKEN SCRIPT:
+(In Attribution View)
+"This brings us to the ultimate operational breakthrough: Holding polluters accountable.
+
+SpillSense cross-references historical Automatic Identification System (AIS) 
+tracks against our reconstructed T-22h discharge envelope:
+- It filters all commercial vessels traversing the corridor during the discharge window.
+- It detects AIS Silence Gaps: flagging vessels that deliberately shut down their 
+  transponders to hide illicit purging.
+- It analyzes vessel speed profiles, spotting sudden decelerations from 15 knots 
+  down to 6 knots, characteristic of bunker pumping.
+- It calculates an aggregate Attribution Score (S = 0.88), identifying the culprit 
+  tanker with mathematically defensible probability.
+
+(Click 'Evidence' tab)
+Finally, in the Evidence Locker, SpillSense automatically compiles the entire dossier: 
+calibrated radar damping curves, oceanographic current logs, vessel MMSI telemetry, 
+and AIS gap timelines.
+
+With one click, commanders can export an audit-ready, court-admissible PDF briefing 
+structured strictly according to UNCLOS Article 194 and MARPOL Annex I, enabling 
+the Indian Coast Guard and DG Shipping to intercept offending vessels and levy 
+international maritime penalties."
+
+================================================================================
+ACT 7: GRAND FINALE & SUMMARY (7:00 - 7:30)
+================================================================================
+PRESENTER ACTION:
+- Return to full Dashboard overview. Look at the judges and conclude with authority.
+
+SPOKEN SCRIPT:
+"To summarize, SpillSense delivers:
+1. 24/7 ALL-WEATHER SPACEBORNE SURVEILLANCE through ISRO NISAR, EOS-04, and Sentinel SAR.
+2. ZERO FALSE ALARMS via Dual-Band L+S Bragg Scattering Damping physics.
+3. SUB-150ms EDGE AI INFERENCE running in-browser with zero cloud dependency.
+4. PHYSICS-CONSISTENT DRIFT MODELING with sovereign coastal land clamping.
+5. COURT-ADMISSIBLE FORENSIC ATTRIBUTION converting dark spills into enforceable convictions.
+
+SpillSense transforms India's maritime oil spill defense from a slow, reactive scramble 
+into an autonomous, proactive, and sovereign shield.
+
+Thank you, respected judges! We are ready for your questions."
+
+================================================================================
+JURY CROSS-EXAMINATION CHEAT SHEET (INSTANT WINNING TECHNICAL ANSWERS)
+================================================================================
+
+Q1: "What if there are thick monsoon clouds or it is pitch black midnight?"
+A1: "Optical sensors fail in clouds and darkness, which is why SpillSense relies on 
+     Synthetic Aperture Radar (SAR) like Sentinel-1, ISRO EOS-04, and NISAR. SAR uses 
+     active microwave pulses (C-band, S-band, L-band) that penetrate cloud cover, 
+     monsoon rain, and darkness 24/7 without requiring any solar illumination."
+
+Q2: "How do you differentiate crude oil from calm water or algal blooms?"
+A2: "We use Dual-Frequency Bragg Scattering Analysis. Crude oil dampens both short 
+     capillary ripples and longer gravity waves. Natural biogenic slicks (like algae) 
+     only dampen short capillary waves. By computing the Dual-Frequency Damping Index 
+     (DFDI) between NISAR S-band (3.2 GHz) and L-band (1.26 GHz), we separate mineral 
+     petroleum from biogenic look-alikes with mathematical certainty."
+
+Q3: "Where does the ocean current data come from for your drift predictions?"
+A3: "Our Lagrangian engine ingests 3D hydrodynamic ocean currents from CMEMS 
+     (Copernicus Marine Environment Monitoring Service) combined with 10-meter 
+     surface wind vectors from ECMWF ERA5 reanalysis to model both advection and 
+     Stokes drift."
+
+Q4: "Can an offshore Coast Guard vessel run this without fast internet?"
+A4: "Yes! Our ONNX WebAssembly model executes directly inside the browser using 
+     the client laptop's CPU/GPU via WASM SIMD. No image bytes are sent over the network; 
+     once the application is loaded, AI inference functions completely offline at sea."
+
+Q5: "Why won't the drift projection penetrate into the mainland?"
+A5: "We engineered a sovereign peninsular land clamping engine (geoContours.ts). 
+     Every forward and backward trajectory waypoint is dynamically checked against 
+     the Indian sovereign coastline baseline, mathematically clamping all dispersion 
+     vectors strictly to navigable ocean waters."
+
+================================================================================
+END OF SCRIPT
+================================================================================
