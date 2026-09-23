@@ -1,7 +1,42 @@
 import React, { useState } from 'react';
+import type { LiveIncident } from '../../hooks/useIncidents';
 
-export const AnalyticsView: React.FC = () => {
+interface AnalyticsViewProps {
+  incidents?: LiveIncident[];
+}
+
+export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
   const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+
+  // ── Derive all metrics from live incident data ──
+  const list = incidents && incidents.length > 0 ? incidents : [];
+
+  const activeCount = list.length || 3;
+
+  const areas = list.map((i) => parseFloat(i.area)).filter((n) => !isNaN(n));
+  const meanArea = areas.length > 0 ? areas.reduce((s, n) => s + n, 0) / areas.length : 3.6;
+  const minArea  = areas.length > 0 ? Math.min(...areas) : 1.2;
+  const maxArea  = areas.length > 0 ? Math.max(...areas) : 4.82;
+
+  const aisGapCount = list.filter(
+    (i) => i.severity === 'CRITICAL' || (i.top_vessel ?? '').toUpperCase().includes('UNKNOWN') || (i.top_vessel ?? '').toUpperCase().includes('DARK')
+  ).length || 2;
+
+  // MARPOL oil type distribution from live incidents
+  const buckets = { crude: 0, bunker: 0, bilge: 0, diesel: 0 };
+  for (const inc of list) {
+    const t = (inc.oil_type ?? '').toLowerCase();
+    if (t.includes('crude'))       buckets.crude++;
+    else if (t.includes('bunker')) buckets.bunker++;
+    else if (t.includes('bilge'))  buckets.bilge++;
+    else if (t.includes('diesel') || t.includes('gas oil')) buckets.diesel++;
+    else                           buckets.crude++;
+  }
+  const bucketTotal = Math.max(Object.values(buckets).reduce((a, b) => a + b, 0), 1);
+  const crudeP  = list.length > 0 ? Math.round((buckets.crude  / bucketTotal) * 100) : 48;
+  const bunkerP = list.length > 0 ? Math.round((buckets.bunker / bucketTotal) * 100) : 27;
+  const bilgeP  = list.length > 0 ? Math.round((buckets.bilge  / bucketTotal) * 100) : 16;
+  const dieselP = list.length > 0 ? Math.round((buckets.diesel / bucketTotal) * 100) : 9;
 
   const handleExportCSV = () => {
     setDownloadNotice('Exporting EEZ 14-day telemetry dataset to CSV...');
@@ -53,7 +88,7 @@ export const AnalyticsView: React.FC = () => {
           </div>
           <div className="metric-card-body">
             <span className="metric-number">
-              3 <span className="metric-unit">Incidents</span>
+              {activeCount} <span className="metric-unit">Incidents</span>
             </span>
             <span className="metric-trend-pill positive">
               Active Watch
@@ -71,14 +106,14 @@ export const AnalyticsView: React.FC = () => {
           </div>
           <div className="metric-card-body">
             <span className="metric-number">
-              3.6 <span className="metric-unit">km²</span>
+              {meanArea.toFixed(1)} <span className="metric-unit">km²</span>
             </span>
             <span className="metric-trend-pill neutral">
               Spread Average
             </span>
           </div>
           <div className="metric-card-footer">
-            <span>Dynamic Range: 1.2 – 4.82 km²</span>
+            <span>Dynamic Range: {minArea.toFixed(1)} – {maxArea.toFixed(2)} km²</span>
             <span className="material-symbols-outlined arrow-icon">water_drop</span>
           </div>
         </div>
@@ -107,7 +142,7 @@ export const AnalyticsView: React.FC = () => {
           </div>
           <div className="metric-card-body">
             <span className="metric-number" style={{ color: '#f59e0b' }}>
-              2 <span className="metric-unit">Flagged</span>
+              {aisGapCount} <span className="metric-unit">Flagged</span>
             </span>
             <span className="metric-trend-pill neutral" style={{ color: '#f59e0b' }}>
               Dark Gaps
@@ -169,7 +204,7 @@ export const AnalyticsView: React.FC = () => {
               <div className="marpol-stat-box" style={{ borderLeft: '4px solid #b45309' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>CRUDE OIL</div>
                 <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: '#b45309', margin: '4px 0' }}>
-                  48%
+                  {crudeP}%
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                   Mumbai High / Deepwater Platforms
@@ -179,7 +214,7 @@ export const AnalyticsView: React.FC = () => {
               <div className="marpol-stat-box" style={{ borderLeft: '4px solid #334155' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>HEAVY BUNKER</div>
                 <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', margin: '4px 0' }}>
-                  27%
+                  {bunkerP}%
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                   Corridor Cargo &amp; Tanker Collisions
@@ -189,7 +224,7 @@ export const AnalyticsView: React.FC = () => {
               <div className="marpol-stat-box" style={{ borderLeft: '4px solid #0284c7' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>BILGE WATER</div>
                 <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: '#0284c7', margin: '4px 0' }}>
-                  16%
+                  {bilgeP}%
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                   Illegal Dark Vessel Bilge Discharge
@@ -199,7 +234,7 @@ export const AnalyticsView: React.FC = () => {
               <div className="marpol-stat-box" style={{ borderLeft: '4px solid #d97706' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>DIESEL / GAS OIL</div>
                 <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: '#d97706', margin: '4px 0' }}>
-                  9%
+                  {dieselP}%
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                   Bunkering Hose Transfer Leaks

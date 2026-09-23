@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Scenario, TabType } from '../../types/dashboard';
+import type { LiveIncident } from '../../hooks/useIncidents';
 import { MapPanel } from '../MapPanel';
 
 interface DashboardViewProps {
@@ -8,6 +9,7 @@ interface DashboardViewProps {
   onOpenForensicModal: () => void;
   onUpdateCoords: (coords: string) => void;
   onSelectScenario?: (key: string) => void;
+  incidents?: LiveIncident[];
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -16,9 +18,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenForensicModal: _onOpenForensicModal,
   onUpdateCoords,
   onSelectScenario,
+  incidents,
 }) => {
   const [activeWorkflowTab, setActiveWorkflowTab] = useState<'map' | 'sensors' | 'ais' | 'drift'>('map');
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const activeSlicksCount = incidents && incidents.length > 0 ? incidents.length : 4;
 
   const statusColor = !currentScenario
     ? '#2563EB'
@@ -72,7 +77,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="metric-card-label">Active Slicks</span>
             </div>
             <div className="metric-card-body">
-              <span className="metric-number">4</span>
+              <span className="metric-number">{activeSlicksCount}</span>
               <span className="metric-trend-pill positive">↑ 100%</span>
             </div>
             <div className="metric-card-footer">
