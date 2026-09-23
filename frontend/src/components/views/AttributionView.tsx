@@ -345,15 +345,22 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
     type: 0.20,
   });
 
-  const handleWeightChange = (changedKey: keyof AttributionWeights, newValue: number) => {
-    const oldWeights = { ...weights };
+  type WeightKey = 'dist' | 'time' | 'gap' | 'type';
+
+  const handleWeightChange = (changedKey: WeightKey, newValue: number) => {
+    const oldWeights: Record<WeightKey, number> = {
+      dist: weights.dist,
+      time: weights.time,
+      gap: weights.gap,
+      type: weights.type,
+    };
     const diff = newValue - oldWeights[changedKey];
     
-    let otherKeys = (Object.keys(oldWeights) as (keyof AttributionWeights)[]).filter(k => k !== changedKey);
+    let otherKeys: WeightKey[] = (['dist', 'time', 'gap', 'type'] as WeightKey[]).filter(k => k !== changedKey);
     let sumOthers = 0;
     otherKeys.forEach(k => { sumOthers += oldWeights[k]; });
     
-    const newWeights = { ...oldWeights, [changedKey]: newValue };
+    const newWeights: Record<WeightKey, number> = { ...oldWeights, [changedKey]: newValue };
     
     if (sumOthers > 0) {
       otherKeys.forEach(k => {
@@ -368,9 +375,9 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
     
     let total = Object.values(newWeights).reduce((a, b) => a + b, 0);
     if (total > 0 && Math.abs(total - 1.0) > 0.001) {
-        Object.keys(newWeights).forEach(k => {
-            newWeights[k as keyof AttributionWeights] /= total;
-        });
+      (['dist', 'time', 'gap', 'type'] as WeightKey[]).forEach(k => {
+        newWeights[k] /= total;
+      });
     }
     
     setWeights(newWeights);
