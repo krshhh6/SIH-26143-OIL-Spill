@@ -41,14 +41,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className={`secondary-drawer ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* macOS Window Titlebar & Controls */}
+      {/* Window Controls */}
       <div className="drawer-header">
-        <div className="mac-traffic-lights">
-          <span className="dot dot-red" title="Close" />
-          <span className="dot dot-yellow" title="Minimize" />
-          <span className="dot dot-green" title="Maximize" />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
           {onOpenSettings && (
             <button
               className="drawer-collapse-btn"
