@@ -1,47 +1,36 @@
-# Spill Sense (SIH26143) — Defined Tech Stack (tech_stack.md)
-# REST API & Validation (P0)
+# Spill Sense (SIH26143) — Production REST API & Services
+# 100% pre-built Linux wheels for rapid and reliable cloud deployment
 fastapi>=0.110.0
 uvicorn[standard]>=0.28.0
 pydantic>=2.6.0
 pydantic-settings>=2.2.0
 
-# Database & Spatial ORM (P0)
+# Database & Spatial ORM
 sqlalchemy[asyncio]>=2.0.28
 asyncpg>=0.29.0
 geoalchemy2>=0.14.3
 shapely>=2.0.3
 alembic>=1.13.1
 
-# Asynchronous Task Queue & Cache (P0)
+# Task Queue & Cache
 celery>=5.3.6
 redis>=5.0.3
 
-# Geospatial & SAR Processing (P0)
+# Data Processing, Geometry & Remote Sensing APIs
 numpy>=1.26.0
 scipy>=1.12.0
-rasterio>=1.3.9
-geopandas>=0.14.3
+pandas>=2.2.1
+pyproj>=3.6.1
 requests>=2.31.0
 httpx>=0.27.0
 
-# AI/ML Inference (P0)
+# AI/ML Inference
 onnxruntime>=1.17.1
 
-# Drift Modeling (P0)
-opendrift>=1.11.3
-
-# AIS Processing (P1)
-pandas>=2.2.1
-movingpandas>=0.17.2
-
-# Security & Legal Evidence (P0)
+# Security & Templates
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
-weasyprint>=61.0
 jinja2>=3.1.3
 
-# Environmental & Marine APIs (P0)
-copernicusmarine>=1.0.0
-
-# Real-Time WebSockets (P1)
+# Real-Time WebSockets
 python-socketio>=5.11.0

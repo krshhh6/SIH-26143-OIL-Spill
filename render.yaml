@@ -21,11 +21,14 @@ services:
   # -------------------------------------------------------------
   - type: web
     name: spill-sense-backend
-    runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     plan: free
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: PROJECT_NAME
         value: "Spill Sense C2 Platform (SIH26143)"
       - key: API_V1_STR
