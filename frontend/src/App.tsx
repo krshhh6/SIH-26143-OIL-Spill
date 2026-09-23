@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { TabType } from './types/dashboard';
 import { SCENARIOS } from './data/scenarios';
+import { useIncidents } from './hooks/useIncidents';
 import { Topbar } from './components/Topbar';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/views/DashboardView';
@@ -22,7 +23,13 @@ export const App: React.FC = () => {
   const [isSentinelHubOpen, setIsSentinelHubOpen] = useState<boolean>(false);
   const [isBhoonidhiOpen, setIsBhoonidhiOpen] = useState<boolean>(false);
 
-  const scenario = currentScenarioKey ? SCENARIOS[currentScenarioKey] || null : null;
+  // Live incident data from backend (falls back to static SCENARIOS)
+  const { incidents, scenarios: liveScenarios } = useIncidents();
+
+  // Merge live scenarios with static ones — live data wins
+  const scenarios = { ...SCENARIOS, ...liveScenarios };
+
+  const scenario = currentScenarioKey ? scenarios[currentScenarioKey] || null : null;
 
   // Apply theme to document element
   useEffect(() => {
@@ -35,8 +42,8 @@ export const App: React.FC = () => {
 
   const handleSelectScenario = (key: string) => {
     setCurrentScenarioKey(key);
-    if (key && SCENARIOS[key]) {
-      const s = SCENARIOS[key];
+    if (key && scenarios[key]) {
+      const s = scenarios[key];
       setCoordinates(`${s.lat.toFixed(4)}°N, ${s.lng.toFixed(4)}°E`);
     } else {
       setCoordinates('15.5000°N, 79.0000°E (Indian Ocean EEZ)');
@@ -84,6 +91,7 @@ export const App: React.FC = () => {
         currentScenarioKey={currentScenarioKey}
         onSelectScenario={handleSelectScenario}
         onOpenSettings={() => setIsForensicOpen(true)}
+        incidents={incidents}
       />
 
       {/* MAIN WORKSPACE CANVAS */}
@@ -117,6 +125,7 @@ export const App: React.FC = () => {
               onOpenForensicModal={() => setIsForensicOpen(true)}
               onUpdateCoords={setCoordinates}
               onSelectScenario={handleSelectScenario}
+              incidents={incidents}
             />
           )}
 
@@ -139,7 +148,7 @@ export const App: React.FC = () => {
             <EvidenceView onOpenForensicModal={() => setIsForensicOpen(true)} />
           )}
 
-          {activeTab === 'analytics' && <AnalyticsView />}
+          {activeTab === 'analytics' && <AnalyticsView incidents={incidents} />}
 
           {activeTab === 'detection' && <DetectionView onSelectTab={setActiveTab} />}
         </main>
