@@ -13,6 +13,15 @@ export interface LiveIncident {
   area: string;
   top_vessel: string;
   attribution_score: number;
+  isLabUploaded?: boolean;
+  rawImage?: string;
+  maskImage?: string;
+  coveragePct?: number;
+  confidence?: number;
+  dampingDb?: number;
+  bonnCode?: number;
+  volumeMT?: number;
+  timestamp?: string;
 }
 
 function incidentToScenario(inc: LiveIncident): Scenario {

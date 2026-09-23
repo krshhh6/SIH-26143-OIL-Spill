@@ -1,27 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import type { LiveIncident } from '../../hooks/useIncidents';
+import { classifyImage } from '../../services/sarClassifier';
+import { decodeTiffFile } from '../../utils/tiffDecoder';
+import {
+  computeSpillAnalyticsFromDetection,
+  analyticsToIncident,
+} from '../../services/spillAnalyticsEngine';
 
 interface AnalyticsViewProps {
   incidents?: LiveIncident[];
+  onOpenLabDetection?: () => void;
 }
 
-export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
+export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents, onOpenLabDetection }) => {
   const [activeWorkflowTab, setActiveWorkflowTab] = useState<'marpol' | 'latencies' | 'basin'>('marpol');
   const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+  const [localUploadedIncidents, setLocalUploadedIncidents] = useState<LiveIncident[]>([]);
+  const [isUploadingScene, setIsUploadingScene] = useState<boolean>(false);
+  const [inspectedIncident, setInspectedIncident] = useState<LiveIncident | null>(null);
+  const sarUploadInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Derive all metrics from live incident data ──
-  const list = incidents && incidents.length > 0 ? incidents : [];
+  // Combine external incidents with locally uploaded SAR lab incidents
+  const list = useMemo(() => {
+    const base = incidents && incidents.length > 0 ? incidents : [];
+    const localIds = new Set(localUploadedIncidents.map((i) => i.id));
+    return [...localUploadedIncidents, ...base.filter((i) => !localIds.has(i.id))];
+  }, [incidents, localUploadedIncidents]);
 
-  const activeCount = list.length || 4;
+  const labIncidentsCount = list.filter((i) => i.isLabUploaded).length;
+  const latestLabIncident = list.find((i) => i.isLabUploaded);
+
+  const activeCount = list.length || 8;
 
   const areas = list.map((i) => parseFloat(i.area)).filter((n) => !isNaN(n));
-  const meanArea = areas.length > 0 ? areas.reduce((s, n) => s + n, 0) / areas.length : 3.6;
-  const minArea  = areas.length > 0 ? Math.min(...areas) : 1.2;
+  const meanArea = areas.length > 0 ? areas.reduce((s, n) => s + n, 0) / areas.length : 2.6;
+  const minArea  = areas.length > 0 ? Math.min(...areas) : 0.9;
   const maxArea  = areas.length > 0 ? Math.max(...areas) : 4.82;
 
   const aisGapCount = list.filter(
     (i) => i.severity === 'CRITICAL' || (i.top_vessel ?? '').toUpperCase().includes('UNKNOWN') || (i.top_vessel ?? '').toUpperCase().includes('DARK')
-  ).length || 2;
+  ).length || 3;
 
   // MARPOL oil type distribution from live incidents
   const buckets = { crude: 0, bunker: 0, bilge: 0, diesel: 0 };
@@ -34,10 +52,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
     else                           buckets.crude++;
   }
   const bucketTotal = Math.max(Object.values(buckets).reduce((a, b) => a + b, 0), 1);
-  const crudeP  = list.length > 0 ? Math.round((buckets.crude  / bucketTotal) * 100) : 48;
-  const bunkerP = list.length > 0 ? Math.round((buckets.bunker / bucketTotal) * 100) : 27;
-  const bilgeP  = list.length > 0 ? Math.round((buckets.bilge  / bucketTotal) * 100) : 16;
-  const dieselP = list.length > 0 ? Math.round((buckets.diesel / bucketTotal) * 100) : 9;
+  const crudeP  = list.length > 0 ? Math.round((buckets.crude  / bucketTotal) * 100) : 38;
+  const bunkerP = list.length > 0 ? Math.round((buckets.bunker / bucketTotal) * 100) : 25;
+  const bilgeP  = list.length > 0 ? Math.round((buckets.bilge  / bucketTotal) * 100) : 25;
+  const dieselP = list.length > 0 ? Math.round((buckets.diesel / bucketTotal) * 100) : 13;
 
   const handleExportCSV = () => {
     setDownloadNotice('Exporting EEZ 14-day telemetry dataset to CSV...');
@@ -47,6 +65,66 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
   const handleGenerateReport = () => {
     setDownloadNotice('Generating executive maritime analytics audit report...');
     setTimeout(() => setDownloadNotice(null), 3000);
+  };
+
+  const handleDirectSarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingScene(true);
+      setDownloadNotice(`Analyzing uploaded SAR scene: ${file.name}...`);
+      let dataUrl = '';
+      let rasters: { vvRaster?: Float32Array; vhRaster?: Float32Array } | undefined;
+
+      if (file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff')) {
+        const decoded = await decodeTiffFile(file);
+        dataUrl = decoded.dataUrl;
+        rasters = { vvRaster: decoded.vvRaster, vhRaster: decoded.vhRaster };
+      } else {
+        dataUrl = URL.createObjectURL(file);
+      }
+
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = async () => {
+        try {
+          const res = await classifyImage(img, rasters);
+          if (res.prediction === 'oil_spill') {
+            const analytics = computeSpillAnalyticsFromDetection({
+              confidence: res.confidence,
+              spillAreaPercent: res.spillAreaPercent,
+              imageName: file.name,
+              imageUrl: dataUrl,
+              maskUrl: res.segmentationMask,
+            });
+            const newInc = analyticsToIncident(analytics);
+            setLocalUploadedIncidents((prev) => [newInc, ...prev.filter((i) => i.id !== newInc.id)]);
+            setDownloadNotice(`✓ Applied SAR Detection: ${newInc.area} (${newInc.oil_type}) registered into registry!`);
+          } else {
+            setDownloadNotice(
+              `ℹ️ Classification: ${res.prediction === 'no_oil' ? 'Clean Ocean (0% Oil)' : 'Invalid Non-SAR Image'}. No spill registered.`
+            );
+          }
+        } catch (err) {
+          console.error(err);
+          setDownloadNotice('❌ Neural inference failed.');
+        } finally {
+          setIsUploadingScene(false);
+          setTimeout(() => setDownloadNotice(null), 4500);
+        }
+      };
+      img.onerror = () => {
+        setIsUploadingScene(false);
+        setDownloadNotice('❌ Failed to load image file.');
+      };
+      img.src = dataUrl;
+    } catch (err) {
+      console.error(err);
+      setIsUploadingScene(false);
+      setDownloadNotice('❌ Failed to decode SAR scene.');
+      setTimeout(() => setDownloadNotice(null), 4000);
+    }
   };
 
   return (
@@ -61,6 +139,27 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
         </div>
 
         <div className="workspace-header-actions">
+          <input
+            type="file"
+            ref={sarUploadInputRef}
+            style={{ display: 'none' }}
+            accept=".jpg,.jpeg,.png,.tif,.tiff"
+            onChange={handleDirectSarUpload}
+          />
+
+          <button
+            className="action-pill-btn primary"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={() => sarUploadInputRef.current?.click()}
+            disabled={isUploadingScene}
+            title="Directly upload and evaluate SAR imagery to apply real-time spill analytics"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+              {isUploadingScene ? 'sync' : 'upload_file'}
+            </span>
+            <span>{isUploadingScene ? 'Analyzing SAR...' : 'Analyze New SAR Scene'}</span>
+          </button>
+
           <button
             className="action-pill-btn secondary"
             onClick={handleExportCSV}
@@ -71,7 +170,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
           </button>
 
           <button
-            className="action-pill-btn primary"
+            className="action-pill-btn secondary"
             onClick={handleGenerateReport}
             title="Compile Monthly Intelligence Brief"
           >
@@ -92,11 +191,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
               {activeCount} <span className="metric-unit">Incidents</span>
             </span>
             <span className="metric-trend-pill positive">
-              Active Watch
+              {labIncidentsCount > 0 ? `+${labIncidentsCount} SAR Lab Detected` : 'Active Watch'}
             </span>
           </div>
           <div className="metric-card-footer">
-            <span>Arabian: 2 · BoB: 1 · Andaman: 1</span>
+            <span>Arabian: 2 · BoB: 1 · Andaman: 1{labIncidentsCount > 0 ? ` · Lab: ${labIncidentsCount}` : ''}</span>
             <span className="material-symbols-outlined arrow-icon">radar</span>
           </div>
         </div>
@@ -273,17 +372,64 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
                   marginTop: 6,
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>science</span>
-                  SAR Backscatter &amp; Optical Spectral Footprints
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>science</span>
+                    <span>SAR Backscatter &amp; Optical Spectral Footprints</span>
+                  </div>
+                  {latestLabIncident && (
+                    <span
+                      style={{
+                        fontSize: 9.5,
+                        fontWeight: 700,
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: 'rgba(56, 189, 248, 0.15)',
+                        color: 'var(--accent)',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                      }}
+                    >
+                      LIVE LAB TELEMETRY ACTIVE
+                    </span>
+                  )}
                 </div>
+
+                {latestLabIncident && (
+                  <div
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.08)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)',
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: 10.5,
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: '#38BDF8', fontWeight: 700 }}>
+                        🛰️ {latestLabIncident.title}
+                      </span>
+                      <div style={{ color: 'var(--text-muted)', fontSize: 9.5, marginTop: 2 }}>
+                        Calculated Area: <strong>{latestLabIncident.area}</strong> · Bonn Code: <strong>Tier {latestLabIncident.bonnCode ?? 4}</strong>
+                      </div>
+                    </div>
+                    <span className="mono" style={{ color: '#10B981', fontWeight: 800, fontSize: 12 }}>
+                      Δσ0: {latestLabIncident.dampingDb ?? -11.4} dB
+                    </span>
+                  </div>
+                )}
+
                 <p style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
                   Crude oil films exhibit pronounced Bragg scattering dampening in Sentinel-1 C-band VV polarization, generating backscatter drops between <strong>-8 dB and -14 dB</strong>. Bilge discharges produce intermittent low-reflectance streaks with minimal emulsification potential.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 10, marginTop: 4 }}>
                   <div style={{ background: 'var(--bg-base)', padding: '6px 8px', borderRadius: 6 }}>
                     <span className="text-muted">C-Band VV: </span>
-                    <strong>-11.4 dB (Avg)</strong>
+                    <strong style={{ color: latestLabIncident?.dampingDb ? '#10B981' : 'inherit' }}>
+                      {latestLabIncident?.dampingDb ? `${latestLabIncident.dampingDb} dB` : '-11.4 dB (Avg)'}
+                    </strong>
                   </div>
                   <div style={{ background: 'var(--bg-base)', padding: '6px 8px', borderRadius: 6 }}>
                     <span className="text-muted">SWIR Ratio: </span>
@@ -304,61 +450,138 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
                   <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>inventory_2</span>
                   Active Incident Hydrocarbon Registry
                 </span>
-                <span className="metric-trend-pill positive" style={{ fontSize: 10 }}>
-                  LIVE EEZ FEED
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {labIncidentsCount > 0 && (
+                    <span
+                      style={{
+                        fontSize: 9.5,
+                        fontWeight: 700,
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: 'rgba(56, 189, 248, 0.2)',
+                        color: '#38BDF8',
+                        border: '1px solid rgba(56, 189, 248, 0.4)',
+                      }}
+                    >
+                      {labIncidentsCount} LAB DETECTIONS
+                    </span>
+                  )}
+                  <span className="metric-trend-pill positive" style={{ fontSize: 10 }}>
+                    LIVE EEZ FEED
+                  </span>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
                 {list.length > 0 ? (
-                  list.map((inc) => (
-                    <div
-                      key={inc.id}
-                      style={{
-                        background: 'var(--bg-raised)',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 10,
-                        padding: '10px 12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 8,
-                      }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>
-                            {inc.id}
-                          </span>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>
-                            {inc.title}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                          {inc.lat.toFixed(3)}°N, {inc.lng.toFixed(3)}°E · Area: <strong>{inc.area}</strong>
-                        </div>
-                      </div>
+                  list.map((inc) => {
+                    const isLab = inc.isLabUploaded;
+                    return (
+                      <div
+                        key={inc.id}
+                        style={{
+                          background: isLab
+                            ? 'linear-gradient(90deg, rgba(56, 189, 248, 0.12) 0%, var(--bg-raised) 100%)'
+                            : 'var(--bg-raised)',
+                          border: isLab ? '1.5px solid #38BDF8' : '1px solid var(--border-subtle)',
+                          boxShadow: isLab ? '0 0 16px rgba(56, 189, 248, 0.25)' : 'none',
+                          borderRadius: 10,
+                          padding: '10px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                          cursor: isLab ? 'pointer' : 'default',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onClick={() => isLab && setInspectedIncident(inc)}
+                        title={isLab ? 'Click to inspect uploaded SAR detection & segmentation mask' : undefined}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          {isLab && (inc.rawImage || inc.maskImage) && (
+                            <div
+                              style={{
+                                position: 'relative',
+                                width: 38,
+                                height: 38,
+                                borderRadius: 6,
+                                overflow: 'hidden',
+                                border: '1px solid rgba(56, 189, 248, 0.5)',
+                                flexShrink: 0,
+                                background: '#000',
+                              }}
+                            >
+                              {inc.rawImage && (
+                                <img src={inc.rawImage} alt="SAR" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              )}
+                              {inc.maskImage && (
+                                <img
+                                  src={inc.maskImage}
+                                  alt="Mask"
+                                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }}
+                                />
+                              )}
+                            </div>
+                          )}
 
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            padding: '2px 6px',
-                            borderRadius: 6,
-                            background: inc.oil_color ? `${inc.oil_color}22` : 'rgba(180, 83, 9, 0.15)',
-                            color: inc.oil_color || '#b45309',
-                            border: `1px solid ${inc.oil_color || '#b45309'}44`,
-                          }}
-                        >
-                          {inc.oil_type}
-                        </span>
-                        <span style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 600 }}>
-                          {inc.severity} SEVERITY
-                        </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>
+                                {inc.id}
+                              </span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {inc.title}
+                              </span>
+                              {isLab && (
+                                <span
+                                  style={{
+                                    fontSize: 8.5,
+                                    fontWeight: 800,
+                                    padding: '1px 5px',
+                                    borderRadius: 4,
+                                    background: 'rgba(56, 189, 248, 0.22)',
+                                    color: '#38BDF8',
+                                    border: '1px solid rgba(56, 189, 248, 0.45)',
+                                    letterSpacing: '0.03em',
+                                  }}
+                                >
+                                  🛰️ SAR LAB UPLOAD
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                              {inc.lat.toFixed(3)}°N, {inc.lng.toFixed(3)}°E · Area: <strong>{inc.area}</strong>
+                              {inc.dampingDb && (
+                                <span> · Damping: <strong style={{ color: '#10B981' }}>{inc.dampingDb} dB</strong></span>
+                              )}
+                              {inc.coveragePct && (
+                                <span> · Coverage: <strong>{inc.coveragePct}%</strong></span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: '2px 6px',
+                              borderRadius: 6,
+                              background: inc.oil_color ? `${inc.oil_color}22` : 'rgba(180, 83, 9, 0.15)',
+                              color: inc.oil_color || '#b45309',
+                              border: `1px solid ${inc.oil_color || '#b45309'}44`,
+                            }}
+                          >
+                            {inc.oil_type}
+                          </span>
+                          <span style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 600 }}>
+                            {inc.severity} SEVERITY
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: 11 }}>
                     Awaiting incident telemetry feed...
@@ -774,6 +997,179 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
           </div>
         )}
       </div>
+
+      {/* 5. LAB UPLOADED INCIDENT FORENSIC INSPECTOR MODAL */}
+      {inspectedIncident && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setInspectedIncident(null)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-card, #0f172a)',
+              border: '1px solid #38bdf8',
+              boxShadow: '0 0 30px rgba(56, 189, 248, 0.35)',
+              borderRadius: 16,
+              maxWidth: 680,
+              width: '100%',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: '16px 20px',
+                background: 'linear-gradient(90deg, rgba(56, 189, 248, 0.15) 0%, transparent 100%)',
+                borderBottom: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 22, color: 'var(--accent)' }}>satellite_alt</span>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    SAR Lab Upload Forensics &amp; Spill Telemetry
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    {inspectedIncident.id} · {inspectedIncident.title} · {inspectedIncident.timestamp || 'Live Analyzed'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setInspectedIncident(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Image comparison pair */}
+              {(inspectedIncident.rawImage || inspectedIncident.maskImage) && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ background: '#000', borderRadius: 8, overflow: 'hidden', padding: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>
+                      Original Calibrated SAR Scene
+                    </div>
+                    {inspectedIncident.rawImage && (
+                      <img
+                        src={inspectedIncident.rawImage}
+                        alt="Original SAR"
+                        style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', borderRadius: 4 }}
+                      />
+                    )}
+                  </div>
+
+                  <div style={{ background: '#000', borderRadius: 8, overflow: 'hidden', padding: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', marginBottom: 6 }}>
+                      SpillSegNet U-Net Segmented Slick
+                    </div>
+                    <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', borderRadius: 4, overflow: 'hidden' }}>
+                      {inspectedIncident.rawImage && (
+                        <img
+                          src={inspectedIncident.rawImage}
+                          alt="Base"
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                      )}
+                      {inspectedIncident.maskImage && (
+                        <img
+                          src={inspectedIncident.maskImage}
+                          alt="Mask"
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 1, opacity: 0.9 }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Forensic Metrics Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                <div style={{ background: 'var(--bg-raised)', padding: '10px', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700 }}>MEASURED AREA</div>
+                  <div className="mono" style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent)', marginTop: 2 }}>
+                    {inspectedIncident.area}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                    {inspectedIncident.coveragePct ? `${inspectedIncident.coveragePct}% scene coverage` : 'SAR pixel mask'}
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-raised)', padding: '10px', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700 }}>MARPOL TYPE</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: inspectedIncident.oil_color || '#b45309', marginTop: 3 }}>
+                    {inspectedIncident.oil_type}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Annex I Standard</div>
+                </div>
+
+                <div style={{ background: 'var(--bg-raised)', padding: '10px', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700 }}>C-BAND DAMPING</div>
+                  <div className="mono" style={{ fontSize: 16, fontWeight: 800, color: '#10b981', marginTop: 2 }}>
+                    {inspectedIncident.dampingDb ?? -11.4} dB
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Bragg wave depression</div>
+                </div>
+
+                <div style={{ background: 'var(--bg-raised)', padding: '10px', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700 }}>NEURAL CONFIDENCE</div>
+                  <div className="mono" style={{ fontSize: 16, fontWeight: 800, color: '#f59e0b', marginTop: 2 }}>
+                    {(inspectedIncident.confidence ? inspectedIncident.confidence * 100 : 98.2).toFixed(1)}%
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>DualPolOilSpillNet</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setInspectedIncident(null)}
+                  style={{ padding: '6px 16px', fontSize: 12, cursor: 'pointer' }}
+                >
+                  Close Inspector
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setInspectedIncident(null);
+                    onOpenLabDetection?.();
+                  }}
+                  style={{ padding: '6px 16px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>science</span>
+                  <span>Open in SAR Detection Lab</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { TabType, SarClassificationResult } from '../../types/dashboard';
+import type { LiveIncident } from '../../hooks/useIncidents';
 import { loadModel, isModelLoaded, getModelLoadError, classifyImage, generateOcclusionMap } from '../../services/sarClassifier';
 import { decodeTiffFile } from '../../utils/tiffDecoder';
+import {
+  computeSpillAnalyticsFromDetection,
+  analyticsToIncident,
+  type CalculatedSpillAnalytics,
+} from '../../services/spillAnalyticsEngine';
 
 interface DetectionViewProps {
   onSelectTab?: (tab: TabType) => void;
+  onApplyLabDetection?: (incident: LiveIncident) => void;
 }
 
-export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => {
+export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab, onApplyLabDetection }) => {
   const [modelStatus, setModelStatus] = useState<'loading' | 'loaded' | 'demo'>('loading');
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<SarClassificationResult | null>(null);
@@ -15,6 +22,9 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
   const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
   const [isGeneratingHeatmap, setIsGeneratingHeatmap] = useState(false);
   const [tiffNotice, setTiffNotice] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string>('Uploaded SAR Scene');
+  const [analyticsResult, setAnalyticsResult] = useState<CalculatedSpillAnalytics | null>(null);
+  const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -24,6 +34,8 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
   }, []);
 
   const handleImageUpload = async (file: File) => {
+    setUploadedFileName(file.name);
+    setAppliedNotice(null);
     const isTiff = file.name.toLowerCase().endsWith('.tif') ||
                    file.name.toLowerCase().endsWith('.tiff') ||
                    file.type.includes('tiff');
@@ -34,7 +46,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
         setTiffNotice(`Decoding GeoTIFF: ${file.name}...`);
         const decoded = await decodeTiffFile(file);
         setTiffNotice(`🛰️ GeoTIFF Decoded: ${file.name} — ${decoded.formatDescription}`);
-        handleImageSelect(decoded.dataUrl, { vvRaster: decoded.vvRaster, vhRaster: decoded.vhRaster });
+        handleImageSelect(decoded.dataUrl, { vvRaster: decoded.vvRaster, vhRaster: decoded.vhRaster }, file.name);
       } catch (err) {
         console.error('Failed to decode TIFF:', err);
         setTiffNotice('❌ Failed to decode TIFF/GeoTIFF raster.');
@@ -43,15 +55,23 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
     } else {
       setTiffNotice(null);
       const url = URL.createObjectURL(file);
-      handleImageSelect(url);
+      handleImageSelect(url, undefined, file.name);
     }
   };
 
-  const handleImageSelect = (url: string, rasters?: { vvRaster?: Float32Array; vhRaster?: Float32Array }) => {
+  const handleImageSelect = (
+    url: string,
+    rasters?: { vvRaster?: Float32Array; vhRaster?: Float32Array },
+    name?: string
+  ) => {
     setSelectedImage(url);
     setResult(null);
     setHeatmapUrl(null);
+    setAnalyticsResult(null);
+    setAppliedNotice(null);
     setIsProcessing(true);
+    const resolvedName = name || (url.includes('/') ? url.split('/').pop()?.split('?')[0] : 'SAR Scene') || 'SAR Scene';
+    setUploadedFileName(resolvedName);
     
     const img = new Image();
     img.crossOrigin = "Anonymous";
@@ -59,6 +79,19 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
       try {
         const res = await classifyImage(img, rasters);
         setResult(res);
+
+        if (res.prediction === 'oil_spill') {
+          const analytics = computeSpillAnalyticsFromDetection({
+            confidence: res.confidence,
+            spillAreaPercent: res.spillAreaPercent,
+            imageName: resolvedName,
+            imageUrl: url,
+            maskUrl: res.segmentationMask,
+          });
+          setAnalyticsResult(analytics);
+        } else {
+          setAnalyticsResult(null);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -358,13 +391,178 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
             </div>
           </div>
           
-          <div style={{ padding: 'var(--sp-4)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-3)' }}>
+          {/* LIVE SPILL ANALYTICS & MARPOL CLASSIFICATION PANEL (Computed on the basis of uploaded SAR image) */}
+          {result.prediction === 'oil_spill' && analyticsResult && (
+            <div
+              style={{
+                background: 'rgba(15, 23, 42, 0.85)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+                padding: 'var(--sp-4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--sp-3)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--accent)' }}>analytics</span>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Live Spill Analytics (Computed on Basis of Uploaded Scene)
+                    </h3>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        background: 'rgba(56, 189, 248, 0.15)',
+                        color: 'var(--accent)',
+                        border: '1px solid rgba(56, 189, 248, 0.35)',
+                        fontWeight: 700,
+                      }}
+                    >
+                      MARPOL 73/78 ANNEX I VALIDATED
+                    </span>
+                  </div>
+                  <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Scene: <strong style={{ color: 'var(--text-secondary)' }}>{uploadedFileName}</strong> · Physical spill area, Bonn Code volume, radar backscatter damping, and statutory classification calculated dynamically from this SAR scene.
+                  </p>
+                </div>
+
+                {appliedNotice && (
+                  <div
+                    style={{
+                      fontSize: '0.82rem',
+                      color: '#10B981',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      padding: '4px 12px',
+                      borderRadius: 6,
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
+                    {appliedNotice}
+                  </div>
+                )}
+              </div>
+
+              {/* 4-Stat Metric Grid */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: 'var(--sp-3)',
+                  marginTop: 4,
+                }}
+              >
+                {/* Metric 1: Slick Surface Area */}
+                <div style={{ background: 'var(--bg-dark)', padding: '12px', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Calculated Slick Area
+                  </div>
+                  <div className="mono" style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent)', margin: '4px 0' }}>
+                    {analyticsResult.calculatedAreaKm2} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>km²</span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {analyticsResult.coveragePct}% scene coverage · {analyticsResult.hectares} ha
+                  </div>
+                </div>
+
+                {/* Metric 2: MARPOL Classification */}
+                <div style={{ background: 'var(--bg-dark)', padding: '12px', borderRadius: 'var(--radius)', border: `1px solid ${analyticsResult.marpolColor}66` }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    MARPOL 73/78 Classification
+                  </div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: analyticsResult.marpolColor, margin: '6px 0 2px' }}>
+                    {analyticsResult.marpolType}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.2 }}>
+                    {analyticsResult.marpolCode}
+                  </div>
+                </div>
+
+                {/* Metric 3: Estimated Volume & Bonn Code */}
+                <div style={{ background: 'var(--bg-dark)', padding: '12px', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Bonn Discharged Volume
+                  </div>
+                  <div className="mono" style={{ fontSize: '1.45rem', fontWeight: 800, color: '#F59E0B', margin: '4px 0' }}>
+                    ~{analyticsResult.estimatedVolumeMT} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>MT</span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    ~{analyticsResult.estimatedBarrels} bbls · {analyticsResult.bonnLabel.split('·')[0].trim()}
+                  </div>
+                </div>
+
+                {/* Metric 4: Radar Damping & Physical Signal */}
+                <div style={{ background: 'var(--bg-dark)', padding: '12px', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Radar Backscatter Damping
+                  </div>
+                  <div className="mono" style={{ fontSize: '1.45rem', fontWeight: 800, color: '#10B981', margin: '4px 0' }}>
+                    {analyticsResult.meanDampingDb} <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>dB</span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    C-Band VV depression · SWIR Ratio: {analyticsResult.swirRatio}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div style={{ padding: 'var(--sp-4)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-3)', flexWrap: 'wrap' }}>
+            <button
+              className="btn"
+              style={{
+                background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                color: '#FFFFFF',
+                border: '1px solid rgba(56, 189, 248, 0.6)',
+                boxShadow: '0 0 16px rgba(2, 132, 199, 0.4)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontWeight: 700,
+                cursor: result.prediction === 'oil_spill' ? 'pointer' : 'not-allowed',
+                opacity: result.prediction === 'oil_spill' ? 1 : 0.5,
+              }}
+              onClick={() => {
+                if (!analyticsResult) return;
+                const inc = analyticsToIncident(analyticsResult);
+                onApplyLabDetection?.(inc);
+                setAppliedNotice(`✓ Applied to Spill Analytics Registry: ${analyticsResult.areaFormatted} (${analyticsResult.marpolType})`);
+                setTimeout(() => {
+                  onSelectTab?.('analytics');
+                }, 600);
+              }}
+              disabled={result.prediction !== 'oil_spill'}
+              title="Apply this detection directly into Spill Analytics & Incident Registry"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>analytics</span>
+              <span>📈 Apply to Spill Analytics &amp; Registry</span>
+            </button>
+
             <button 
               className="btn" 
               onClick={() => onSelectTab && onSelectTab('drift')} 
               disabled={result.prediction !== 'oil_spill'}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
-              📊 Feed into Drift Model
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>water</span>
+              <span>📊 Feed into Drift Model</span>
+            </button>
+
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => onSelectTab && onSelectTab('attribution')} 
+              disabled={result.prediction !== 'oil_spill'}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>radar</span>
+              <span>🚢 Correlate AIS Suspects</span>
             </button>
           </div>
         </section>

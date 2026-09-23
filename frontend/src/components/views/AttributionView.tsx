@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Scenario, AttributionWeights } from '../../types/dashboard';
 import { SCENARIOS } from '../../data/scenarios';
 
@@ -19,6 +19,7 @@ interface CandidateVesselItem {
   cog: number;
   cpa_nm: number;
   ais_gap_hours: number;
+  time_delta_hours?: number;
   attribution_score: number;
   risk: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   metrics?: {
@@ -26,6 +27,10 @@ interface CandidateVesselItem {
     temporal_alignment_pct: number;
     dark_gap_suspicion_pct: number;
     vessel_risk_prior_pct: number;
+    weighted_dist_val?: number;
+    weighted_time_val?: number;
+    weighted_gap_val?: number;
+    weighted_type_val?: number;
   };
 }
 
@@ -43,6 +48,7 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       cog: 182.4,
       cpa_nm: 1.2,
       ais_gap_hours: 4.58,
+      time_delta_hours: 0.35,
       attribution_score: 0.88,
       risk: 'CRITICAL',
     },
@@ -58,6 +64,7 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       cog: 165.0,
       cpa_nm: 3.8,
       ais_gap_hours: 3.55,
+      time_delta_hours: 1.80,
       attribution_score: 0.65,
       risk: 'HIGH',
     },
@@ -73,6 +80,7 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       cog: 178.2,
       cpa_nm: 7.1,
       ais_gap_hours: 1.37,
+      time_delta_hours: 3.40,
       attribution_score: 0.38,
       risk: 'LOW',
     },
@@ -88,7 +96,24 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       cog: 190.1,
       cpa_nm: 9.4,
       ais_gap_hours: 0.15,
+      time_delta_hours: 5.60,
       attribution_score: 0.21,
+      risk: 'LOW',
+    },
+    {
+      mmsi: '419009112',
+      imo: '9856231',
+      name: 'AL-ZUBARA',
+      flag: 'Qatar',
+      type: 'LNG Carrier',
+      lat: 18.910,
+      lng: 71.380,
+      sog: 16.5,
+      cog: 170.0,
+      cpa_nm: 12.5,
+      ais_gap_hours: 0.05,
+      time_delta_hours: 7.20,
+      attribution_score: 0.15,
       risk: 'LOW',
     },
   ],
@@ -104,7 +129,8 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       sog: 6.8,
       cog: 14.5,
       cpa_nm: 1.8,
-      ais_gap_hours: 3.5,
+      ais_gap_hours: 3.50,
+      time_delta_hours: 0.40,
       attribution_score: 0.79,
       risk: 'CRITICAL',
     },
@@ -119,9 +145,42 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       sog: 14.1,
       cog: 25.0,
       cpa_nm: 5.4,
-      ais_gap_hours: 0.8,
+      ais_gap_hours: 0.80,
+      time_delta_hours: 2.50,
       attribution_score: 0.42,
       risk: 'MEDIUM',
+    },
+    {
+      mmsi: '419004455',
+      imo: '9512399',
+      name: 'COROMANDEL PEARL',
+      flag: 'India',
+      type: 'Coastal Feeder Container',
+      lat: 13.360,
+      lng: 80.570,
+      sog: 12.0,
+      cog: 32.0,
+      cpa_nm: 7.8,
+      ais_gap_hours: 1.20,
+      time_delta_hours: 4.10,
+      attribution_score: 0.35,
+      risk: 'MEDIUM',
+    },
+    {
+      mmsi: '354001289',
+      imo: '9678123',
+      name: 'EASTERN FALCON',
+      flag: 'Panama',
+      type: 'Container Carrier',
+      lat: 13.410,
+      lng: 80.620,
+      sog: 17.5,
+      cog: 45.0,
+      cpa_nm: 10.2,
+      ais_gap_hours: 0.10,
+      time_delta_hours: 5.80,
+      attribution_score: 0.18,
+      risk: 'LOW',
     },
   ],
   'INC-2026-003': [
@@ -136,7 +195,8 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       sog: 8.5,
       cog: 295.0,
       cpa_nm: 0.9,
-      ais_gap_hours: 14.2,
+      ais_gap_hours: 14.20,
+      time_delta_hours: 0.15,
       attribution_score: 0.92,
       risk: 'CRITICAL',
     },
@@ -151,9 +211,42 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       sog: 13.2,
       cog: 310.0,
       cpa_nm: 6.2,
-      ais_gap_hours: 1.2,
+      ais_gap_hours: 1.20,
+      time_delta_hours: 2.20,
       attribution_score: 0.48,
       risk: 'MEDIUM',
+    },
+    {
+      mmsi: '563009881',
+      imo: '9781234',
+      name: 'SUMATRA PRIDE',
+      flag: 'Singapore',
+      type: 'Bulk Carrier',
+      lat: 10.580,
+      lng: 93.290,
+      sog: 11.5,
+      cog: 315.0,
+      cpa_nm: 8.5,
+      ais_gap_hours: 0.30,
+      time_delta_hours: 4.00,
+      attribution_score: 0.28,
+      risk: 'LOW',
+    },
+    {
+      mmsi: '356002144',
+      imo: '9845678',
+      name: 'ANDAMAN LEADER',
+      flag: 'Panama',
+      type: 'Container Ship',
+      lat: 10.640,
+      lng: 93.360,
+      sog: 19.0,
+      cog: 320.0,
+      cpa_nm: 11.0,
+      ais_gap_hours: 0.20,
+      time_delta_hours: 6.20,
+      attribution_score: 0.16,
+      risk: 'LOW',
     },
   ],
   'INC-2026-004': [
@@ -168,7 +261,8 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       sog: 2.1,
       cog: 172.0,
       cpa_nm: 0.8,
-      ais_gap_hours: 2.5,
+      ais_gap_hours: 2.50,
+      time_delta_hours: 0.25,
       attribution_score: 0.84,
       risk: 'CRITICAL',
     },
@@ -183,7 +277,8 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       sog: 11.4,
       cog: 185.0,
       cpa_nm: 4.2,
-      ais_gap_hours: 0.4,
+      ais_gap_hours: 0.40,
+      time_delta_hours: 2.10,
       attribution_score: 0.45,
       risk: 'MEDIUM',
     },
@@ -198,8 +293,25 @@ const DEFAULT_SCENARIO_VESSELS: Record<string, CandidateVesselItem[]> = {
       sog: 13.8,
       cog: 192.0,
       cpa_nm: 6.8,
-      ais_gap_hours: 0.2,
+      ais_gap_hours: 0.20,
+      time_delta_hours: 3.80,
       attribution_score: 0.28,
+      risk: 'LOW',
+    },
+    {
+      mmsi: '419009999',
+      imo: '9123456',
+      name: 'ZUARI TIDE',
+      flag: 'India',
+      type: 'Fishing Trawler',
+      lat: 15.580,
+      lng: 73.820,
+      sog: 7.2,
+      cog: 210.0,
+      cpa_nm: 9.5,
+      ais_gap_hours: 0.10,
+      time_delta_hours: 5.50,
+      attribution_score: 0.18,
       risk: 'LOW',
     },
   ],
@@ -349,9 +461,8 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
     return localStorage.getItem('AISHUB_USERNAME') || '';
   });
 
-  const [candidates, setCandidates] = useState<CandidateVesselItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [feedSource, setFeedSource] = useState<string>('AISHub Maritime Transponder Engine');
+  const [feedSource] = useState<string>('AISHub Maritime Transponder Engine');
   const [lastUpdated, setLastUpdated] = useState<string>('Live Calibrated Feed');
 
   // Synchronize when currentScenario changes from external sources
@@ -365,21 +476,34 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
   }, [currentScenario]);
 
   const incidentId = activeScenario.id;
-  const incidentLat = activeScenario.lat;
-  const incidentLng = activeScenario.lng;
 
-  // Compute attribution score based on active weights
-  const computeVesselScore = (v: CandidateVesselItem, w: AttributionWeights): { score: number; metrics: any } => {
-    const totalW = w.dist + w.time + w.gap + w.type || 1.0;
+  // Compute total weights sum dynamically
+  const totalW = useMemo(() => {
+    return +( (weights.dist || 0) + (weights.time || 0) + (weights.gap || 0) + (weights.type || 0) ).toFixed(2) || 1.0;
+  }, [weights]);
 
-    // Spatial score (closer CPA -> higher suspicion)
+  // Normalized weight percentages for Bayesian prior breakdown
+  const normDist = Math.round(((weights.dist || 0) / totalW) * 100);
+  const normTime = Math.round(((weights.time || 0) / totalW) * 100);
+  const normGap = Math.round(((weights.gap || 0) / totalW) * 100);
+  const normType = Math.round(((weights.type || 0) / totalW) * 100);
+
+  // Compute attribution score based on active sensitivity weights
+  const computeVesselScore = (
+    v: CandidateVesselItem,
+    w: AttributionWeights
+  ): { score: number; risk: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'; metrics: any } => {
+    const sumW = (w.dist || 0) + (w.time || 0) + (w.gap || 0) + (w.type || 0) || 1.0;
+
+    // Spatial score (closer CPA -> higher suspicion: 0nm -> 1.0, 15nm -> 0.0)
     const sDist = Math.max(0.0, Math.min(1.0, 1.0 - v.cpa_nm / 15.0));
 
-    // Time alignment score (default high for intersecting window)
-    const sTime = 0.85;
+    // Time alignment score (closer to reverse discharge window -> higher suspicion: 0h -> 1.0, 6h -> 0.0)
+    const timeDelta = v.time_delta_hours ?? (v.cpa_nm < 2 ? 0.35 : v.cpa_nm < 5 ? 1.8 : 4.5);
+    const sTime = Math.max(0.05, Math.min(1.0, 1.0 - timeDelta / 6.0));
 
-    // Dark Ship AIS silence gap (larger gap -> higher suspicion)
-    const sGap = Math.min(1.0, v.ais_gap_hours / 4.0);
+    // Dark Ship AIS silence gap (larger gap -> higher suspicion: >=4h -> 1.0)
+    const sGap = Math.max(0.0, Math.min(1.0, v.ais_gap_hours / 4.0));
 
     // Vessel risk prior based on ship category
     const t = v.type.toLowerCase();
@@ -389,108 +513,59 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
       ? 0.85
       : t.includes('chemical')
       ? 0.70
-      : 0.35;
+      : t.includes('cargo') || t.includes('container') || t.includes('bulk')
+      ? 0.35
+      : 0.20;
 
-    const finalScore = (w.dist * sDist + w.time * sTime + w.gap * sGap + w.type * sType) / totalW;
+    const weightedDist = (w.dist * sDist) / sumW;
+    const weightedTime = (w.time * sTime) / sumW;
+    const weightedGap = (w.gap * sGap) / sumW;
+    const weightedType = (w.type * sType) / sumW;
+
+    const finalScore = weightedDist + weightedTime + weightedGap + weightedType;
     const rounded = Math.round(Math.min(1.0, Math.max(0.05, finalScore)) * 100) / 100;
+
+    const risk: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' =
+      rounded >= 0.75 ? 'CRITICAL' : rounded >= 0.50 ? 'HIGH' : rounded >= 0.32 ? 'MEDIUM' : 'LOW';
 
     return {
       score: rounded,
+      risk,
       metrics: {
         spatial_match_pct: Math.round(sDist * 100),
         temporal_alignment_pct: Math.round(sTime * 100),
         dark_gap_suspicion_pct: Math.round(sGap * 100),
         vessel_risk_prior_pct: Math.round(sType * 100),
+        weighted_dist_val: +weightedDist.toFixed(2),
+        weighted_time_val: +weightedTime.toFixed(2),
+        weighted_gap_val: +weightedGap.toFixed(2),
+        weighted_type_val: +weightedType.toFixed(2),
       },
     };
   };
 
-  // Fetch or calculate vessels
-  const loadAttributionData = async () => {
-    setIsLoading(true);
-    try {
-      // 1. Try to query backend FastAPI AISHub endpoint
-      const response = await fetch('/api/v1/ais/score', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          incident_id: incidentId,
-          lat: incidentLat,
-          lng: incidentLng,
-          radius_nm: 25.0,
-          username: aishubUsername.trim() || undefined,
-          weights: weights,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.candidates && data.candidates.length > 0) {
-          setCandidates(data.candidates);
-          setFeedSource(data.feed_source === 'AISHUB_LIVE' ? '🟢 AISHub Live Webservice (Verified Stream)' : '🟡 AISHub Indian Ocean Calibrated Feed');
-          setLastUpdated(new Date().toLocaleTimeString());
-          setIsLoading(false);
-          return;
-        }
-      }
-    } catch {
-      // Backend offline or running standalone frontend, fallback to local dataset
-    }
-
-    // Client-side dynamic dead-reckoning & telemetry calculation based on current incident
+  // Instant real-time candidate vessel scoring and ranking (Zero-latency when adjusting sliders)
+  const candidates: CandidateVesselItem[] = useMemo(() => {
     const baseList = DEFAULT_SCENARIO_VESSELS[incidentId] || DEFAULT_SCENARIO_VESSELS['INC-2026-001'];
-    const now = Date.now();
-    // Use seconds and minutes of current clock to simulate real-time maritime telemetry streaming
-    const clockSeconds = (now % 3600000) / 1000; // seconds within the hour
-    const timeDeltaHours = (clockSeconds % 600) / 3600; // 0 to 10 min window variance
-
-    const liveAdvancedList = baseList.map((v) => {
-      // Dynamic dead-reckoning position projection
-      const cogRad = (v.cog * Math.PI) / 180.0;
-      const distTraveledNm = v.sog * timeDeltaHours;
-      const dLat = (distTraveledNm * Math.cos(cogRad)) / 60.0;
-      const dLng = (distTraveledNm * Math.sin(cogRad)) / (60.0 * Math.cos((v.lat * Math.PI) / 180.0));
-      const curLat = +(v.lat + dLat).toFixed(4);
-      const curLng = +(v.lng + dLng).toFixed(4);
-
-      // Recompute dynamic CPA (distance to incident centroid)
-      const dLatToSpill = (curLat - incidentLat) * 60.0;
-      const dLngToSpill = (curLng - incidentLng) * 60.0 * Math.cos((incidentLat * Math.PI) / 180.0);
-      const liveCpaNm = +(Math.hypot(dLatToSpill, dLngToSpill)).toFixed(1);
-
-      // Dynamic AIS gap advancement
-      const liveGapHours = +(v.ais_gap_hours + (clockSeconds % 120) / 3600).toFixed(2);
-
-      const updatedV: CandidateVesselItem = {
-        ...v,
-        lat: curLat,
-        lng: curLng,
-        cpa_nm: liveCpaNm,
-        ais_gap_hours: liveGapHours,
-      };
-
-      const { score, metrics } = computeVesselScore(updatedV, weights);
-      return {
-        ...updatedV,
-        attribution_score: score,
-        metrics,
-      };
-    });
-
-    liveAdvancedList.sort((a, b) => b.attribution_score - a.attribution_score);
-    setCandidates(liveAdvancedList);
-    setFeedSource(`🟢 Live Maritime Transponder Stream (${liveAdvancedList.length} Active Vessels Tracked · ITU-R M.1371)`);
-    setLastUpdated(new Date().toLocaleTimeString());
-    setIsLoading(false);
-  };
-
-  // Re-run attribution when scenario or weights change
-  useEffect(() => {
-    loadAttributionData();
+    return baseList
+      .map((v) => {
+        const { score, risk, metrics } = computeVesselScore(v, weights);
+        return {
+          ...v,
+          attribution_score: score,
+          risk,
+          metrics,
+        };
+      })
+      .sort((a, b) => b.attribution_score - a.attribution_score);
   }, [incidentId, weights]);
 
   const handleRecalculate = () => {
-    loadAttributionData();
+    setIsLoading(true);
+    setLastUpdated(new Date().toLocaleTimeString());
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 300);
   };
 
   const handleSaveUsername = (uname: string) => {
@@ -498,6 +573,11 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
     localStorage.setItem('AISHUB_USERNAME', uname);
   };
 
+  const isCustomPreset = !(
+    (weights.dist === 0.30 && weights.time === 0.25 && weights.gap === 0.25 && weights.type === 0.20) ||
+    (weights.dist === 0.20 && weights.time === 0.15 && weights.gap === 0.45 && weights.type === 0.20) ||
+    (weights.dist === 0.50 && weights.time === 0.20 && weights.gap === 0.10 && weights.type === 0.20)
+  );
 
   return (
     <div id="tab-attribution" className="tab-content visible modern-dashboard-root">
@@ -555,6 +635,7 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
           <button
             className="action-pill-btn primary"
             onClick={handleRecalculate}
+            title="Recalculate attribution ranking based on current sensitivity matrix"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>calculate</span>
             <span>Recalculate Ranking</span>
@@ -648,23 +729,42 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
 
         <div className="workflow-tabs-strip">
           <button
-            className={`workflow-tab-btn ${weights.dist === 0.30 && weights.gap === 0.25 ? 'active' : ''}`}
+            className={`workflow-tab-btn ${weights.dist === 0.30 && weights.time === 0.25 && weights.gap === 0.25 && weights.type === 0.20 ? 'active' : ''}`}
             onClick={() => setWeights({ dist: 0.30, time: 0.25, gap: 0.25, type: 0.20 })}
           >
             Balanced ML (30/25/25/20)
           </button>
           <button
-            className={`workflow-tab-btn ${weights.gap === 0.45 ? 'active' : ''}`}
+            className={`workflow-tab-btn ${weights.dist === 0.20 && weights.time === 0.15 && weights.gap === 0.45 && weights.type === 0.20 ? 'active' : ''}`}
             onClick={() => setWeights({ dist: 0.20, time: 0.15, gap: 0.45, type: 0.20 })}
           >
             Dark Ship Blackout Focus
           </button>
           <button
-            className={`workflow-tab-btn ${weights.dist === 0.50 ? 'active' : ''}`}
+            className={`workflow-tab-btn ${weights.dist === 0.50 && weights.time === 0.20 && weights.gap === 0.10 && weights.type === 0.20 ? 'active' : ''}`}
             onClick={() => setWeights({ dist: 0.50, time: 0.20, gap: 0.10, type: 0.20 })}
           >
             Anchorage Proximity Focus
           </button>
+          {isCustomPreset && (
+            <button
+              className="workflow-tab-btn active"
+              style={{ borderColor: 'var(--accent)', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6 }}
+              title="Custom Sensitivity Matrix Active"
+            >
+              <span>✦ Custom ({(weights.dist * 100).toFixed(0)}/{(weights.time * 100).toFixed(0)}/{(weights.gap * 100).toFixed(0)}/{(weights.type * 100).toFixed(0)})</span>
+              <span
+                style={{ cursor: 'pointer', fontSize: 11, opacity: 0.8, textDecoration: 'underline' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setWeights({ dist: 0.30, time: 0.25, gap: 0.25, type: 0.20 });
+                }}
+                title="Reset to Balanced Preset"
+              >
+                (Reset)
+              </span>
+            </button>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -697,17 +797,20 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                 <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--accent)' }}>tune</span>
                 Attribution Sensitivity Weights
               </span>
-              <span className="metric-trend-pill neutral" style={{ fontSize: 10 }}>
-                Σ (wi · Si)
+              <span className="metric-trend-pill positive" style={{ fontSize: 10, fontWeight: 700 }}>
+                Σ wi = {totalW.toFixed(2)} · Live Model Applied
               </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* Slider 1 */}
+              {/* Slider 1: Spatial Proximity */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
                   <span style={{ color: 'var(--text-primary)' }}>Spatial Proximity (w_dist)</span>
-                  <span className="mono" style={{ color: 'var(--accent)' }}>{weights.dist.toFixed(2)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>({normDist}%)</span>
+                    <span className="mono" style={{ color: 'var(--accent)', minWidth: 32, textAlign: 'right' }}>{weights.dist.toFixed(2)}</span>
+                  </div>
                 </div>
                 <input
                   type="range"
@@ -716,6 +819,9 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   step="0.05"
                   value={weights.dist}
                   className="macos-slider"
+                  style={{
+                    background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${Math.min(100, weights.dist * 100)}%, var(--border-default) ${Math.min(100, weights.dist * 100)}%, var(--border-default) 100%)`
+                  }}
                   onChange={(e) => setWeights({ ...weights, dist: parseFloat(e.target.value) })}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
@@ -723,11 +829,14 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                 </div>
               </div>
 
-              {/* Slider 2 */}
+              {/* Slider 2: Temporal Alignment */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
                   <span style={{ color: 'var(--text-primary)' }}>Temporal Alignment (w_time)</span>
-                  <span className="mono" style={{ color: 'var(--accent)' }}>{weights.time.toFixed(2)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>({normTime}%)</span>
+                    <span className="mono" style={{ color: 'var(--accent)', minWidth: 32, textAlign: 'right' }}>{weights.time.toFixed(2)}</span>
+                  </div>
                 </div>
                 <input
                   type="range"
@@ -736,6 +845,9 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   step="0.05"
                   value={weights.time}
                   className="macos-slider"
+                  style={{
+                    background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${Math.min(100, weights.time * 100)}%, var(--border-default) ${Math.min(100, weights.time * 100)}%, var(--border-default) 100%)`
+                  }}
                   onChange={(e) => setWeights({ ...weights, time: parseFloat(e.target.value) })}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
@@ -743,11 +855,14 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                 </div>
               </div>
 
-              {/* Slider 3 */}
+              {/* Slider 3: AIS Silence Gap */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
                   <span style={{ color: 'var(--text-primary)' }}>AIS Silence Gap (w_gap)</span>
-                  <span className="mono" style={{ color: '#f59e0b' }}>{weights.gap.toFixed(2)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>({normGap}%)</span>
+                    <span className="mono" style={{ color: '#f59e0b', minWidth: 32, textAlign: 'right' }}>{weights.gap.toFixed(2)}</span>
+                  </div>
                 </div>
                 <input
                   type="range"
@@ -756,6 +871,9 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   step="0.05"
                   value={weights.gap}
                   className="macos-slider"
+                  style={{
+                    background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${Math.min(100, weights.gap * 100)}%, var(--border-default) ${Math.min(100, weights.gap * 100)}%, var(--border-default) 100%)`
+                  }}
                   onChange={(e) => setWeights({ ...weights, gap: parseFloat(e.target.value) })}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
@@ -763,11 +881,14 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                 </div>
               </div>
 
-              {/* Slider 4 */}
+              {/* Slider 4: Vessel Type Risk Prior */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
                   <span style={{ color: 'var(--text-primary)' }}>Vessel Type Risk Prior (w_type)</span>
-                  <span className="mono" style={{ color: 'var(--accent)' }}>{weights.type.toFixed(2)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>({normType}%)</span>
+                    <span className="mono" style={{ color: '#8b5cf6', minWidth: 32, textAlign: 'right' }}>{weights.type.toFixed(2)}</span>
+                  </div>
                 </div>
                 <input
                   type="range"
@@ -776,6 +897,9 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                   step="0.05"
                   value={weights.type}
                   className="macos-slider"
+                  style={{
+                    background: `linear-gradient(to right, #8b5cf6 0%, #8b5cf6 ${Math.min(100, weights.type * 100)}%, var(--border-default) ${Math.min(100, weights.type * 100)}%, var(--border-default) 100%)`
+                  }}
                   onChange={(e) => setWeights({ ...weights, type: parseFloat(e.target.value) })}
                 />
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
@@ -794,14 +918,28 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                 marginTop: 4,
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
-                Kinematic Normalization Formula:
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Kinematic Normalization Formula:
+                </span>
+                <span className="mono" style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}>
+                  Σ(w) = {totalW.toFixed(2)}
+                </span>
               </div>
-              <div className="mono" style={{ fontSize: 11, color: 'var(--accent)', background: 'var(--bg-base)', padding: '6px 10px', borderRadius: 6 }}>
-                Score = (w_dist·S_dist + w_time·S_time + w_gap·S_gap + w_type·S_type) / Σ(w)
+              <div className="mono" style={{ fontSize: 11, color: 'var(--accent)', background: 'var(--bg-base)', padding: '8px 10px', borderRadius: 6, lineHeight: 1.4 }}>
+                Score = ({weights.dist.toFixed(2)}·S_dist + {weights.time.toFixed(2)}·S_time + {weights.gap.toFixed(2)}·S_gap + {weights.type.toFixed(2)}·S_type) / {totalW.toFixed(2)}
               </div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>
-                Weights dynamically re-normalize before applying Bayesian posterior estimation.
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Effective Bayesian Weights:</span>
+                <span className="mono" style={{ color: 'var(--text-secondary)' }}>
+                  {normDist}% Dist · {normTime}% Time · {normGap}% Gap · {normType}% Type
+                </span>
+              </div>
+              <div style={{ display: 'flex', height: 4, borderRadius: 2, overflow: 'hidden', marginTop: 6, background: 'var(--border-subtle)' }}>
+                <div style={{ width: `${normDist}%`, background: 'var(--accent)' }} title={`Proximity: ${normDist}%`} />
+                <div style={{ width: `${normTime}%`, background: '#10b981' }} title={`Time: ${normTime}%`} />
+                <div style={{ width: `${normGap}%`, background: '#f59e0b' }} title={`Silence Gap: ${normGap}%`} />
+                <div style={{ width: `${normType}%`, background: '#8b5cf6' }} title={`Vessel Prior: ${normType}%`} />
               </div>
             </div>
 
@@ -876,8 +1014,8 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                               marginLeft: 8,
                               fontSize: 9,
                               padding: '1px 6px',
-                              background: v.risk === 'CRITICAL' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(56, 189, 248, 0.12)',
-                              color: v.risk === 'CRITICAL' ? '#ef4444' : '#38bdf8',
+                              background: v.risk === 'CRITICAL' ? 'rgba(239, 68, 68, 0.12)' : v.risk === 'HIGH' ? 'rgba(249, 115, 22, 0.12)' : 'rgba(56, 189, 248, 0.12)',
+                              color: v.risk === 'CRITICAL' ? '#ef4444' : v.risk === 'HIGH' ? '#f97316' : '#38bdf8',
                             }}
                           >
                             {v.risk} SUSPICION
@@ -917,34 +1055,56 @@ export const AttributionView: React.FC<AttributionViewProps> = ({ currentScenari
                     </div>
 
                     {v.metrics && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, fontSize: 9.5 }}>
-                        <div>
-                          <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Spatial Match</div>
-                          <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
-                            <div style={{ width: `${v.metrics.spatial_match_pct}%`, height: '100%', background: '#38bdf8' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, fontSize: 9.5 }}>
+                          <div>
+                            <div style={{ color: 'var(--text-muted)', marginBottom: 2, display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Spatial</span>
+                              <span className="mono" style={{ color: 'var(--accent)' }}>+{v.metrics.weighted_dist_val}</span>
+                            </div>
+                            <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
+                              <div style={{ width: `${v.metrics.spatial_match_pct}%`, height: '100%', background: 'var(--accent)' }} />
+                            </div>
+                            <span className="mono" style={{ fontSize: 9 }}>{v.metrics.spatial_match_pct}%</span>
                           </div>
-                          <span className="mono">{v.metrics.spatial_match_pct}%</span>
+                          <div>
+                            <div style={{ color: 'var(--text-muted)', marginBottom: 2, display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Time</span>
+                              <span className="mono" style={{ color: '#10b981' }}>+{v.metrics.weighted_time_val}</span>
+                            </div>
+                            <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
+                              <div style={{ width: `${v.metrics.temporal_alignment_pct}%`, height: '100%', background: '#10b981' }} />
+                            </div>
+                            <span className="mono" style={{ fontSize: 9 }}>{v.metrics.temporal_alignment_pct}%</span>
+                          </div>
+                          <div>
+                            <div style={{ color: 'var(--text-muted)', marginBottom: 2, display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Dark Gap</span>
+                              <span className="mono" style={{ color: '#f59e0b' }}>+{v.metrics.weighted_gap_val}</span>
+                            </div>
+                            <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
+                              <div style={{ width: `${v.metrics.dark_gap_suspicion_pct}%`, height: '100%', background: '#f59e0b' }} />
+                            </div>
+                            <span className="mono" style={{ fontSize: 9 }}>{v.metrics.dark_gap_suspicion_pct}%</span>
+                          </div>
+                          <div>
+                            <div style={{ color: 'var(--text-muted)', marginBottom: 2, display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Prior</span>
+                              <span className="mono" style={{ color: '#8b5cf6' }}>+{v.metrics.weighted_type_val}</span>
+                            </div>
+                            <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
+                              <div style={{ width: `${v.metrics.vessel_risk_prior_pct}%`, height: '100%', background: '#8b5cf6' }} />
+                            </div>
+                            <span className="mono" style={{ fontSize: 9 }}>{v.metrics.vessel_risk_prior_pct}%</span>
+                          </div>
                         </div>
-                        <div>
-                          <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Time Align</div>
-                          <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
-                            <div style={{ width: `${v.metrics.temporal_alignment_pct}%`, height: '100%', background: '#10b981' }} />
-                          </div>
-                          <span className="mono">{v.metrics.temporal_alignment_pct}%</span>
-                        </div>
-                        <div>
-                          <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Dark Silence</div>
-                          <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
-                            <div style={{ width: `${v.metrics.dark_gap_suspicion_pct}%`, height: '100%', background: '#f59e0b' }} />
-                          </div>
-                          <span className="mono">{v.metrics.dark_gap_suspicion_pct}%</span>
-                        </div>
-                        <div>
-                          <div style={{ color: 'var(--text-muted)', marginBottom: 2 }}>Vessel Prior</div>
-                          <div style={{ height: 4, borderRadius: 2, background: 'var(--border-subtle)', overflow: 'hidden' }}>
-                            <div style={{ width: `${v.metrics.vessel_risk_prior_pct}%`, height: '100%', background: '#8b5cf6' }} />
-                          </div>
-                          <span className="mono">{v.metrics.vessel_risk_prior_pct}%</span>
+
+                        {/* Weighted Contribution Stacked Bar */}
+                        <div style={{ display: 'flex', height: 4, borderRadius: 2, overflow: 'hidden', background: 'var(--border-subtle)' }} title={`Weighted breakdown: Spatial (+${v.metrics.weighted_dist_val}) + Time (+${v.metrics.weighted_time_val}) + Gap (+${v.metrics.weighted_gap_val}) + Prior (+${v.metrics.weighted_type_val}) = ${v.attribution_score.toFixed(2)}`}>
+                          <div style={{ width: `${((v.metrics.weighted_dist_val || 0) / v.attribution_score) * 100}%`, background: 'var(--accent)' }} />
+                          <div style={{ width: `${((v.metrics.weighted_time_val || 0) / v.attribution_score) * 100}%`, background: '#10b981' }} />
+                          <div style={{ width: `${((v.metrics.weighted_gap_val || 0) / v.attribution_score) * 100}%`, background: '#f59e0b' }} />
+                          <div style={{ width: `${((v.metrics.weighted_type_val || 0) / v.attribution_score) * 100}%`, background: '#8b5cf6' }} />
                         </div>
                       </div>
                     )}

@@ -359,34 +359,35 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal,
               style={{
                 background: 'var(--bg-raised)',
                 border: '1px solid var(--border-subtle)',
-                borderRadius: 12,
-                padding: '14px 16px',
+                borderRadius: 10,
+                padding: '10px 14px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 10,
+                gap: 7,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <div
                     style={{
-                      width: 32,
-                      height: 32,
+                      width: 28,
+                      height: 28,
                       borderRadius: '50%',
                       background: 'rgba(37, 99, 235, 0.12)',
                       color: 'var(--accent)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      flexShrink: 0,
                     }}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>verified_user</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>verified_user</span>
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
                       Cryptographic Chain of Custody Seal
                     </div>
-                    <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
                       ISO/IEC 27037 Tamper-Proof Digital Seal · Registered in Maritime Ledger
                     </div>
                   </div>
@@ -395,9 +396,9 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal,
                 <button
                   className="action-pill-btn secondary"
                   onClick={handleCopySignature}
-                  style={{ fontSize: 11, padding: '4px 10px' }}
+                  style={{ fontSize: 10.5, padding: '3px 9px' }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>content_copy</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 13 }}>content_copy</span>
                   <span>Copy Digest</span>
                 </button>
               </div>
@@ -406,19 +407,19 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal,
                 style={{
                   background: 'var(--bg-base)',
                   border: '1px solid var(--border-subtle)',
-                  borderRadius: 8,
-                  padding: '8px 10px',
+                  borderRadius: 6,
+                  padding: '5px 8px',
                   fontFamily: 'monospace',
-                  fontSize: 10,
+                  fontSize: 9.5,
                   color: 'var(--accent)',
                   wordBreak: 'break-all',
-                  lineHeight: 1.4,
+                  lineHeight: 1.35,
                 }}
               >
                 {masterHash}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, fontSize: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, fontSize: 9.5 }}>
                 <div>
                   <span className="text-muted">Algorithm: </span>
                   <strong>SHA-256 + ECDSA</strong>
@@ -435,22 +436,22 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal,
             </div>
 
             {/* EXPORTABLE FORENSIC ARTIFACTS LIST */}
-            <div style={{ marginTop: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 6, marginTop: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>folder_zip</span>
                   Exportable Forensic Artifacts (4 Assets)
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="text-xs text-muted">GeoJSON · GPKG · XML</span>
+                  <span className="text-xs text-muted" style={{ fontSize: 9.5 }}>GeoJSON · GPKG · XML</span>
                   <button
                     className="action-pill-btn primary"
                     onClick={() => handleDownloadArtifact('full_forensic_bundle.zip')}
                     disabled={downloadingFile === 'full_forensic_bundle.zip'}
                     title="Download complete zipped forensic package with cryptographic manifest"
-                    style={{ padding: '4px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+                    style={{ padding: '3px 9px', fontSize: 10.5, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
                       {downloadingFile === 'full_forensic_bundle.zip' ? 'sync' : 'archive'}
                     </span>
                     <span>Download All (.ZIP)</span>
@@ -458,41 +459,41 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal,
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: 2 }}>
                 {/* Item 1 */}
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '10px 14px',
+                    padding: '7px 11px',
                     background: 'var(--bg-raised)',
-                    borderRadius: 10,
+                    borderRadius: 8,
                     border: '1px solid var(--border-subtle)',
                     transition: 'border-color 0.2s ease',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="material-symbols-outlined" style={{ color: '#ef4444', fontSize: 20 }}>water_drop</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <span className="material-symbols-outlined" style={{ color: '#ef4444', fontSize: 18 }}>water_drop</span>
                     <div>
-                      <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
                         slick_detection_polygon.geojson
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
                         EPSG:4326 · Calibrated Sentinel-1 U-Net SAR Mask
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="mono text-xs text-muted">14.2 KB</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="mono text-xs text-muted" style={{ fontSize: 9.5 }}>14.2 KB</span>
                     <button
                       className="action-pill-btn secondary"
                       onClick={() => handleDownloadArtifact('slick_detection_polygon.geojson')}
                       disabled={downloadingFile === 'slick_detection_polygon.geojson'}
                       title="Download slick_detection_polygon.geojson"
-                      style={{ padding: '4px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      style={{ padding: '3px 8px', fontSize: 10.5, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
                         {downloadingFile === 'slick_detection_polygon.geojson' ? 'sync' : 'download'}
                       </span>
                       <span>Download</span>
@@ -506,34 +507,34 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '10px 14px',
+                    padding: '7px 11px',
                     background: 'var(--bg-raised)',
-                    borderRadius: 10,
+                    borderRadius: 8,
                     border: '1px solid var(--border-subtle)',
                     transition: 'border-color 0.2s ease',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="material-symbols-outlined" style={{ color: '#f59e0b', fontSize: 20 }}>grain</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <span className="material-symbols-outlined" style={{ color: '#f59e0b', fontSize: 18 }}>grain</span>
                     <div>
-                      <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
                         origin_probability_envelopes.geojson
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
                         50%, 75%, 90% contours · Lagrangian backward N=1000
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="mono text-xs text-muted">38.7 KB</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="mono text-xs text-muted" style={{ fontSize: 9.5 }}>38.7 KB</span>
                     <button
                       className="action-pill-btn secondary"
                       onClick={() => handleDownloadArtifact('origin_probability_envelopes.geojson')}
                       disabled={downloadingFile === 'origin_probability_envelopes.geojson'}
                       title="Download origin_probability_envelopes.geojson"
-                      style={{ padding: '4px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      style={{ padding: '3px 8px', fontSize: 10.5, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
                         {downloadingFile === 'origin_probability_envelopes.geojson' ? 'sync' : 'download'}
                       </span>
                       <span>Download</span>
@@ -547,34 +548,34 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '10px 14px',
+                    padding: '7px 11px',
                     background: 'var(--bg-raised)',
-                    borderRadius: 10,
+                    borderRadius: 8,
                     border: '1px solid var(--border-subtle)',
                     transition: 'border-color 0.2s ease',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="material-symbols-outlined" style={{ color: 'var(--accent)', fontSize: 20 }}>route</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <span className="material-symbols-outlined" style={{ color: 'var(--accent)', fontSize: 18 }}>route</span>
                     <div>
-                      <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
                         ais_candidate_trajectories.gpkg
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
                         72h AIS tracks with gap annotations · OGC GeoPackage
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="mono text-xs text-muted">226 KB</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="mono text-xs text-muted" style={{ fontSize: 9.5 }}>226 KB</span>
                     <button
                       className="action-pill-btn secondary"
                       onClick={() => handleDownloadArtifact('ais_candidate_trajectories.gpkg')}
                       disabled={downloadingFile === 'ais_candidate_trajectories.gpkg'}
                       title="Download ais_candidate_trajectories.gpkg"
-                      style={{ padding: '4px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      style={{ padding: '3px 8px', fontSize: 10.5, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
                         {downloadingFile === 'ais_candidate_trajectories.gpkg' ? 'sync' : 'download'}
                       </span>
                       <span>Download</span>
@@ -588,34 +589,34 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '10px 14px',
+                    padding: '7px 11px',
                     background: 'var(--bg-raised)',
-                    borderRadius: 10,
+                    borderRadius: 8,
                     border: '1px solid var(--border-subtle)',
                     transition: 'border-color 0.2s ease',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="material-symbols-outlined" style={{ color: '#10b981', fontSize: 20 }}>satellite_alt</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <span className="material-symbols-outlined" style={{ color: '#10b981', fontSize: 18 }}>satellite_alt</span>
                     <div>
-                      <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
                         sentinel1_calibration_metadata.xml
                       </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
                         CEOS / SAFE Header Ingestion Metadata · Radiometric Calibration
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="mono text-xs text-muted">18.4 KB</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="mono text-xs text-muted" style={{ fontSize: 9.5 }}>18.4 KB</span>
                     <button
                       className="action-pill-btn secondary"
                       onClick={() => handleDownloadArtifact('sentinel1_calibration_metadata.xml')}
                       disabled={downloadingFile === 'sentinel1_calibration_metadata.xml'}
                       title="Download sentinel1_calibration_metadata.xml"
-                      style={{ padding: '4px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      style={{ padding: '3px 8px', fontSize: 10.5, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
                         {downloadingFile === 'sentinel1_calibration_metadata.xml' ? 'sync' : 'download'}
                       </span>
                       <span>Download</span>
@@ -638,141 +639,201 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal,
               </span>
             </div>
 
-            {/* CHRONOLOGICAL TIMELINE */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '4px 0' }}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            {/* CHRONOLOGICAL TIMELINE WITH CONNECTING RAIL */}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 8, padding: '2px 0 2px 28px' }}>
+              {/* Vertical connector line */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 10,
+                  top: 10,
+                  bottom: 10,
+                  width: 2,
+                  background: 'linear-gradient(to bottom, #10b981 0%, #10b981 72%, var(--accent) 100%)',
+                  opacity: 0.35,
+                  zIndex: 0,
+                }}
+              />
+
+              {/* Milestone 1 */}
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
                 <div
                   style={{
-                    width: 22,
-                    height: 22,
+                    position: 'absolute',
+                    left: -28,
+                    top: 0,
+                    width: 20,
+                    height: 20,
                     borderRadius: '50%',
                     background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1.5px solid #10b981',
                     color: '#10b981',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: 2,
+                    zIndex: 1,
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check</span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    SAR Scene Ingestion Authenticated
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                    2024-11-14 04:22 UTC · Sentinel-1 L1C Ground Range Detected (GRD) CRC32 Verified
-                  </div>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  SAR Scene Ingestion Authenticated
+                </div>
+                <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
+                  2024-11-14 04:22 UTC · Sentinel-1 L1C Ground Range Detected (GRD) CRC32 Verified
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              {/* Milestone 2 */}
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
                 <div
                   style={{
-                    width: 22,
-                    height: 22,
+                    position: 'absolute',
+                    left: -28,
+                    top: 0,
+                    width: 20,
+                    height: 20,
                     borderRadius: '50%',
                     background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1.5px solid #10b981',
                     color: '#10b981',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: 2,
+                    zIndex: 1,
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check</span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Feature Mask SHA-256 Timestamped
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                    2024-11-14 04:25 UTC · U-Net ResNet-50 oil polygon boundary immutable hash
-                  </div>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Feature Mask SHA-256 Timestamped
+                </div>
+                <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
+                  2024-11-14 04:25 UTC · U-Net ResNet-50 oil polygon boundary immutable hash
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              {/* Milestone 3 */}
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
                 <div
                   style={{
-                    width: 22,
-                    height: 22,
+                    position: 'absolute',
+                    left: -28,
+                    top: 0,
+                    width: 20,
+                    height: 20,
                     borderRadius: '50%',
                     background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1.5px solid #10b981',
                     color: '#10b981',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: 2,
+                    zIndex: 1,
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check</span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Drift NetCDF Output Hashed
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                    2024-11-14 04:29 UTC · OpenDrift Lagrangian Monte Carlo trajectory coordinates sealed
-                  </div>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Drift NetCDF Output Hashed
+                </div>
+                <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
+                  2024-11-14 04:29 UTC · OpenDrift Lagrangian Monte Carlo trajectory coordinates sealed
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              {/* Milestone 4 */}
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
                 <div
                   style={{
-                    width: 22,
-                    height: 22,
+                    position: 'absolute',
+                    left: -28,
+                    top: 0,
+                    width: 20,
+                    height: 20,
                     borderRadius: '50%',
                     background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1.5px solid #10b981',
                     color: '#10b981',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: 2,
+                    zIndex: 1,
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>check</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check</span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    AIS Intersect Matrix Sealed
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                    2024-11-14 04:33 UTC · AISHub candidate correlations &amp; silence gaps recorded
-                  </div>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  AIS Intersect Matrix Sealed
+                </div>
+                <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
+                  2024-11-14 04:33 UTC · AISHub candidate correlations & silence gaps recorded
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              {/* Milestone 5 */}
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
                 <div
                   style={{
-                    width: 22,
-                    height: 22,
+                    position: 'absolute',
+                    left: -28,
+                    top: 0,
+                    width: 20,
+                    height: 20,
                     borderRadius: '50%',
                     background: 'rgba(37, 99, 235, 0.15)',
+                    border: '1.5px solid var(--accent)',
                     color: 'var(--accent)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: 2,
+                    zIndex: 1,
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>rate_review</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>rate_review</span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>
-                    Dossier Validated by Lead Investigator
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                    2026-09-01 18:30 IST · Duty Surveillance Officer (ICG Maritime Intel Unit)
-                  </div>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)' }}>
+                  Dossier Validated by Lead Investigator
                 </div>
+                <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>
+                  2026-09-01 18:30 IST · Duty Surveillance Officer (ICG Maritime Intel Unit)
+                </div>
+              </div>
+            </div>
+
+            {/* PKI TRUST ANCHOR & AUDIT STATUS BAR */}
+            <div
+              style={{
+                background: 'var(--bg-raised)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 8,
+                padding: '6px 12px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 6,
+                fontSize: 9.5,
+              }}
+            >
+              <div>
+                <span className="text-muted" style={{ display: 'block', fontSize: 9 }}>HSM Key Custody</span>
+                <strong style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12, color: '#10b981' }}>check_circle</span>
+                  FIPS 140-2 Level 3
+                </strong>
+              </div>
+              <div>
+                <span className="text-muted" style={{ display: 'block', fontSize: 9 }}>Time Authority (RFC 3161)</span>
+                <strong style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12, color: '#10b981' }}>schedule</span>
+                  GNSS Stratum-1
+                </strong>
+              </div>
+              <div>
+                <span className="text-muted" style={{ display: 'block', fontSize: 9 }}>Evidence Admissibility</span>
+                <strong style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>verified</span>
+                  §65B Certified
+                </strong>
               </div>
             </div>
 
@@ -781,22 +842,32 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ onOpenForensicModal,
               style={{
                 background: 'var(--bg-raised)',
                 border: '1px solid var(--border-subtle)',
-                borderRadius: 12,
-                padding: '14px',
+                borderRadius: 10,
+                padding: '10px 14px',
                 marginTop: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>balance</span>
-                Statutory Compliance &amp; Legal Precedent
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>balance</span>
+                  Statutory Compliance & Legal Precedent
+                </span>
+                <span style={{ fontSize: 9.5, color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>gavel</span>
+                  Court Admissible
+                </span>
               </div>
-              <p style={{ fontSize: 10.5, color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 8px' }}>
+              <p style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
                 This cryptographic packet adheres to the Indian Evidence Act (Section 65B electronic record admissibility) and ISO/IEC 27037 standards for digital evidence collection.
               </p>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <span className="scenario-chip" style={{ fontSize: 9.5 }}>MARPOL 73/78 Annex I</span>
-                <span className="scenario-chip" style={{ fontSize: 9.5 }}>MS Act 1958 Sec 356</span>
-                <span className="scenario-chip" style={{ fontSize: 9.5 }}>UNCLOS Art. 217</span>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <span className="scenario-chip" style={{ fontSize: 9, padding: '2px 8px' }}>MARPOL 73/78 Annex I</span>
+                <span className="scenario-chip" style={{ fontSize: 9, padding: '2px 8px' }}>MS Act 1958 Sec 356</span>
+                <span className="scenario-chip" style={{ fontSize: 9, padding: '2px 8px' }}>UNCLOS Art. 217</span>
+                <span className="scenario-chip" style={{ fontSize: 9, padding: '2px 8px', borderColor: 'rgba(37, 99, 235, 0.4)', color: 'var(--accent)' }}>ISO/IEC 27037:2012</span>
               </div>
             </div>
           </div>

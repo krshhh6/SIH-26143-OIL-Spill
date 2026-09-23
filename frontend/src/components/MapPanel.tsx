@@ -12,6 +12,14 @@ interface MapPanelProps {
   onUpdateCoords: (coords: string) => void;
   onSelectScenario?: (key: string) => void;
   scenarios?: Record<string, Scenario>;
+  targetLocation?: {
+    lat: number;
+    lng: number;
+    zoom?: number;
+    title: string;
+    sub?: string;
+    category?: string;
+  } | null;
 }
 
 const COPERNICUS_LAYERS: CopernicusLayerInfo[] = [
@@ -98,7 +106,13 @@ const COPERNICUS_LAYERS: CopernicusLayerInfo[] = [
   },
 ];
 
-export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, onSelectScenario, scenarios }) => {
+export const MapPanel: React.FC<MapPanelProps> = ({
+  scenario,
+  onUpdateCoords,
+  onSelectScenario,
+  scenarios,
+  targetLocation,
+}) => {
   const [baseLayer2D, setBaseLayer2D] = useState<BaseLayerType>('satellite');
   const [showSeamarks, setShowSeamarks] = useState<boolean>(true);
   const [selectedCopernicusLayer, setSelectedCopernicusLayer] = useState<CopernicusLayerId>('true-color');
@@ -899,6 +913,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
           onSelectScenario={onSelectScenario}
           mapRef={leafletMapRef}
           scenarios={scenarios}
+          targetLocation={targetLocation}
         />
 
         {/* Cartographic Legend (Superhuman Glassmorphic HUD at Bottom-Right) */}

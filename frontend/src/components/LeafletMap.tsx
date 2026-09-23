@@ -21,6 +21,14 @@ interface LeafletMapProps {
   onSelectScenario?: (key: string) => void;
   mapRef: React.MutableRefObject<L.Map | null>;
   scenarios?: Record<string, Scenario>;
+  targetLocation?: {
+    lat: number;
+    lng: number;
+    zoom?: number;
+    title: string;
+    sub?: string;
+    category?: string;
+  } | null;
 }
 
 export const LeafletMap: React.FC<LeafletMapProps> = ({
@@ -39,6 +47,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   onSelectScenario,
   mapRef,
   scenarios,
+  targetLocation,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const baseLayersRef = useRef<Record<string, L.TileLayer>>({});
@@ -47,6 +56,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const indiaOutlineLayerRef = useRef<L.LayerGroup | null>(null);
   const indiaBoundariesTileRef = useRef<L.TileLayer | null>(null);
   const driftLayerRef = useRef<L.GeoJSON | null>(null);
+  const searchTargetMarkerRef = useRef<L.Marker | null>(null);
   const cachedIndiaOutline = useRef<any>(null);
   const cachedIndiaEez = useRef<any>(null);
 
@@ -410,12 +420,60 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     if (prevScenarioIdRef.current !== curId) {
       prevScenarioIdRef.current = curId;
       if (scenario) {
+        if (searchTargetMarkerRef.current && map) {
+          map.removeLayer(searchTargetMarkerRef.current);
+          searchTargetMarkerRef.current = null;
+        }
         map.flyTo([scenario.lat, scenario.lng], 11, { duration: 1.2 });
       } else {
         map.flyTo([15.5, 79.0], 4.25, { duration: 1.2 });
       }
     }
   }, [scenario?.id, scenario?.lat, scenario?.lng]);
+
+  // Search Target Navigation: Fly to searched port, strait, coordinate, or vessel with tactical pulse marker
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !targetLocation) return;
+
+    map.flyTo([targetLocation.lat, targetLocation.lng], targetLocation.zoom || 12, { duration: 1.5 });
+
+    if (searchTargetMarkerRef.current) {
+      map.removeLayer(searchTargetMarkerRef.current);
+      searchTargetMarkerRef.current = null;
+    }
+
+    const pinIcon = L.divIcon({
+      className: 'gis-search-target-pin-wrap',
+      html: `
+        <div class="search-target-pin">
+          <div class="search-target-pulse"></div>
+          <div class="search-target-dot"></div>
+          <div class="search-target-badge">${targetLocation.title}</div>
+        </div>
+      `,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+
+    const marker = L.marker([targetLocation.lat, targetLocation.lng], { icon: pinIcon, zIndexOffset: 2000 })
+      .bindPopup(`
+        <div class="gis-popup-card">
+          <div class="gis-popup-header" style="border-bottom: 2px solid #0284C7;">
+            ${targetLocation.title}
+          </div>
+          <div class="gis-popup-row"><span>Classification:</span> <strong style="text-transform:uppercase;color:#38BDF8;">${targetLocation.category || 'MARITIME LOCATION'}</strong></div>
+          <div class="gis-popup-row"><span>Coordinates:</span> <strong>${targetLocation.lat.toFixed(4)}°N, ${targetLocation.lng.toFixed(4)}°E</strong></div>
+          ${targetLocation.sub ? `<div class="gis-popup-row"><span>Details:</span> <span>${targetLocation.sub}</span></div>` : ''}
+        </div>
+      `);
+
+    marker.addTo(map);
+    setTimeout(() => {
+      marker.openPopup();
+    }, 1600);
+    searchTargetMarkerRef.current = marker;
+  }, [targetLocation]);
 
   // Render REAL satellite imagery picture, ML-predicted oil spill, past origin, and future drift forecast
   useEffect(() => {

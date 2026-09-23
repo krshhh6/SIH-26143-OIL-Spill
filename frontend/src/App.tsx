@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { TabType } from './types/dashboard';
 import { SCENARIOS } from './data/scenarios';
-import { useIncidents } from './hooks/useIncidents';
+import { useIncidents, type LiveIncident } from './hooks/useIncidents';
 import { Topbar } from './components/Topbar';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/views/DashboardView';
@@ -13,6 +13,11 @@ import { DetectionView } from './components/views/DetectionView';
 import { ForensicModal } from './components/modals/ForensicModal';
 import { SentinelHubModal } from './components/modals/SentinelHubModal';
 import { BhoonidhiModal } from './components/modals/BhoonidhiModal';
+import {
+  searchMaritimeCatalog,
+  parseGpsCoordinates,
+  type MaritimeSearchResult,
+} from './services/maritimeSearchService';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -23,6 +28,14 @@ export const App: React.FC = () => {
   const [isSentinelHubOpen, setIsSentinelHubOpen] = useState<boolean>(false);
   const [isBhoonidhiOpen, setIsBhoonidhiOpen] = useState<boolean>(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState<boolean>(false);
+  const [targetLocation, setTargetLocation] = useState<{
+    lat: number;
+    lng: number;
+    zoom?: number;
+    title: string;
+    sub?: string;
+    category?: string;
+  } | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -37,6 +50,31 @@ export const App: React.FC = () => {
   // Live incident data — falls back to static SCENARIOS when backend is offline
   const { incidents, scenarios: liveScenarios } = useIncidents();
   const scenarios = { ...SCENARIOS, ...liveScenarios };
+
+  // Incidents dynamically registered from SAR Detection Lab uploads & inferences
+  const [labIncidents, setLabIncidents] = useState<LiveIncident[]>(() => {
+    try {
+      const stored = localStorage.getItem('SPILL_SENSE_LAB_INCIDENTS');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handleApplyLabDetection = (incident: LiveIncident) => {
+    setLabIncidents((prev) => {
+      const filtered = prev.filter((i) => i.id !== incident.id);
+      const updated = [incident, ...filtered];
+      try {
+        localStorage.setItem('SPILL_SENSE_LAB_INCIDENTS', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const allIncidents = useMemo(() => {
+    return [...labIncidents, ...incidents];
+  }, [labIncidents, incidents]);
 
   const scenario = currentScenarioKey ? scenarios[currentScenarioKey] || null : null;
 
@@ -61,23 +99,77 @@ export const App: React.FC = () => {
     if (key && scenarios[key]) {
       const s = scenarios[key];
       setCoordinates(`${s.lat.toFixed(4)}°N, ${s.lng.toFixed(4)}°E`);
+      setTargetLocation(null);
     } else {
       setCoordinates('15.5000°N, 79.0000°E (Indian Ocean EEZ)');
+      setTargetLocation(null);
+    }
+  };
+
+  const handleSelectSearchResult = (result: MaritimeSearchResult) => {
+    setActiveTab('dashboard');
+    if (result.scenarioKey && scenarios[result.scenarioKey]) {
+      handleSelectScenario(result.scenarioKey);
+    } else {
+      setCoordinates(`${result.lat.toFixed(4)}°N, ${result.lng.toFixed(4)}°E (${result.title})`);
+      setTargetLocation({
+        lat: result.lat,
+        lng: result.lng,
+        zoom: result.zoom || 12,
+        title: result.title,
+        sub: result.sub,
+        category: result.category,
+      });
     }
   };
 
   const handleSearchPlace = (query: string) => {
-    const q = query.toLowerCase();
-    if (q.includes('mumbai')) handleSelectScenario('INC-001');
-    else if (q.includes('chennai') || q.includes('ennore')) handleSelectScenario('INC-002');
-    else if (q.includes('andaman') || q.includes('malacca')) handleSelectScenario('INC-003');
-    else if (q.includes('goa')) handleSelectScenario('INC-004');
-    else if (q.includes('kutch') || q.includes('vadinar') || q.includes('gujarat')) handleSelectScenario('INC-005');
-    else if (q.includes('cochin') || q.includes('kochi') || q.includes('kerala')) handleSelectScenario('INC-006');
-    else if (q.includes('paradip') || q.includes('odisha') || q.includes('bengal')) handleSelectScenario('INC-007');
-    else if (q.includes('lakshadweep') || q.includes('channel')) handleSelectScenario('INC-008');
-    else {
-      alert(`Maritime Place Search: Found location coordinates for "${query}". Navigating chart.`);
+    const results = searchMaritimeCatalog(query, scenarios);
+    if (results.length > 0) {
+      handleSelectSearchResult(results[0]);
+    } else {
+      const coords = parseGpsCoordinates(query);
+      if (coords) {
+        handleSelectSearchResult({
+          id: 'coord-custom',
+          title: `GPS: ${coords.lat.toFixed(4)}°N, ${coords.lng.toFixed(4)}°E`,
+          category: 'coordinate',
+          lat: coords.lat,
+          lng: coords.lng,
+          zoom: 12,
+          sub: 'Direct nautical coordinate inspection',
+          badge: 'COORDINATES',
+          badgeColor: '#0284C7',
+          icon: 'pin_drop',
+        });
+      } else {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data && data.length > 0) {
+              const item = data[0];
+              const lat = parseFloat(item.lat);
+              const lng = parseFloat(item.lon);
+              handleSelectSearchResult({
+                id: `geo-${item.osm_id}`,
+                title: item.name || query,
+                category: 'external',
+                lat,
+                lng,
+                zoom: 10,
+                sub: item.display_name,
+                badge: 'GEO SEARCH',
+                badgeColor: '#10B981',
+                icon: 'public',
+              });
+            } else {
+              alert(`Maritime Intelligence Directory: No port, strait, or vessel found matching "${query}".`);
+            }
+          })
+          .catch(() => {
+            alert(`Maritime Intelligence Directory: Could not locate "${query}".`);
+          });
+      }
     }
   };
 
@@ -111,7 +203,7 @@ export const App: React.FC = () => {
         currentScenarioKey={currentScenarioKey}
         onSelectScenario={handleSelectScenario}
         onOpenSettings={() => setIsForensicOpen(true)}
-        incidents={incidents}
+        incidents={allIncidents}
       />
 
       {/* MAIN WORKSPACE CANVAS */}
@@ -128,6 +220,8 @@ export const App: React.FC = () => {
           onOpenSentinelHubModal={() => setIsSentinelHubOpen(true)}
           onOpenBhoonidhiModal={() => setIsBhoonidhiOpen(true)}
           onSearchPlace={handleSearchPlace}
+          onSelectSearchResult={handleSelectSearchResult}
+          scenarios={scenarios}
         />
 
         {/* WORKSPACE MAIN VIEW */}
@@ -145,10 +239,11 @@ export const App: React.FC = () => {
               onOpenForensicModal={() => setIsForensicOpen(true)}
               onUpdateCoords={setCoordinates}
               onSelectScenario={handleSelectScenario}
-              incidents={incidents}
+              incidents={allIncidents}
               scenarios={scenarios}
               isFullscreen={isMapFullscreen}
               onToggleFullscreen={() => setIsMapFullscreen((prev) => !prev)}
+              targetLocation={targetLocation}
             />
           )}
 
@@ -174,9 +269,14 @@ export const App: React.FC = () => {
             />
           )}
 
-          {activeTab === 'analytics' && <AnalyticsView incidents={incidents} />}
+          {activeTab === 'analytics' && <AnalyticsView incidents={allIncidents} />}
 
-          {activeTab === 'detection' && <DetectionView onSelectTab={setActiveTab} />}
+          {activeTab === 'detection' && (
+            <DetectionView
+              onSelectTab={setActiveTab}
+              onApplyLabDetection={handleApplyLabDetection}
+            />
+          )}
         </main>
       </div>
 

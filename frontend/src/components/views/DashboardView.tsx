@@ -13,6 +13,14 @@ interface DashboardViewProps {
   scenarios?: Record<string, Scenario>;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  targetLocation?: {
+    lat: number;
+    lng: number;
+    zoom?: number;
+    title: string;
+    sub?: string;
+    category?: string;
+  } | null;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -25,6 +33,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   scenarios,
   isFullscreen: externalFullscreen,
   onToggleFullscreen: externalToggleFullscreen,
+  targetLocation,
 }) => {
   const [internalFullscreen, setInternalFullscreen] = useState(false);
   const isFullscreen = externalFullscreen !== undefined ? externalFullscreen : internalFullscreen;
@@ -162,6 +171,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onUpdateCoords={onUpdateCoords}
             onSelectScenario={onSelectScenario}
             scenarios={scenarios}
+            targetLocation={targetLocation}
           />
         </div>
 
