@@ -1,0 +1,472 @@
+{
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "metadata": {
+    "dossier_id": "SPILL-2024-11-14-KUTCH-005",
+    "statutory_ref": "ICG/MRCC/2026/SS-INC-005",
+    "mission": "Sentinel-1A C-SAR (Copernicus)",
+    "product_type": "Level-1 Ground Range Detected (GRD-HR)",
+    "acquisition_mode": "Interferometric Wide Swath (IW)",
+    "polarization": "Dual-Pol (VV + VH)",
+    "acquisition_time_utc": "2024-11-14T04:22:18.412Z",
+    "geographic_location": "Gulf of Kutch Deepwater Tanker Fairway, Arabian Sea EEZ, India",
+    "centroid_wgs84": [
+      69.5,
+      22.61
+    ],
+    "spatial_resolution_m": 10.0,
+    "neural_network_architecture": "DeepLabV3+ with ResNet-50 SAR Backscatter Encoder",
+    "training_dataset": "CSIRO & Maritime Sentinel-1 SAR Oil Slick Benchmark",
+    "radiometric_calibration": "Sigma0 Normalized Radar Cross Section (NRCS) Decibels",
+    "digital_custody_hash_sha256": "d8e3b7c2a1f09e45c7b8a21390d6e5f1b4a8c9d0e2f3a4b5c6d7e8f9a0b1c2d3",
+    "forensic_integrity": "Cryptographically Sealed under RFC 3161 TSP & ISO/IEC 27037"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "SLICK-CORE-EMULSION",
+      "properties": {
+        "layer_classification": "Continuous Emulsion Core",
+        "bonn_agreement_code": 5,
+        "bonn_descriptor": "Discontinuous to Continuous True Oil / Chocolate Mousse Emulsion",
+        "layer_color_hex": "#F59E0B",
+        "film_thickness_range_um": "50 to >200",
+        "surface_area_km2": 4.82,
+        "estimated_discharge_volume_m3": 312.4,
+        "estimated_discharge_volume_metric_tons": 274.9,
+        "mean_damping_ratio_db": -14.2,
+        "min_backscatter_sigma0_db": -24.85,
+        "surrounding_sea_sigma0_db": -10.65,
+        "u_net_segmentation_confidence": 0.948,
+        "statutory_violation": "MARPOL 73/78 Annex I Reg 15 / Merchant Shipping Act 1958 Sec 356"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              69.536192,
+              22.616382
+            ],
+            [
+              69.532545,
+              22.617265
+            ],
+            [
+              69.535375,
+              22.619644
+            ],
+            [
+              69.529184,
+              22.619529
+            ],
+            [
+              69.529385,
+              22.621396
+            ],
+            [
+              69.527902,
+              22.622857
+            ],
+            [
+              69.521754,
+              22.622021
+            ],
+            [
+              69.520103,
+              22.623598
+            ],
+            [
+              69.516201,
+              22.623937
+            ],
+            [
+              69.510815,
+              22.622714
+            ],
+            [
+              69.507461,
+              22.624027
+            ],
+            [
+              69.502287,
+              22.621759
+            ],
+            [
+              69.497875,
+              22.622054
+            ],
+            [
+              69.492975,
+              22.621688
+            ],
+            [
+              69.489613,
+              22.61935
+            ],
+            [
+              69.48428,
+              22.618936
+            ],
+            [
+              69.480009,
+              22.617555
+            ],
+            [
+              69.478269,
+              22.615449
+            ],
+            [
+              69.472086,
+              22.614384
+            ],
+            [
+              69.473103,
+              22.61223
+            ],
+            [
+              69.46849,
+              22.610658
+            ],
+            [
+              69.465073,
+              22.608831
+            ],
+            [
+              69.467859,
+              22.607329
+            ],
+            [
+              69.464177,
+              22.605338
+            ],
+            [
+              69.463808,
+              22.603618
+            ],
+            [
+              69.467455,
+              22.602735
+            ],
+            [
+              69.464625,
+              22.600356
+            ],
+            [
+              69.470816,
+              22.600471
+            ],
+            [
+              69.470615,
+              22.598604
+            ],
+            [
+              69.472098,
+              22.597143
+            ],
+            [
+              69.478246,
+              22.597979
+            ],
+            [
+              69.479897,
+              22.596402
+            ],
+            [
+              69.483799,
+              22.596063
+            ],
+            [
+              69.489185,
+              22.597286
+            ],
+            [
+              69.492539,
+              22.595973
+            ],
+            [
+              69.497713,
+              22.598241
+            ],
+            [
+              69.502125,
+              22.597946
+            ],
+            [
+              69.507025,
+              22.598312
+            ],
+            [
+              69.510387,
+              22.60065
+            ],
+            [
+              69.51572,
+              22.601064
+            ],
+            [
+              69.519991,
+              22.602445
+            ],
+            [
+              69.521731,
+              22.604551
+            ],
+            [
+              69.527914,
+              22.605616
+            ],
+            [
+              69.526897,
+              22.60777
+            ],
+            [
+              69.53151,
+              22.609342
+            ],
+            [
+              69.534927,
+              22.611169
+            ],
+            [
+              69.532141,
+              22.612671
+            ],
+            [
+              69.535823,
+              22.614662
+            ],
+            [
+              69.536192,
+              22.616382
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SLICK-SPREADING-SHEEN",
+      "properties": {
+        "layer_classification": "Spreading Sheen / Metallic Film",
+        "bonn_agreement_code": 2,
+        "bonn_descriptor": "Rainbow & Metallic Surface Sheen",
+        "layer_color_hex": "#0284C7",
+        "film_thickness_range_um": "0.3 to 5.0",
+        "surface_area_km2": 14.85,
+        "estimated_sheen_volume_m3": 48.6,
+        "mean_damping_ratio_db": -6.8,
+        "u_net_segmentation_confidence": 0.892,
+        "dispersion_status": "Actively weathering under 4.1 m/s wind and 0.42 kn tidal currents"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              69.576579,
+              22.623503
+            ],
+            [
+              69.564831,
+              22.624636
+            ],
+            [
+              69.5754,
+              22.630948
+            ],
+            [
+              69.558041,
+              22.629428
+            ],
+            [
+              69.561515,
+              22.634575
+            ],
+            [
+              69.558856,
+              22.638057
+            ],
+            [
+              69.54319,
+              22.63479
+            ],
+            [
+              69.541958,
+              22.6396
+            ],
+            [
+              69.532489,
+              22.639279
+            ],
+            [
+              69.522045,
+              22.637303
+            ],
+            [
+              69.51511,
+              22.640206
+            ],
+            [
+              69.504444,
+              22.635127
+            ],
+            [
+              69.494943,
+              22.638678
+            ],
+            [
+              69.487504,
+              22.631616
+            ],
+            [
+              69.476379,
+              22.632356
+            ],
+            [
+              69.465564,
+              22.630759
+            ],
+            [
+              69.463786,
+              22.624649
+            ],
+            [
+              69.450448,
+              22.623465
+            ],
+            [
+              69.445069,
+              22.619543
+            ],
+            [
+              69.443358,
+              22.615442
+            ],
+            [
+              69.431243,
+              22.612133
+            ],
+            [
+              69.43747,
+              22.60837
+            ],
+            [
+              69.421982,
+              22.603896
+            ],
+            [
+              69.435491,
+              22.601761
+            ],
+            [
+              69.426258,
+              22.596997
+            ],
+            [
+              69.423319,
+              22.592688
+            ],
+            [
+              69.438064,
+              22.592793
+            ],
+            [
+              69.432392,
+              22.587369
+            ],
+            [
+              69.439076,
+              22.585661
+            ],
+            [
+              69.448635,
+              22.585514
+            ],
+            [
+              69.449299,
+              22.580898
+            ],
+            [
+              69.463188,
+              22.58403
+            ],
+            [
+              69.464672,
+              22.578163
+            ],
+            [
+              69.479103,
+              22.584119
+            ],
+            [
+              69.48545,
+              22.580913
+            ],
+            [
+              69.494743,
+              22.58028
+            ],
+            [
+              69.504154,
+              22.586443
+            ],
+            [
+              69.514555,
+              22.584821
+            ],
+            [
+              69.523394,
+              22.587858
+            ],
+            [
+              69.530054,
+              22.591883
+            ],
+            [
+              69.542512,
+              22.592803
+            ],
+            [
+              69.543475,
+              22.598187
+            ],
+            [
+              69.55973,
+              22.599623
+            ],
+            [
+              69.553692,
+              22.604842
+            ],
+            [
+              69.566211,
+              22.607946
+            ],
+            [
+              69.57396,
+              22.611928
+            ],
+            [
+              69.564086,
+              22.615014
+            ],
+            [
+              69.575142,
+              22.619597
+            ],
+            [
+              69.576579,
+              22.623503
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

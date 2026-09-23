@@ -48,7 +48,7 @@ STATIC_INCIDENTS: List[IncidentSummary] = [
         lat=15.420, lng=73.650, severity="LOW", oil_type="Diesel / Marine Gas Oil",
         oil_color="#EAB308", area="1.75 km²", top_vessel="SEA PEARL", attribution_score=0.55),
     IncidentSummary(id="INC-005", title="Gulf of Kutch / Vadinar Deepwater Terminal",
-        lat=22.480, lng=69.520, severity="HIGH", oil_type="Crude Oil",
+        lat=22.600, lng=69.500, severity="HIGH", oil_type="Crude Oil",
         oil_color="#B45309", area="3.85 km²", top_vessel="AL KHALEEJ STAR", attribution_score=0.78),
     IncidentSummary(id="INC-006", title="Cochin Port SPM Anchorage",
         lat=9.960, lng=76.080, severity="MEDIUM", oil_type="Heavy Bunker Fuel",

@@ -94,6 +94,19 @@ export function clampToNavigableWaters(coord: [number, number]): [number, number
     return [lat, lng];
   }
 
+  // 1. GULF OF KUTCH / VADINAR SPECIAL MARITIME BOUNDARY
+  // The Gulf of Kutch is an east-west channel between Lat 22.20°N and 23.05°N, Lng 68.80°E to 70.30°E
+  // Deepwater VLCC shipping channel runs between 22.58°N and 22.72°N
+  // South (<22.56°N) are the Marine National Park mangrove islands (Nora Tapu, Gaudweep, Bhaidar Tapu)
+  // North (>22.74°N) is the northern Kutch coast (Mandvi)
+  if (lat >= 22.20 && lat <= 23.05 && lng >= 68.80 && lng <= 70.30) {
+    let safeLat = lat;
+    let safeLng = lng;
+    if (safeLat < 22.58) safeLat = 22.60; // Strictly keep north of Nora Tapu into the 35m deepwater fairway
+    if (safeLat > 22.72) safeLat = 22.70; // Strictly keep south of Mandvi coast into the fairway
+    return [+safeLat.toFixed(4), +safeLng.toFixed(4)];
+  }
+
   const { westLng, eastLng } = getIndianCoastline(lat);
   const midLng = (westLng + eastLng) / 2.0;
 
@@ -139,65 +152,65 @@ function roundCoord(num: number): number {
 }
 
 /**
- * Calculates backward hydrodynamic Lagrangian drift trajectory, origin envelopes,
- * candidate AIS vessel tracks, and forward predicted drift forecasts (+12h, +24h),
- * STRICTLY restricted to navigable ocean waters outside the Indian coastline.
+ * Computes realistic hydrodynamic dispersion contours, backward Lagrangian origin,
+ * and future forward drift cones strictly clamped to deep navigable waters.
  */
 export function computeBackwardDriftGeometry(
   scenarioId: string,
-  detectedCentroid: [number, number]
+  incidentCoord: [number, number]
 ): DriftGeometry {
-  const [lat, lng] = detectedCentroid;
+  const safeCoord = clampToNavigableWaters(incidentCoord);
+  const lat = safeCoord[0];
+  const lng = safeCoord[1];
 
-  let driftAngle = 1.15;
-  let originLat = lat - 0.10;
-  let originLng = lng - 0.08;
-  let heading = 165; // SSE tanker corridor
-  let fwdDLat = 0.07;
-  let fwdDLng = 0.06;
+  let driftAngle = 0.0;
+  let originLat = lat;
+  let originLng = lng;
+  let heading = 180;
+  let fwdDLat = 0.0;
+  let fwdDLng = 0.0;
 
   if (scenarioId.includes('001')) {
-    // Mumbai High (Deep Arabian Sea, 120km offshore)
-    driftAngle = 1.15;
-    originLat = lat - 0.12;
-    originLng = lng - 0.09;
-    heading = 165;
-    fwdDLat = 0.075;
-    fwdDLng = 0.060;
+    // Bombay High (Arabian Sea, 160km offshore Mumbai)
+    driftAngle = 2.45;
+    originLat = lat + 0.06;
+    originLng = lng - 0.07;
+    heading = 205; // SSW Arabian Sea transit
+    fwdDLat = -0.065;
+    fwdDLng = 0.075;
   } else if (scenarioId.includes('002')) {
-    // Chennai-Ennore Corridor (Coromandel Coast, Bay of Bengal)
-    // Land is to the WEST (80.33°E). Sea is to the EAST.
+    // Chennai Coast / Ennore Port (Bay of Bengal)
     driftAngle = 0.35;
-    originLat = lat - 0.09;
-    originLng = lng - 0.015; // stays safely in water >80.40°E
-    heading = 20; // NNE parallel to coast
+    originLat = lat - 0.08;
+    originLng = lng + 0.015;
+    heading = 20; // NNE along Coromandel current
     fwdDLat = 0.085;
-    fwdDLng = 0.015;
+    fwdDLng = 0.018;
   } else if (scenarioId.includes('003')) {
-    // Andaman Sea Shipping Lane 7 (Open Sea)
-    driftAngle = 4.35;
-    originLat = lat + 0.08;
-    originLng = lng - 0.10;
-    heading = 115; // ESE toward Malacca
-    fwdDLat = -0.060;
-    fwdDLng = 0.090;
+    // Gulf of Mannar
+    driftAngle = 0.20;
+    originLat = lat - 0.05;
+    originLng = lng + 0.04;
+    heading = 45;
+    fwdDLat = 0.060;
+    fwdDLng = -0.020;
   } else if (scenarioId.includes('004')) {
-    // Goa Coastal Waters (Arabian Sea)
-    // Land is to the EAST (73.78°E). Sea is to the WEST.
-    driftAngle = 2.85;
-    originLat = lat + 0.08;
-    originLng = lng - 0.035; // stays in water <73.65°E
+    // Goa Coastal Waters (Deep Arabian Sea)
+    driftAngle = 2.75;
+    originLat = lat + 0.070;
+    originLng = lng - 0.035;
     heading = 165; // SSE parallel to Konkan coast
     fwdDLat = -0.080;
     fwdDLng = -0.025;
   } else if (scenarioId.includes('005')) {
-    // Gulf of Kutch / Vadinar SPM Channel
-    driftAngle = 0.90;
-    originLat = lat - 0.04;
-    originLng = lng - 0.11; // westwards in the gulf fairway
-    heading = 75; // ENE along deepwater channel
-    fwdDLat = 0.035;
-    fwdDLng = 0.080;
+    // Gulf of Kutch / Vadinar SPM Deepwater Fairway
+    // Water flows ENE along the deep 35m shipping channel (heading ~80°)
+    driftAngle = 0.85;
+    originLat = 22.615; // 15 km upstream in deep channel (~69.36°E)
+    originLng = 69.360;
+    heading = 80;       // ENE along the main Kandla/Vadinar deep-draft fairway
+    fwdDLat = 0.005;
+    fwdDLng = 0.080;    // Downstream towards Vadinar SPM in open channel (~22.615°N, 69.580°E)
   } else if (scenarioId.includes('006')) {
     // Cochin Port SPM Anchorage (Arabian Sea, Kerala coast)
     // Land is to the EAST (Kerala coast at 76.22°E). Sea is strictly to the WEST.
@@ -353,18 +366,8 @@ export function computeBackwardDriftGeometry(
   const aisGapTrack = rawGapTrack.map(clampToNavigableWaters);
 
   // Construct local Coastal Land Exclusion Boundary Line (Shoreline Guard)
-  // Provides visual proof of land restriction along the nearest coastline segment
+  // Left empty to prevent artificial straight-line segments across water bodies
   const coastalBoundary: [number, number][] = [];
-  const minLat = Math.min(lat, originLat, predictedCoord24h[0]) - 0.25;
-  const maxLat = Math.max(lat, originLat, predictedCoord24h[0]) + 0.25;
-  const steps = 14;
-  for (let i = 0; i <= steps; i++) {
-    const cLat = minLat + (maxLat - minLat) * (i / steps);
-    const bounds = getIndianCoastline(cLat);
-    const isWest = lng < (bounds.westLng + bounds.eastLng) / 2.0;
-    const cLng = isWest ? bounds.westLng : bounds.eastLng;
-    coastalBoundary.push([+cLat.toFixed(4), +cLng.toFixed(4)]);
-  }
 
   return {
     envelope90,

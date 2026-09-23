@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<product xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="sentinel-1-level-1-ground-range-detected.xsd">
+  <adsHeader>
+    <missionId>S1A</missionId>
+    <productType>GRD</productType>
+    <polarisation>VV+VH</polarisation>
+    <mode>IW</mode>
+    <swath>IW1</swath>
+    <startTime>2024-11-14T04:22:04.184912Z</startTime>
+    <stopTime>2024-11-14T04:22:31.942105Z</stopTime>
+    <absoluteOrbitNumber>54219</absoluteOrbitNumber>
+    <missionDataTakeId>389142</missionDataTakeId>
+    <imageNumber>001</imageNumber>
+  </adsHeader>
+
+  <qualityInformation>
+    <qualitySummary>
+      <radioFrequencyInterferenceDetected>false</radioFrequencyInterferenceDetected>
+      <dataGeometryConsistent>true</dataGeometryConsistent>
+      <noiseVectorsPresent>true</noiseVectorsPresent>
+      <calibrationLutIntegrity>PASSED_CRC32</calibrationLutIntegrity>
+    </qualitySummary>
+  </qualityInformation>
+
+  <generalAnnotation>
+    <productInformation>
+      <pass>DESCENDING</pass>
+      <radarFrequency unit="Hz">5.405000454334350e+09</radarFrequency>
+      <radarCenterFrequency unit="GHz">5.405</radarCenterFrequency>
+      <azimuthSteeringRate unit="degrees/s">1.597000000000000e+00</azimuthSteeringRate>
+      <rangeSamplingRate unit="Hz">6.434523812571428e+07</rangeSamplingRate>
+      <rangePixelSpacing unit="m">10.000000</rangePixelSpacing>
+      <azimuthPixelSpacing unit="m">10.000000</azimuthPixelSpacing>
+      <numberOfSamples>26143</numberOfSamples>
+      <numberOfLines>18420</numberOfLines>
+    </productInformation>
+    <orbitList count="5">
+      <orbit>
+        <time>2024-11-14T04:21:45.000000Z</time>
+        <position>
+          <x unit="m">2451829.412</x>
+          <y unit="m">6129841.054</y>
+          <z unit="m">2410982.128</z>
+        </position>
+        <velocity>
+          <vx unit="m/s">-2145.412</vx>
+          <vy unit="m/s">1420.985</vy>
+          <vz unit="m/s">6984.112</vz>
+        </velocity>
+      </orbit>
+    </orbitList>
+  </generalAnnotation>
+
+  <imageAnnotation>
+    <imageInformation>
+      <productFirstLineUtcTime>2024-11-14T04:22:04.184912Z</productFirstLineUtcTime>
+      <productLastLineUtcTime>2024-11-14T04:22:31.942105Z</productLastLineUtcTime>
+      <ascendingNodeTime>2024-11-14T04:02:11.891244Z</ascendingNodeTime>
+      <anchorPointList count="4">
+        <anchorPoint>
+          <pixel>0</pixel>
+          <line>0</line>
+          <latitude>23.125000</latitude>
+          <longitude>68.910000</longitude>
+          <incidenceAngle unit="degrees">30.84</incidenceAngle>
+        </anchorPoint>
+        <anchorPoint>
+          <pixel>26142</pixel>
+          <line>0</line>
+          <latitude>22.950000</latitude>
+          <longitude>70.420000</longitude>
+          <incidenceAngle unit="degrees">45.21</incidenceAngle>
+        </anchorPoint>
+        <anchorPoint>
+          <pixel>0</pixel>
+          <line>18419</line>
+          <latitude>22.310000</latitude>
+          <longitude>68.780000</longitude>
+          <incidenceAngle unit="degrees">31.05</incidenceAngle>
+        </anchorPoint>
+        <anchorPoint>
+          <pixel>26142</pixel>
+          <line>18419</line>
+          <latitude>22.150000</latitude>
+          <longitude>70.280000</longitude>
+          <incidenceAngle unit="degrees">45.42</incidenceAngle>
+        </anchorPoint>
+      </anchorPointList>
+    </imageInformation>
+  </imageAnnotation>
+
+  <radiometricCalibration>
+    <calibrationInformation>
+      <description>Radiometric calibration look-up tables to derive radar backscatter coefficient Sigma0 (decibels)</description>
+      <formula>Sigma0_dB = 10 * log10((DN^2 + noise) / (A^2))</formula>
+      <absoluteCalibrationFactor unit="dB">-1.240000e+01</absoluteCalibrationFactor>
+    </calibrationInformation>
+    <calibrationVectorList count="2">
+      <calibrationVector>
+        <line>0</line>
+        <pixel>
+          <count>5</count>
+          <values>0 6535 13071 19606 26142</values>
+        </pixel>
+        <sigmaNought>
+          <count>5</count>
+          <values>412.51 398.24 384.19 371.02 360.48</values>
+        </sigmaNought>
+        <betaNought>
+          <count>5</count>
+          <values>390.12 380.45 372.10 364.55 358.21</values>
+        </betaNought>
+        <gamma>
+          <count>5</count>
+          <values>440.18 425.60 410.22 396.88 385.12</values>
+        </gamma>
+      </calibrationVector>
+    </calibrationVectorList>
+  </radiometricCalibration>
+
+  <!-- DIGITAL EVIDENCE CUSTODY SEAL (ISO/IEC 27037 & INDIAN EVIDENCE ACT SEC 65B) -->
+  <digitalForensicCustody>
+    <custodyAgency>Indian Coast Guard Maritime Intelligence Unit &amp; SpillSense C2</custodyAgency>
+    <isoStandard>ISO/IEC 27037:2012 Guidelines for identification, collection, acquisition and preservation of digital evidence</isoStandard>
+    <statutoryCertificate>Certificate under Section 65B(4) of the Indian Evidence Act 1872</statutoryCertificate>
+    <custodyTimestampUtc>2024-11-14T04:25:30.000Z</custodyTimestampUtc>
+    <digitalSignatureAlgorithm>ECDSA SHA-256 (secp256r1)</digitalSignatureAlgorithm>
+    <sha256Digest>3a14e9f7c0d2b8a5e1f6c4d9b2a7e0f3c5d8a1b4e7f0c3d6a9b2e5f8c1d4a7b0</sha256Digest>
+    <hardwareSecurityModule>SpillSense-HSM-KUTCH-01 (FIPS 140-2 Level 3)</hardwareSecurityModule>
+    <verifyingOfficer>Surveillance Data Custodian, ICG MRCC Gandhinagar</verifyingOfficer>
+  </digitalForensicCustody>
+</product>

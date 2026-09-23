@@ -328,12 +328,12 @@ export const MapPanel: React.FC<MapPanelProps> = ({ scenario, onUpdateCoords, on
               Bathymetry
             </button>
             <button
-              className={`base-btn ${baseLayer2D === 'carto-voyager' || baseLayer2D === 'opensea' ? 'active' : ''}`}
+              className={`base-btn ${baseLayer2D === 'carto-voyager' || baseLayer2D === 'google-satellite' || baseLayer2D === 'opensea' ? 'active' : ''}`}
               onClick={() => handleSelectBasemap('carto-voyager')}
               style={{ fontSize: 11, padding: '3px 8px', borderRadius: 3 }}
-              title="Nautical & Hydrographic Navigation Chart"
+              title="Google Earth Ultra-HD Satellite (Zoom 21 - View real boats, ships, wakes, piers & harbor SPM)"
             >
-              Nautical
+              Google Earth
             </button>
           </div>
 

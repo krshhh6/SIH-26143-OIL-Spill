@@ -73,9 +73,9 @@ export const SCENARIOS: Record<string, Scenario> = {
   'INC-005': {
     id: 'INC-2026-005',
     title: 'Gulf of Kutch / Vadinar Deepwater Terminal',
-    sub: 'Vadinar Single Point Mooring (SPM) · Gulf of Kutch EEZ · 22.480°N, 69.520°E',
-    lat: 22.480,
-    lng: 69.520,
+    sub: 'Vadinar Single Point Mooring (SPM) Fairway · Gulf of Kutch · 22.600°N, 69.500°E',
+    lat: 22.600,
+    lng: 69.500,
     oilType: 'Crude Oil',
     oilColor: '#B45309',
     oilFill: 'rgba(180, 83, 9, 0.45)',

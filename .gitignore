@@ -31,6 +31,7 @@ Thumbs.db
 # Large Geospatial & Raw Satellite Rasters
 *.SAFE/
 *.zip
+!frontend/public/downloads/*.zip
 *.tar.gz
 *.nc
 *.nc4

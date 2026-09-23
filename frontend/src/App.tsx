@@ -148,7 +148,10 @@ export const App: React.FC = () => {
           )}
 
           {activeTab === 'evidence' && (
-            <EvidenceView onOpenForensicModal={() => setIsForensicOpen(true)} />
+            <EvidenceView
+              onOpenForensicModal={() => setIsForensicOpen(true)}
+              currentScenario={scenario}
+            />
           )}
 
           {activeTab === 'analytics' && <AnalyticsView incidents={incidents} />}

@@ -116,17 +116,21 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       }
     );
 
-    // 4. Hydrographic & Nautical Chart (Carto Voyager)
+    // 4. Google Earth Ultra-HD Satellite & Marine Infrastructure (Zoom 0-22)
+    // Down to 30cm/pixel: lets operators zoom into water to see actual boats, ships, wakes, piers, and harbor SPMs
     baseLayersRef.current['carto-voyager'] = L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
       {
-        subdomains: ['a', 'b', 'c', 'd'],
-        maxNativeZoom: 19,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        maxNativeZoom: 21,
         maxZoom: 22,
         noWrap: true,
         bounds: maxWorldBounds,
+        attribution: '© Google Earth / Maxar / Airbus Marine Imagery',
+        className: 'google-earth-satellite-tiles',
       }
     );
+    baseLayersRef.current['google-satellite'] = baseLayersRef.current['carto-voyager'];
 
     // 5. Tactical Dark Night Chart (Carto Dark)
     baseLayersRef.current['carto-dark'] = L.tileLayer(
@@ -830,20 +834,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         opacity: 0.95,
       }).bindTooltip(`<b>AIS Silence Gap Segment</b><br>${scenario.diagDetails}`, { sticky: true, className: 'gis-custom-tooltip' });
       group.addLayer(gapLine);
-
-      // E. COASTAL LAND EXCLUSION BOUNDARY & SHORELINE GUARD LINE
-      if (driftGeo.coastalBoundary && driftGeo.coastalBoundary.length > 1) {
-        const coastBarrier = L.polyline(driftGeo.coastalBoundary, {
-          color: '#F59E0B',
-          weight: 2.5,
-          dashArray: '5, 5',
-          opacity: 0.90,
-        }).bindTooltip(
-          '<b>🛡️ Sovereign Shoreline Land Boundary</b><br>Territorial Baseline · Hydrodynamic Containment Enforced (No Landward Drift)',
-          { sticky: true, className: 'gis-custom-tooltip' }
-        );
-        group.addLayer(coastBarrier);
-      }
 
       const vesselPos = driftGeo.vesselTrack[driftGeo.vesselTrack.length - 1];
       const vesselIcon = L.divIcon({
