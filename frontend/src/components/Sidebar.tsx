@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import type { TabType } from '../types/dashboard';
-import type { LiveIncident } from '../hooks/useIncidents';
 import { SCENARIOS } from '../data/scenarios';
 
 interface SidebarProps {
@@ -9,7 +8,6 @@ interface SidebarProps {
   currentScenarioKey?: string;
   onSelectScenario?: (key: string) => void;
   onOpenSettings?: () => void;
-  incidents?: LiveIncident[];
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -18,25 +16,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentScenarioKey = '',
   onSelectScenario,
   onOpenSettings,
-  incidents,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isTreeExpanded, setIsTreeExpanded] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Use live incidents if available, otherwise fall back to static SCENARIOS
-  const allEntries: [string, { id: string; title: string; oilType: string }][] =
-    incidents && incidents.length > 0
-      ? incidents.map((inc) => [
-          inc.id,
-          { id: inc.id, title: inc.title, oilType: inc.oil_type },
-        ])
-      : Object.entries(SCENARIOS).map(([key, s]) => [
-          key,
-          { id: s.id, title: s.title, oilType: s.oilType },
-        ]);
-
-  const filteredEntries = allEntries.filter(([key, s]) => {
+  const filteredScenarios = Object.entries(SCENARIOS).filter(([key, s]) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -46,9 +31,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       s.id.toLowerCase().includes(q)
     );
   });
-
-  const totalCount = allEntries.length;
-
 
   return (
     <aside className={`secondary-drawer ${isCollapsed ? 'collapsed' : ''}`}>
@@ -112,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="material-symbols-outlined nav-icon">dashboard</span>
                 <span className="nav-label">Dashboard</span>
               </div>
-              <span className="nav-pill-badge">{totalCount}</span>
+              <span className="nav-pill-badge">4</span>
             </button>
 
             <button
@@ -178,7 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="status-dot dot-live" />
                 <span>Active Slicks</span>
               </div>
-              <span className="status-count">{totalCount}</span>
+              <span className="status-count">4</span>
             </div>
             <div className="drawer-status-row">
               <div className="drawer-status-left">
@@ -248,11 +230,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <span className="material-symbols-outlined tree-icon">folder_open</span>
                 <span className="tree-label">National Indian Ocean</span>
-                <span className="tree-count">{totalCount}</span>
+                <span className="tree-count">4</span>
               </div>
 
               <div className="tree-children">
-                {filteredEntries.map(([key, s]) => {
+                {filteredScenarios.map(([key, s]) => {
                   const isSelected = currentScenarioKey === key;
                   return (
                     <div
@@ -266,7 +248,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span className="tree-label" title={`${s.id}: ${s.title}`}>
                         {s.title}
                       </span>
-                      <span className="tree-count">—</span>
+                      <span className="tree-count">
+                        {key === 'INC-001' ? '12' : key === 'INC-002' ? '4' : key === 'INC-003' ? '3' : '5'}
+                      </span>
                     </div>
                   );
                 })}

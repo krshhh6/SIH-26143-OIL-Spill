@@ -1,53 +1,7 @@
 import React, { useState } from 'react';
-import type { LiveIncident } from '../../hooks/useIncidents';
 
-interface AnalyticsViewProps {
-  incidents?: LiveIncident[];
-}
-
-export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
+export const AnalyticsView: React.FC = () => {
   const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
-
-  // ── Derived metrics from live incident data ──
-  const incidentList = incidents && incidents.length > 0 ? incidents : [];
-  const activeCount = incidentList.length || 3;
-
-  // Total + mean area
-  const areas = incidentList.map((i) => parseFloat(i.area)).filter((n) => !isNaN(n));
-  const totalArea = areas.reduce((s, n) => s + n, 0);
-  const meanArea = areas.length > 0 ? totalArea / areas.length : 3.6;
-  const minArea  = areas.length > 0 ? Math.min(...areas) : 1.2;
-  const maxArea  = areas.length > 0 ? Math.max(...areas) : 4.82;
-
-  // AIS gap count — incidents flagged CRITICAL or HIGH with dark vessel
-  const aisGapCount = incidentList.filter((i) =>
-    i.severity === 'CRITICAL' || i.top_vessel?.includes('UNKNOWN') || i.top_vessel?.includes('DARK')
-  ).length || 2;
-
-  // MARPOL oil type distribution
-  const oilBuckets: Record<string, number> = {
-    'Crude Oil': 0,
-    'Heavy Bunker Fuel': 0,
-    'Oil Bilge Water': 0,
-    'Diesel / Marine Gas Oil': 0,
-  };
-  for (const inc of incidentList) {
-    const t = inc.oil_type ?? '';
-    if (t.includes('Crude') || t.includes('crude')) oilBuckets['Crude Oil']++;
-    else if (t.includes('Bunker') || t.includes('bunker')) oilBuckets['Heavy Bunker Fuel']++;
-    else if (t.includes('Bilge') || t.includes('bilge')) oilBuckets['Oil Bilge Water']++;
-    else if (t.includes('Diesel') || t.includes('Gas Oil') || t.includes('diesel')) oilBuckets['Diesel / Marine Gas Oil']++;
-    else oilBuckets['Crude Oil']++; // default
-  }
-  const total = Math.max(Object.values(oilBuckets).reduce((a, b) => a + b, 0), 1);
-  const pct = (key: string) =>
-    incidentList.length > 0 ? Math.round((oilBuckets[key] / total) * 100) : null;
-
-  // Display values with static fallbacks when no live data
-  const crudeP    = pct('Crude Oil') ?? 48;
-  const bunkerP   = pct('Heavy Bunker Fuel') ?? 27;
-  const bilgeP    = pct('Oil Bilge Water') ?? 16;
-  const dieselP   = pct('Diesel / Marine Gas Oil') ?? 9;
 
   const handleExportCSV = () => {
     setDownloadNotice('Exporting EEZ 14-day telemetry dataset to CSV...');
@@ -58,7 +12,6 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
     setDownloadNotice('Generating executive maritime analytics audit report...');
     setTimeout(() => setDownloadNotice(null), 3000);
   };
-
 
   return (
     <div id="tab-analytics" className="tab-content visible modern-dashboard-root">
@@ -100,18 +53,14 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
           </div>
           <div className="metric-card-body">
             <span className="metric-number">
-              {activeCount} <span className="metric-unit">Incidents</span>
+              3 <span className="metric-unit">Incidents</span>
             </span>
             <span className="metric-trend-pill positive">
               Active Watch
             </span>
           </div>
           <div className="metric-card-footer">
-            <span>
-              {incidentList.length > 0
-                ? incidentList.map((i) => i.title.split(' ')[0]).join(' · ')
-                : 'Arabian: 1 · BoB: 1 · Andaman: 1'}
-            </span>
+            <span>Arabian: 1 · BoB: 1 · Andaman: 1</span>
             <span className="material-symbols-outlined arrow-icon">radar</span>
           </div>
         </div>
@@ -122,14 +71,14 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
           </div>
           <div className="metric-card-body">
             <span className="metric-number">
-              {meanArea.toFixed(1)} <span className="metric-unit">km²</span>
+              3.6 <span className="metric-unit">km²</span>
             </span>
             <span className="metric-trend-pill neutral">
               Spread Average
             </span>
           </div>
           <div className="metric-card-footer">
-            <span>Dynamic Range: {minArea.toFixed(1)} – {maxArea.toFixed(2)} km²</span>
+            <span>Dynamic Range: 1.2 – 4.82 km²</span>
             <span className="material-symbols-outlined arrow-icon">water_drop</span>
           </div>
         </div>
@@ -158,7 +107,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
           </div>
           <div className="metric-card-body">
             <span className="metric-number" style={{ color: '#f59e0b' }}>
-              {aisGapCount} <span className="metric-unit">Flagged</span>
+              2 <span className="metric-unit">Flagged</span>
             </span>
             <span className="metric-trend-pill neutral" style={{ color: '#f59e0b' }}>
               Dark Gaps
@@ -220,7 +169,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
               <div className="marpol-stat-box" style={{ borderLeft: '4px solid #b45309' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>CRUDE OIL</div>
                 <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: '#b45309', margin: '4px 0' }}>
-                  {crudeP}%
+                  48%
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                   Mumbai High / Deepwater Platforms
@@ -230,7 +179,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
               <div className="marpol-stat-box" style={{ borderLeft: '4px solid #334155' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>HEAVY BUNKER</div>
                 <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', margin: '4px 0' }}>
-                  {bunkerP}%
+                  27%
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                   Corridor Cargo &amp; Tanker Collisions
@@ -240,7 +189,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
               <div className="marpol-stat-box" style={{ borderLeft: '4px solid #0284c7' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>BILGE WATER</div>
                 <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: '#0284c7', margin: '4px 0' }}>
-                  {bilgeP}%
+                  16%
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                   Illegal Dark Vessel Bilge Discharge
@@ -250,7 +199,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ incidents }) => {
               <div className="marpol-stat-box" style={{ borderLeft: '4px solid #d97706' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>DIESEL / GAS OIL</div>
                 <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: '#d97706', margin: '4px 0' }}>
-                  {dieselP}%
+                  9%
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                   Bunkering Hose Transfer Leaks
