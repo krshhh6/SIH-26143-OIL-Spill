@@ -22,7 +22,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   incidents,
   scenarios,
 }) => {
-  const [activeWorkflowTab, setActiveWorkflowTab] = useState<'map' | 'sensors' | 'ais' | 'drift'>('map');
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const activeSlicksCount = incidents && incidents.length > 0 ? incidents.length : 4;
@@ -146,34 +145,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {currentScenario.id} · {currentScenario.oilType}
             </span>
           )}
-        </div>
-
-        <div className="workflow-tabs-strip">
-          <button
-            className={`workflow-tab-btn ${activeWorkflowTab === 'map' ? 'active' : ''}`}
-            onClick={() => setActiveWorkflowTab('map')}
-          >
-            Maritime Chart
-            {activeWorkflowTab === 'map' && <span className="tab-underline" />}
-          </button>
-          <button
-            className={`workflow-tab-btn ${activeWorkflowTab === 'sensors' ? 'active' : ''}`}
-            onClick={() => onSelectTab('detection')}
-          >
-            SAR Radar
-          </button>
-          <button
-            className={`workflow-tab-btn ${activeWorkflowTab === 'drift' ? 'active' : ''}`}
-            onClick={() => onSelectTab('drift')}
-          >
-            Drift Physics
-          </button>
-          <button
-            className={`workflow-tab-btn ${activeWorkflowTab === 'ais' ? 'active' : ''}`}
-            onClick={() => onSelectTab('attribution')}
-          >
-            AIS Tracking
-          </button>
         </div>
       </div>
 
