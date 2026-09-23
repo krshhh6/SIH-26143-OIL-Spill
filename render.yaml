@@ -1,0 +1,38 @@
+services:
+  # -------------------------------------------------------------
+  # 1. FRONTEND (React + Vite + ONNX WebAssembly)
+  # -------------------------------------------------------------
+  - type: static
+    name: spill-sense-frontend
+    repo: https://github.com/krshhh6/SIH-26143-OIL-Spill
+    branch: main
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: spill-sense-backend
+          property: host
+
+  # -------------------------------------------------------------
+  # 2. BACKEND (FastAPI C2 Engine + Socket.IO)
+  # -------------------------------------------------------------
+  - type: web
+    name: spill-sense-backend
+    runtime: docker
+    repo: https://github.com/krshhh6/SIH-26143-OIL-Spill
+    branch: main
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    plan: free
+    envVars:
+      - key: PROJECT_NAME
+        value: "Spill Sense C2 Platform (SIH26143)"
+      - key: API_V1_STR
+        value: "/api/v1"
