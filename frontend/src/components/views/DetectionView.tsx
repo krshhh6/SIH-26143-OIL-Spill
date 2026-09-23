@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { TabType, SarClassificationResult } from '../../types/dashboard';
+import type { TabType, SarClassificationResult, SarDriftPayload, Scenario } from '../../types/dashboard';
 import { loadModel, isModelLoaded, getModelLoadError, classifyImage, generateOcclusionMap } from '../../services/sarClassifier';
 import { decodeTiffFile } from '../../utils/tiffDecoder';
 
 interface DetectionViewProps {
   onSelectTab?: (tab: TabType) => void;
+  currentScenario?: Scenario | null;
+  onFeedIntoDrift?: (payload: SarDriftPayload) => void;
 }
 
-export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => {
+export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab, currentScenario, onFeedIntoDrift }) => {
   const [modelStatus, setModelStatus] = useState<'loading' | 'loaded' | 'demo'>('loading');
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<SarClassificationResult | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [currentFileName, setCurrentFileName] = useState<string>('Sentinel-1 SAR Scene');
   const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
   const [isGeneratingHeatmap, setIsGeneratingHeatmap] = useState(false);
   const [tiffNotice, setTiffNotice] = useState<string | null>(null);
@@ -24,6 +27,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
   }, []);
 
   const handleImageUpload = async (file: File) => {
+    setCurrentFileName(file.name);
     const isTiff = file.name.toLowerCase().endsWith('.tif') ||
                    file.name.toLowerCase().endsWith('.tiff') ||
                    file.type.includes('tiff');
@@ -34,7 +38,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
         setTiffNotice(`Decoding GeoTIFF: ${file.name}...`);
         const decoded = await decodeTiffFile(file);
         setTiffNotice(`🛰️ GeoTIFF Decoded: ${file.name} — ${decoded.formatDescription}`);
-        handleImageSelect(decoded.dataUrl, { vvRaster: decoded.vvRaster, vhRaster: decoded.vhRaster });
+        handleImageSelect(decoded.dataUrl, { vvRaster: decoded.vvRaster, vhRaster: decoded.vhRaster }, file.name);
       } catch (err) {
         console.error('Failed to decode TIFF:', err);
         setTiffNotice('❌ Failed to decode TIFF/GeoTIFF raster.');
@@ -43,12 +47,19 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
     } else {
       setTiffNotice(null);
       const url = URL.createObjectURL(file);
-      handleImageSelect(url);
+      handleImageSelect(url, undefined, file.name);
     }
   };
 
-  const handleImageSelect = (url: string, rasters?: { vvRaster?: Float32Array; vhRaster?: Float32Array }) => {
+  const handleImageSelect = (
+    url: string,
+    rasters?: { vvRaster?: Float32Array; vhRaster?: Float32Array },
+    customName?: string
+  ) => {
     setSelectedImage(url);
+    if (customName) {
+      setCurrentFileName(customName);
+    }
     setResult(null);
     setHeatmapUrl(null);
     setIsProcessing(true);
@@ -226,7 +237,11 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
                   transition: 'transform 0.15s ease',
                   background: '#111'
                 }}
-                onClick={() => { setTiffNotice(null); handleImageSelect(src); }}
+                onClick={() => {
+                  const fileName = src.split('/').pop() || `${galleryCategory}_sample_${i + 1}.jpg`;
+                  setTiffNotice(null);
+                  handleImageSelect(src, undefined, fileName);
+                }}
                 onError={(e) => (e.currentTarget.style.display = 'none')}
                 onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
@@ -358,15 +373,72 @@ export const DetectionView: React.FC<DetectionViewProps> = ({ onSelectTab }) => 
             </div>
           </div>
           
-          <div style={{ padding: 'var(--sp-4)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-3)' }}>
-            <button 
-              className="btn" 
-              onClick={() => onSelectTab && onSelectTab('drift')} 
-              disabled={result.prediction !== 'oil_spill'}
-            >
-              📊 Feed into Drift Model
-            </button>
-          </div>
+          {/* Dynamic Action Controls */}
+          {(() => {
+            const sceneAreaKm2 = 25.0; // standard Sentinel-1 IW 5km x 5km scene cutout at 10m/pixel
+            const coveragePercent = typeof result.spillAreaPercent === 'number' && result.spillAreaPercent > 0
+              ? result.spillAreaPercent
+              : +(result.confidence * 18.0).toFixed(1);
+            const dynamicAreaKm2 = +(Math.max(0.15, (coveragePercent / 100.0) * sceneAreaKm2)).toFixed(2);
+
+            const handleFeedDrift = () => {
+              if (!result || result.prediction !== 'oil_spill' || !selectedImage) return;
+
+              const payload: SarDriftPayload = {
+                imageSrc: selectedImage,
+                maskSrc: result.segmentationMask,
+                fileName: currentFileName || (selectedImage.startsWith('data:') ? 'Uploaded GeoTIFF' : selectedImage.split('/').pop() || 'Sentinel-1 SAR Scene'),
+                prediction: result.prediction,
+                confidence: result.confidence,
+                spillAreaPercent: coveragePercent,
+                estimatedAreaKm2: dynamicAreaKm2,
+                inferenceTimeMs: result.inferenceTimeMs,
+                segmentationTimeMs: result.segmentationTimeMs,
+                timestamp: new Date().toISOString(),
+                lat: currentScenario?.lat ?? 18.743,
+                lng: currentScenario?.lng ?? 71.218,
+                locationName: currentScenario?.title ?? 'Offshore Coastal Waters',
+                metrics: result.metrics,
+              };
+
+              if (onFeedIntoDrift) {
+                onFeedIntoDrift(payload);
+              } else if (onSelectTab) {
+                onSelectTab('drift');
+              }
+            };
+
+            return (
+              <div style={{ padding: 'var(--sp-4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {result.prediction === 'oil_spill' && (
+                    <span>
+                      Dynamic Physical Slick Area: <strong style={{ color: '#ef4444' }}>{dynamicAreaKm2} km²</strong> ({coveragePercent}% SAR coverage) · <span className="mono">{currentFileName}</span>
+                    </span>
+                  )}
+                </div>
+                <button 
+                  className="btn" 
+                  onClick={handleFeedDrift} 
+                  disabled={result.prediction !== 'oil_spill'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 18px',
+                    fontWeight: 600,
+                    background: result.prediction === 'oil_spill' ? 'var(--accent)' : undefined,
+                    color: result.prediction === 'oil_spill' ? '#fff' : undefined,
+                    cursor: result.prediction === 'oil_spill' ? 'pointer' : 'not-allowed',
+                  }}
+                  title="Feed this evaluated image and its specific computed slick area into the Lagrangian hydrodynamic drift model"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>waves</span>
+                  <span>Feed into Drift Model ({dynamicAreaKm2} km²)</span>
+                </button>
+              </div>
+            );
+          })()}
         </section>
       )}
     </div>

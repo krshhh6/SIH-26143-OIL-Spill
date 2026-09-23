@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { TabType, Scenario } from '../../types/dashboard';
+import type { TabType, Scenario, SarDriftPayload } from '../../types/dashboard';
 import { SCENARIOS } from '../../data/scenarios';
 import {
   fetchLiveMetOcean,
@@ -11,6 +11,7 @@ interface DriftViewProps {
   onSelectTab: (tab: TabType) => void;
   currentScenario?: Scenario | null;
   onSelectScenario?: (key: string) => void;
+  sarDriftPayload?: SarDriftPayload | null;
 }
 
 interface TimestepForecast {
@@ -568,9 +569,84 @@ const DRIFT_PROFILES: Record<string, ScenarioDriftProfile> = {
   },
 };
 
-export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenario, onSelectScenario }) => {
+function createSarDriftProfile(payload: SarDriftPayload): ScenarioDriftProfile {
+  const area = payload.estimatedAreaKm2;
+  const lat = payload.lat;
+  const lng = payload.lng;
+  const confPct = Math.round(payload.confidence * 100);
+
+  const steps = [
+    { hours: 6, label: 'T + 6 Hours', spread: 1.55, distKm: 76.5, evap: 15, emul: 6, disp: 5, threat: 'LOW' as const, rec: 'Deploy containment boom around primary detected slick core.' },
+    { hours: 12, label: 'T + 12 Hours', spread: 2.30, distKm: 62.0, evap: 25, emul: 14, disp: 8, threat: 'MODERATE' as const, rec: 'Offshore skimming craft deployed along leading edge vector.' },
+    { hours: 24, label: 'T + 24 Hours', spread: 3.65, distKm: 44.5, evap: 36, emul: 28, disp: 12, threat: 'HIGH' as const, rec: 'Seal vulnerable coastal tidal inlets with bubble barriers and sorbent curtains.' },
+    { hours: 36, label: 'T + 36 Hours', spread: 5.10, distKm: 27.0, evap: 44, emul: 40, disp: 16, threat: 'HIGH' as const, rec: 'Pre-position shoreline protection units and beach cleanup recovery gear.' },
+    { hours: 48, label: 'T + 48 Hours', spread: 6.80, distKm: 13.5, evap: 50, emul: 52, disp: 18, threat: 'CRITICAL' as const, rec: 'Active shoreline defense protocol; nearshore skimming & absorbent deployment.' },
+  ];
+
+  return {
+    scenarioId: `SAR-${payload.fileName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 14).toUpperCase()}`,
+    incidentName: `Live SAR AI Detection: ${payload.fileName}`,
+    seaBasin: `${payload.locationName} Maritime Basin`,
+    oilType: 'Sentinel-1 Ingested Hydrocarbon (SpillSegNet Masked)',
+    apiGravity: '32.5° API (Medium-Heavy Marine)',
+    initialObservedCoords: `${lat.toFixed(3)}°N, ${lng.toFixed(3)}°E`,
+    initialAreaKm2: area,
+    currentVector: 'Computing live CMEMS surface jet...',
+    windVector: 'Computing live ERA5 10m wind...',
+    seaState: 'Dynamic Satellite Met-Ocean',
+    sstCelsius: 28.6,
+    originCoords: `${(lat - 0.11).toFixed(3)}°N, ${(lng - 0.08).toFixed(3)}°E`,
+    originWindow: `SAR Pass: ${new Date(payload.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} UTC`,
+    originAreaKm2: +(area * 6.5).toFixed(1),
+    suspectVessel: 'AIS TRACK CORRELATION ACTIVE',
+    backtrackConfidencePct: Math.min(99, Math.round(confPct * 0.95)),
+    coastalZoneName: `${payload.locationName} Intertidal Shelf`,
+    overallLandfallEta: `${Math.max(16, Math.round(54 - area * 1.5))}h (Active Watch)`,
+    vulnerableHabitats: [
+      `${payload.locationName} Sensitive Coastal Mangroves & Inlets`,
+      'Marine Protected Biome & Artisanal Fishery Shelf',
+      'High-Density International Commercial Shipping Channel',
+    ],
+    forecasts: steps.map((s) => {
+      const stepArea = +(area * s.spread).toFixed(2);
+      const slickRadiusKm = +(Math.sqrt(stepArea / Math.PI)).toFixed(2);
+      const remainingSurfacePct = Math.max(1, 100 - (s.evap + s.emul + s.disp));
+      return {
+        timeOffsetHours: s.hours,
+        label: s.label,
+        timestamp: `T + ${String(s.hours).padStart(2, '0')}:00 UTC`,
+        lat: +(lat + s.hours * 0.0055).toFixed(3),
+        lng: +(lng + s.hours * 0.0085).toFixed(3),
+        areaKm2: stepArea,
+        slickRadiusKm,
+        driftSpeedKnots: 0.68,
+        headingDeg: 62,
+        distanceToCoastKm: s.distKm,
+        evaporatedPct: s.evap,
+        emulsifiedPct: s.emul,
+        dispersedPct: s.disp,
+        remainingSurfacePct,
+        viscosityCSt: 65 + s.hours * 45,
+        waterContentPct: +(s.emul * 1.25).toFixed(1),
+        threatLevel: s.threat,
+        containmentRecommendation: s.rec,
+      };
+    }),
+  };
+}
+
+export const DriftView: React.FC<DriftViewProps> = ({
+  onSelectTab,
+  currentScenario,
+  onSelectScenario,
+  sarDriftPayload,
+}) => {
+  const [activeSarPayload, setActiveSarPayload] = useState<SarDriftPayload | null>(sarDriftPayload || null);
+
   // Determine active scenario key
-  const defaultKey = currentScenario?.id.includes('002')
+  const defaultKey = sarDriftPayload
+    ? 'SAR-DETECTION'
+    : currentScenario?.id.includes('002')
     ? 'INC-002'
     : currentScenario?.id.includes('003')
     ? 'INC-003'
@@ -588,8 +664,46 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
   const [liveResult, setLiveResult] = useState<LiveSimulationResult | null>(null);
   const [isLoadingLive, setIsLoadingLive] = useState<boolean>(false);
 
-  const refreshLiveDriftData = async (keyOverride?: string) => {
+  // When sarDriftPayload prop updates, switch immediately to SAR-DETECTION and trigger live calculation
+  useEffect(() => {
+    if (sarDriftPayload) {
+      setActiveSarPayload(sarDriftPayload);
+      setSelectedKey('SAR-DETECTION');
+      setSelectedStepIndex(2);
+      refreshLiveDriftData('SAR-DETECTION', sarDriftPayload);
+    }
+  }, [sarDriftPayload]);
+
+  const refreshLiveDriftData = async (keyOverride?: string, customPayload?: SarDriftPayload | null) => {
     const k = keyOverride || selectedKey;
+    const activePayload = customPayload !== undefined ? customPayload : activeSarPayload;
+
+    if (k === 'SAR-DETECTION' && activePayload) {
+      setIsLoadingLive(true);
+      try {
+        const metOcean = await fetchLiveMetOcean(activePayload.lat, activePayload.lng);
+        const computed = computeLiveDriftSimulation(
+          activePayload.lat,
+          activePayload.lng,
+          activePayload.estimatedAreaKm2,
+          'Sentinel-1 Detected Hydrocarbon Fraction',
+          metOcean,
+          `${activePayload.locationName} Shelf`,
+          [
+            `${activePayload.locationName} Sensitive Mangroves`,
+            'Marine Sanctuary & Protected Fisheries Ground',
+            'Commercial Navigational Shipping Corridor',
+          ]
+        );
+        setLiveResult(computed);
+      } catch (e) {
+        console.warn('[DriftView] Live met-ocean fetch error for SAR Detection:', e);
+      } finally {
+        setIsLoadingLive(false);
+      }
+      return;
+    }
+
     const activeSc = SCENARIOS[k] || currentScenario || SCENARIOS['INC-001'];
     const p = DRIFT_PROFILES[k] || DRIFT_PROFILES['INC-001'];
     setIsLoadingLive(true);
@@ -614,7 +728,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
 
   // Sync when currentScenario changes
   useEffect(() => {
-    if (currentScenario?.id) {
+    if (currentScenario?.id && selectedKey !== 'SAR-DETECTION') {
       const matchedKey = Object.keys(SCENARIOS).find(
         (k) => SCENARIOS[k].id === currentScenario.id || currentScenario.id.includes(k.replace('INC-', ''))
       );
@@ -629,7 +743,10 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
     refreshLiveDriftData(selectedKey);
   }, [selectedKey]);
 
-  const profile = DRIFT_PROFILES[selectedKey] || DRIFT_PROFILES['INC-001'];
+  const profile = (selectedKey === 'SAR-DETECTION' && activeSarPayload)
+    ? createSarDriftProfile(activeSarPayload)
+    : (DRIFT_PROFILES[selectedKey] || DRIFT_PROFILES['INC-001']);
+
   const activeForecasts = liveResult ? liveResult.forecasts : profile.forecasts;
   const currentForecast = activeForecasts[selectedStepIndex] || activeForecasts[2];
   const activeOriginCoords = liveResult ? liveResult.originCoords : profile.originCoords;
@@ -712,7 +829,7 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
               const k = e.target.value;
               setSelectedKey(k);
               setSelectedStepIndex(2);
-              if (SCENARIOS[k]) {
+              if (k !== 'SAR-DETECTION' && SCENARIOS[k]) {
                 onSelectScenario?.(k);
               }
             }}
@@ -724,6 +841,11 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
               appearance: 'auto',
             }}
           >
+            {activeSarPayload && (
+              <option value="SAR-DETECTION">
+                🛰️ Live SAR AI Detection · {activeSarPayload.fileName} ({(activeSarPayload.confidence * 100).toFixed(0)}% · {activeSarPayload.estimatedAreaKm2} km²)
+              </option>
+            )}
             {Object.entries(SCENARIOS).map(([key, sc]) => (
               <option key={key} value={key}>
                 {sc.id} · {sc.title}
@@ -915,6 +1037,116 @@ export const DriftView: React.FC<DriftViewProps> = ({ onSelectTab, currentScenar
           <span>Export GeoJSON</span>
         </button>
       </div>
+
+      {/* 3.5 DYNAMIC SAR AI DETECTION PROVENANCE CARD */}
+      {selectedKey === 'SAR-DETECTION' && activeSarPayload && (
+        <div
+          style={{
+            margin: '0 0 16px',
+            padding: '16px 20px',
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(37, 99, 235, 0.08) 100%)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 14,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 20,
+            flexWrap: 'wrap',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+          }}
+        >
+          {/* Left: Thumbnail & Mask Previews */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ position: 'relative', width: 72, height: 72, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.2)', background: '#000', flexShrink: 0 }}>
+              <img
+                src={activeSarPayload.imageSrc}
+                alt="Evaluated SAR Scene"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              {activeSarPayload.maskSrc && (
+                <img
+                  src={activeSarPayload.maskSrc}
+                  alt="SpillSegNet Mask"
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }}
+                />
+              )}
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  🛰️ Ingested SAR AI Detection
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  {new Date(activeSarPayload.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} UTC
+                </span>
+              </div>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {activeSarPayload.fileName}
+              </h3>
+              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
+                Slick Coordinates: <span className="mono" style={{ color: 'var(--text-secondary)' }}>{activeSarPayload.lat.toFixed(3)}°N, {activeSarPayload.lng.toFixed(3)}°E</span> · {activeSarPayload.locationName}
+              </div>
+            </div>
+          </div>
+
+          {/* Middle: Ingested Metrics Telemetry - 100% Dynamic from Evaluated Image */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+            <div style={{ textAlign: 'center', minWidth: 90 }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Classification</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: activeSarPayload.confidence > 0.85 ? '#ef4444' : '#f59e0b', marginTop: 2 }}>
+                {(activeSarPayload.confidence * 100).toFixed(1)}%
+              </div>
+              <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>{activeSarPayload.inferenceTimeMs}ms (DualPolNet)</div>
+            </div>
+
+            <div style={{ width: 1, height: 36, background: 'rgba(255, 255, 255, 0.1)' }} />
+
+            <div style={{ textAlign: 'center', minWidth: 90 }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Mask Coverage</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: '#f59e0b', marginTop: 2 }}>
+                {activeSarPayload.spillAreaPercent.toFixed(1)}%
+              </div>
+              <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>{activeSarPayload.segmentationTimeMs ? `${activeSarPayload.segmentationTimeMs}ms` : 'SpillSegNet'}</div>
+            </div>
+
+            <div style={{ width: 1, height: 36, background: 'rgba(255, 255, 255, 0.1)' }} />
+
+            <div style={{ textAlign: 'center', minWidth: 100 }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Calculated Area</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--accent)', marginTop: 2 }}>
+                {activeSarPayload.estimatedAreaKm2} <span style={{ fontSize: 12 }}>km²</span>
+              </div>
+              <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>Initial Slick Surface</div>
+            </div>
+          </div>
+
+          {/* Right: Quick Action to Re-evaluate or Switch back */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              className="action-pill-btn secondary"
+              onClick={() => onSelectTab('detection')}
+              style={{ fontSize: 11, padding: '6px 14px' }}
+              title="Return to SAR Detection Lab to inspect or select another scene"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>science</span>
+              <span>Inspect in Lab</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 4. ROUNDED CANVAS CONTAINER */}
       <div className="canvas-rounded-container">

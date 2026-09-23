@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { TabType } from './types/dashboard';
+import type { TabType, SarDriftPayload } from './types/dashboard';
 import { SCENARIOS } from './data/scenarios';
 import { useIncidents } from './hooks/useIncidents';
 import { Topbar } from './components/Topbar';
@@ -23,6 +23,7 @@ export const App: React.FC = () => {
   const [isSentinelHubOpen, setIsSentinelHubOpen] = useState<boolean>(false);
   const [isBhoonidhiOpen, setIsBhoonidhiOpen] = useState<boolean>(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState<boolean>(false);
+  const [sarDriftPayload, setSarDriftPayload] = useState<SarDriftPayload | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -51,6 +52,14 @@ export const App: React.FC = () => {
 
   const handleSelectTab = (tab: TabType) => {
     setActiveTab(tab);
+    if (isMapFullscreen) {
+      setIsMapFullscreen(false);
+    }
+  };
+
+  const handleFeedIntoDrift = (payload: SarDriftPayload) => {
+    setSarDriftPayload(payload);
+    setActiveTab('drift');
     if (isMapFullscreen) {
       setIsMapFullscreen(false);
     }
@@ -159,6 +168,7 @@ export const App: React.FC = () => {
               onSelectTab={setActiveTab}
               currentScenario={scenario}
               onSelectScenario={handleSelectScenario}
+              sarDriftPayload={sarDriftPayload}
             />
           )}
 
@@ -178,7 +188,13 @@ export const App: React.FC = () => {
 
           {activeTab === 'analytics' && <AnalyticsView incidents={incidents} />}
 
-          {activeTab === 'detection' && <DetectionView onSelectTab={setActiveTab} />}
+          {activeTab === 'detection' && (
+            <DetectionView
+              onSelectTab={setActiveTab}
+              currentScenario={scenario}
+              onFeedIntoDrift={handleFeedIntoDrift}
+            />
+          )}
         </main>
       </div>
 
