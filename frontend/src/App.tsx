@@ -118,6 +118,8 @@ export const App: React.FC = () => {
       <div className={`workspace-container ${isMapFullscreen ? 'map-fullscreen-active' : ''}`}>
         {/* WORKSPACE HEADER */}
         <Topbar
+          activeTab={activeTab}
+          onSelectTab={handleSelectTab}
           currentScenario={scenario}
           currentScenarioKey={currentScenarioKey}
           onSelectScenario={handleSelectScenario}

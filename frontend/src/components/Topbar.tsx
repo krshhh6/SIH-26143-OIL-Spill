@@ -1,8 +1,10 @@
 import React from 'react';
-import type { Scenario } from '../types/dashboard';
+import type { Scenario, TabType } from '../types/dashboard';
 import { SCENARIOS } from '../data/scenarios';
 
 interface TopbarProps {
+  activeTab?: TabType;
+  onSelectTab?: (tab: TabType) => void;
   currentScenario: Scenario | null;
   currentScenarioKey: string;
   onSelectScenario: (key: string) => void;
@@ -16,6 +18,8 @@ interface TopbarProps {
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
+  activeTab = 'dashboard',
+  onSelectTab,
   currentScenario,
   currentScenarioKey,
   onSelectScenario,
@@ -27,6 +31,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   onOpenBhoonidhiModal: _onOpenBhoonidhiModal,
   onSearchPlace,
 }) => {
+  const isDashboard = activeTab === 'dashboard';
+
   const [searchInput, setSearchInput] = React.useState('');
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -42,6 +48,26 @@ export const Topbar: React.FC<TopbarProps> = ({
     : currentScenario.sev.includes('HIGH')
     ? '#F97316'
     : '#F59E0B';
+
+  if (!isDashboard) {
+    return (
+      <header className="topbar">
+        {/* BRAND LOGO ONLY */}
+        <div
+          className="topbar-logo"
+          style={{ padding: 0, gap: '12px', cursor: onSelectTab ? 'pointer' : 'default' }}
+          onClick={() => onSelectTab && onSelectTab('dashboard')}
+          title="Return to Main Dashboard"
+        >
+          <img src="/clean_raw_logo.png" alt="Spill Sense Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
+          <div>
+            <div className="logo-name">SPILL SENSE</div>
+            <div className="logo-sub">MARITIME C2 INTELLIGENCE</div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="topbar">
