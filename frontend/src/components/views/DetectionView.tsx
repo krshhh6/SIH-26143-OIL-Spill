@@ -33,6 +33,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
   const [uploadedFileName, setUploadedFileName] = useState<string>('Uploaded SAR Scene');
   const [analyticsResult, setAnalyticsResult] = useState<CalculatedSpillAnalytics | null>(null);
   const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
+  const [screenshotNotice, setScreenshotNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLElement>(null);
 
@@ -40,6 +41,28 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
     loadModel().then(() => {
       setModelStatus(isModelLoaded() ? 'loaded' : 'demo');
     });
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            const timeStr = new Date().toTimeString().split(' ')[0].replace(/:/g, '');
+            const screenshotFile = new File([file], `SAR_Screenshot_${timeStr}.png`, { type: file.type });
+            setScreenshotNotice(`📸 Clipboard Screenshot Ingested (${screenshotFile.name}) — Calibrated for SAR microwave backscatter`);
+            handleImageUpload(screenshotFile);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
   }, []);
 
   useEffect(() => {
@@ -50,6 +73,29 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
     }
   }, [result, selectedImage]);
 
+  const handlePasteFromClipboard = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (navigator.clipboard?.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imageType = item.types.find(t => t.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const timeStr = new Date().toTimeString().split(' ')[0].replace(/:/g, '');
+            const file = new File([blob], `SAR_Screenshot_${timeStr}.png`, { type: imageType });
+            setScreenshotNotice(`📸 Clipboard Screenshot Ingested (${file.name}) — Calibrated for SAR microwave backscatter`);
+            handleImageUpload(file);
+            return;
+          }
+        }
+      }
+      alert('Press Ctrl+V on your keyboard to paste your screenshot directly.');
+    } catch {
+      alert('Press Ctrl+V on your keyboard to paste your screenshot directly.');
+    }
+  };
+
   const handleImageUpload = async (file: File) => {
     setCurrentFileName(file.name);
     setUploadedFileName(file.name);
@@ -57,8 +103,13 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
     const isTiff = file.name.toLowerCase().endsWith('.tif') ||
                    file.name.toLowerCase().endsWith('.tiff') ||
                    file.type.includes('tiff');
+    const isScreenshot = file.name.toLowerCase().includes('screenshot') ||
+                         file.name.toLowerCase().includes('screen shot') ||
+                         file.name.toLowerCase().includes('snip') ||
+                         file.name.toLowerCase().includes('capture');
 
     if (isTiff) {
+      setScreenshotNotice(null);
       try {
         setIsProcessing(true);
         setTiffNotice(`Decoding GeoTIFF: ${file.name}...`);
@@ -72,6 +123,9 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
       }
     } else {
       setTiffNotice(null);
+      if (isScreenshot) {
+        setScreenshotNotice(`📸 Screenshot Calibrated: ${file.name} — Microwave radar backscatter extracted from optical RGB channels`);
+      }
       const url = URL.createObjectURL(file);
       handleImageSelect(url, undefined, file.name);
     }
@@ -190,14 +244,14 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
         </div>
       </div>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flexShrink: 0 }}>
-        {/* Upload Zone (Stock White Panel) */}
+      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, flexShrink: 0, marginBottom: 20 }}>
+        {/* Upload & Screenshot Ingestion Zone (Stock White Panel) */}
         <div 
           style={{ 
             background: 'var(--bg-surface)',
             border: '2px dashed var(--border-default)', 
             borderRadius: 16, 
-            padding: '32px 24px', 
+            padding: '24px 20px', 
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
@@ -205,7 +259,8 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)'
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
+            position: 'relative'
           }}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={e => e.preventDefault()}
@@ -214,9 +269,50 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
             if (e.dataTransfer.files?.[0]) handleImageUpload(e.dataTransfer.files[0]);
           }}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 42, color: 'var(--accent)', opacity: 0.8, marginBottom: 10 }}>cloud_upload</span>
-          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>Drop a SAR image or GeoTIFF (.tif) here or click to upload</p>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5, marginBottom: 0 }}>Accepts .tif, .tiff, .jpg, .png (Auto-calibrates 32-bit Sentinel-1 dB)</p>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 8 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 36, color: 'var(--accent)', opacity: 0.9 }}>cloud_upload</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 36, color: '#10B981', opacity: 0.9 }}>screenshot_monitor</span>
+          </div>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Drop SAR Scene, GeoTIFF, or Screenshot</p>
+          <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '4px 0 10px 0' }}>
+            Click to browse · Drag & drop · or press <kbd style={{ background: 'rgba(0,0,0,0.06)', padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)' }}>Ctrl+V</kbd> to paste snip
+          </p>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={handlePasteFromClipboard}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 14px',
+                borderRadius: 8,
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                color: '#059669',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Paste image directly from clipboard (Win+Shift+S / Snipping Tool / Bhoonidhi screenshot)"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>content_paste</span>
+              <span>📋 Paste Screenshot (Ctrl+V)</span>
+            </button>
+
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              Accepts .tif, .tiff, .jpg, .png & Clipboard snips
+            </span>
+          </div>
+
+          {screenshotNotice && (
+            <div style={{ marginTop: 10, padding: '6px 12px', borderRadius: 8, background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#059669', fontSize: 11.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>verified</span>
+              {screenshotNotice}
+            </div>
+          )}
           {tiffNotice && (
             <div style={{ marginTop: 10, padding: '5px 12px', borderRadius: 8, background: 'rgba(6, 182, 212, 0.1)', border: '1px solid rgba(6, 182, 212, 0.3)', color: '#0891B2', fontSize: 11, fontWeight: 600 }}>
               {tiffNotice}

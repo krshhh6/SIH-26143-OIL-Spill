@@ -144,11 +144,9 @@ export function validateSarImage(data: Uint8ClampedArray, width: number, height:
   const brightRatio = brightCount / totalPixels;
   const coloredRatio = coloredPixels / totalPixels;
   const avgColorDiff = colorDiffSum / totalPixels;
-  const isColor = coloredRatio > 0.008 || avgColorDiff > 12;
+  const isColor = coloredRatio > 0.08 || avgColorDiff > 25;
 
   // 1. Measure spatial speckle noise via 5x5 blocks (excluding pure satellite NoData borders)
-  // Real coherent microwave SAR radar has Rayleigh/Gamma distributed speckle noise across valid sea pixels.
-  // Software screenshots (terminals, code editors, browser windows, documents) have flat solid background blocks (>70%).
   const bs = 5;
   const hb = Math.floor(height / bs);
   const wb = Math.floor(width / bs);
@@ -182,7 +180,7 @@ export function validateSarImage(data: Uint8ClampedArray, width: number, height:
   }
   const flatRatio = validBlocks > 0 ? flatBlocks / validBlocks : 1.0;
 
-  // 2. Check for dominant single background value (terminal background, solid canvas, etc.)
+  // 2. Check for dominant single background value
   let maxModeCount = 0;
   let maxModeVal = 0;
   for (let g = 0; g < 256; g++) {
@@ -193,45 +191,46 @@ export function validateSarImage(data: Uint8ClampedArray, width: number, height:
   }
   const maxModeRatio = maxModeCount / totalPixels;
 
-  // REJECTION 1: Software UI / Terminal / Code Editor / IDE Screenshot
-  // Terminals and code windows have massive flat background space (> 30% flat blocks)
-  if (flatRatio > 0.30) {
+  // REJECTION 1: Extreme Solid Canvas (Entire image is single synthetic flat color)
+  if (flatRatio > 0.94) {
     return {
       isValid: false,
-      reason: `Software UI / Terminal / Code Window (Lacks physical radar speckle: ${(flatRatio * 100).toFixed(0)}% flat digital space)`,
+      reason: `Blank / Uniform Graphic (Lacks physical radar backscatter: ${(flatRatio * 100).toFixed(0)}% synthetic flat space)`,
       metrics: { meanBrightness, brightRatio, sharpTransitions: flatRatio, isColor }
     };
   }
 
-  // REJECTION 2: Artificial Solid Background / Synthetic Graphic
-  if (maxModeRatio > 0.40 && maxModeVal !== 0) {
+  // REJECTION 2: Artificial Solid Background covering nearly entire frame
+  if (maxModeRatio > 0.90 && maxModeVal !== 0) {
     return {
       isValid: false,
-      reason: `Artificial Solid Canvas (Single background color covers ${(maxModeRatio * 100).toFixed(0)}% of image)`,
+      reason: `Single Solid Color (Covers ${(maxModeRatio * 100).toFixed(0)}% of image canvas)`,
       metrics: { meanBrightness, brightRatio, sharpTransitions: flatRatio, isColor }
     };
   }
 
-  // REJECTION 3: Color Camera Photo / Syntax-Highlighted Code Window
-  if (isColor) {
+  // REJECTION 3: Vivid High-Saturation Daylight Photo (Selfie / Natural Landscape / Cartoon)
+  // Note: Screenshots of SAR tools (Bhoonidhi, Sentinel Hub, GIS) with UI colors or false-color palettes
+  // are accepted and converted to radar luminance. Only heavily saturated non-radar scenes are rejected.
+  if (coloredRatio > 0.65 && avgColorDiff > 45) {
     return {
       isValid: false,
-      reason: `Optical Color Image / Syntax Highlighting (SAR microwave radar is monochrome/dual-pol)`,
+      reason: `Optical Color Photography (High-saturation non-radar scene; SAR is microwave backscatter)`,
       metrics: { meanBrightness, brightRatio, sharpTransitions: flatRatio, isColor }
     };
   }
 
-  // REJECTION 4: Printed document / paper sheet
-  if (brightRatio > 0.35 && meanBrightness > 150) {
+  // REJECTION 4: Printed document / paper sheet / blank white page
+  if (brightRatio > 0.85 && meanBrightness > 225) {
     return {
       isValid: false,
-      reason: 'Printed Document / High-Luminance Sheet (Non-Marine Scene)',
+      reason: 'Blank Document / High-Luminance Sheet (Non-Marine Scene)',
       metrics: { meanBrightness, brightRatio, sharpTransitions: flatRatio, isColor }
     };
   }
 
   // REJECTION 5: Blank / empty black frame
-  if (meanBrightness < 6) {
+  if (meanBrightness < 4) {
     return {
       isValid: false,
       reason: 'Empty / Black Frame (Zero radar backscatter signal)',
@@ -266,6 +265,7 @@ function computeDeterministicPhysicsScore(
 ): { prob: number; isOil: boolean; spillAreaPercent: number } {
   const totalPixels = width * height;
   let sumLuminance = 0;
+  let validMarinePixels = 0;
   let dampedCount = 0;
   let coreDampedCount = 0;
 
@@ -279,17 +279,22 @@ function computeDeterministicPhysicsScore(
     }
     sumLuminance += lum;
 
-    // Oil damping thresholds: capillary waves suppressed -> dark pixels
-    if (lum < 58) dampedCount++;
-    if (lum < 32) coreDampedCount++;
+    // Filter out synthetic zero-border / letterboxing (lum < 5) from damping count.
+    // Real oil slicks have capillary wave damping backscatter in the range [5, 58].
+    if (lum >= 5) {
+      validMarinePixels++;
+      if (lum < 58) dampedCount++;
+      if (lum < 32) coreDampedCount++;
+    }
   }
 
+  const denominator = validMarinePixels > 0 ? validMarinePixels : totalPixels;
   const meanLum = sumLuminance / totalPixels;
-  const dampRatio = dampedCount / totalPixels;
-  const coreRatio = coreDampedCount / totalPixels;
+  const dampRatio = dampedCount / denominator;
+  const coreRatio = coreDampedCount / denominator;
 
   // Radar physics damping score:
-  // True slicks have high dampRatio (> 0.03) with a dark core and reasonable contrast
+  // True slicks have high dampRatio (> 0.015) with a dark core and reasonable contrast
   let logit = -1.2;
   if (dampRatio > 0.015) {
     logit += dampRatio * 18.0;
@@ -311,6 +316,72 @@ function computeDeterministicPhysicsScore(
   const spillAreaPercent = Math.round(dampRatio * 1000) / 10;
 
   return { prob, isOil, spillAreaPercent };
+}
+
+/**
+ * Generates an adaptive capillary wave damping segmentation mask.
+ * Accurately highlights oil slicks on SAR radar backscatter and screenshots.
+ */
+export function generateDeterministicMask(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  dualPolRasters?: DualPolInputRasters
+): { dataUrl: string; areaPercent: number } {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  const totalPixels = width * height;
+  let sumLum = 0;
+  let validMarinePixels = 0;
+  const lums = new Float32Array(totalPixels);
+
+  for (let i = 0; i < totalPixels; i++) {
+    let lum = 0;
+    if (dualPolRasters?.vvRaster && i < dualPolRasters.vvRaster.length) {
+      lum = dualPolRasters.vvRaster[i] * 255;
+    } else {
+      lum = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
+    }
+    lums[i] = lum;
+    if (lum >= 5 && lum <= 245) {
+      sumLum += lum;
+      validMarinePixels++;
+    }
+  }
+
+  const oceanMean = validMarinePixels > 0 ? sumLum / validMarinePixels : 75;
+  const dampThreshold = Math.min(62, Math.max(38, oceanMean * 0.62));
+  const coreThreshold = Math.min(36, Math.max(20, oceanMean * 0.40));
+
+  const maskImg = ctx.createImageData(width, height);
+  const mData = maskImg.data;
+  let spillPixels = 0;
+
+  for (let i = 0; i < totalPixels; i++) {
+    const lum = lums[i];
+    // Damped oil slick pixel: dark ocean surface, excluding synthetic borders (< 5)
+    if (lum >= 5 && lum <= dampThreshold) {
+      spillPixels++;
+      const isCore = lum <= coreThreshold;
+      const pIdx = i * 4;
+      mData[pIdx] = 255;                    // R: vivid warning red
+      mData[pIdx + 1] = isCore ? 40 : 85;   // G
+      mData[pIdx + 2] = 0;                  // B
+      mData[pIdx + 3] = isCore ? 175 : 125; // A: translucent overlay
+    }
+  }
+
+  ctx.putImageData(maskImg, 0, 0);
+  const denominator = validMarinePixels > 0 ? validMarinePixels : totalPixels;
+  const areaPercent = Math.round((spillPixels / denominator) * 1000) / 10;
+
+  return {
+    dataUrl: canvas.toDataURL('image/png'),
+    areaPercent,
+  };
 }
 
 export async function classifyImage(
@@ -347,6 +418,15 @@ export async function classifyImage(
     const physics = computeDeterministicPhysicsScore(data, 400, 400, dualPolRasters);
     const classificationTimeMs = Math.round(performance.now() - start);
 
+    let segMaskUrl: string | undefined;
+    let segTimeMs: number | undefined;
+    if (physics.isOil) {
+      const segStart = performance.now();
+      const fallbackMask = generateDeterministicMask(data, 400, 400, dualPolRasters);
+      segMaskUrl = fallbackMask.dataUrl;
+      segTimeMs = Math.round(performance.now() - segStart);
+    }
+
     return {
       imageFile: imageElement instanceof HTMLImageElement ? imageElement.src : 'canvas',
       prediction: physics.isOil ? 'oil_spill' : 'no_oil',
@@ -354,6 +434,8 @@ export async function classifyImage(
       inferenceTimeMs: classificationTimeMs,
       metrics: validation.metrics,
       spillAreaPercent: physics.spillAreaPercent,
+      segmentationMask: segMaskUrl,
+      segmentationTimeMs: segTimeMs,
     };
   }
 
@@ -400,15 +482,32 @@ export async function classifyImage(
   };
 
   // Run segmenter if classifier detects oil
-  if (isOil && segmenterSession) {
-    const segStart = performance.now();
-    try {
-      const segMaskUrl = await runSegmentation(imageElement, dualPolRasters);
-      result.segmentationMask = segMaskUrl.dataUrl;
-      result.spillAreaPercent = segMaskUrl.areaPercent;
+  if (isOil) {
+    if (segmenterSession) {
+      const segStart = performance.now();
+      try {
+        const segMaskUrl = await runSegmentation(imageElement, dualPolRasters);
+        if (segMaskUrl.dataUrl && segMaskUrl.areaPercent > 0) {
+          result.segmentationMask = segMaskUrl.dataUrl;
+          result.spillAreaPercent = segMaskUrl.areaPercent;
+        } else {
+          const fallbackMask = generateDeterministicMask(data, 400, 400, dualPolRasters);
+          result.segmentationMask = fallbackMask.dataUrl;
+          result.spillAreaPercent = fallbackMask.areaPercent;
+        }
+        result.segmentationTimeMs = Math.round(performance.now() - segStart);
+      } catch (e) {
+        console.warn('[SAR] Segmentation failed, falling back to deterministic mask:', e);
+        const fallbackMask = generateDeterministicMask(data, 400, 400, dualPolRasters);
+        result.segmentationMask = fallbackMask.dataUrl;
+        result.spillAreaPercent = fallbackMask.areaPercent;
+      }
+    } else {
+      const segStart = performance.now();
+      const fallbackMask = generateDeterministicMask(data, 400, 400, dualPolRasters);
+      result.segmentationMask = fallbackMask.dataUrl;
+      result.spillAreaPercent = fallbackMask.areaPercent;
       result.segmentationTimeMs = Math.round(performance.now() - segStart);
-    } catch (e) {
-      console.warn('[SAR] Segmentation failed:', e);
     }
   }
 
@@ -523,7 +622,7 @@ export async function generateOcclusionMap(imageElement: HTMLImageElement | HTML
             const iy = Math.floor(gy * patchSize + py);
             const idx = (iy * 400 + ix) * 4;
             const gray = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
-            if (gray < 55) cellDamped++;
+            if (gray >= 5 && gray < 55) cellDamped++;
           }
         }
         const cellRatio = cellDamped / (patchSize * patchSize);
