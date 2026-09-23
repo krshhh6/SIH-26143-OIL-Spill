@@ -691,6 +691,18 @@ svg { display: block; flex-shrink: 0; }
   flex-shrink: 0;
   z-index: 100;
 }
+.topbar.topbar-compact {
+  width: fit-content;
+  max-width: fit-content;
+  align-self: flex-start;
+  padding: 0 18px 0 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.topbar.topbar-compact:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
 .topbar-logo {
   display: flex;
   align-items: center;

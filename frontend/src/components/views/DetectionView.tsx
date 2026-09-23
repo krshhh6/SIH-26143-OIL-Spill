@@ -8,11 +8,6 @@ import {
   analyticsToIncident,
   type CalculatedSpillAnalytics,
 } from '../../services/spillAnalyticsEngine';
-import {
-  executeSegmentationMethod,
-  type SegmentationMethod,
-  type SegmentationAlgorithmResult,
-} from '../../services/sarSegmentationAlgorithms';
 
 interface DetectionViewProps {
   onSelectTab?: (tab: TabType) => void;
@@ -39,12 +34,6 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
   const [analyticsResult, setAnalyticsResult] = useState<CalculatedSpillAnalytics | null>(null);
   const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // d-elicio Image Processing & 5-Class Semantic Segmentation State
-  const [activeSegMethod, setActiveSegMethod] = useState<SegmentationMethod>('unet');
-  const [segResult, setSegResult] = useState<SegmentationAlgorithmResult | null>(null);
-  const [maskDisplayMode, setMaskDisplayMode] = useState<'cyan' | 'multiclass'>('cyan');
-  const [isSegmentingAlgo, setIsSegmentingAlgo] = useState(false);
 
   useEffect(() => {
     loadModel().then(() => {
@@ -89,7 +78,6 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
     setCurrentFileName(resolvedName);
     setUploadedFileName(resolvedName);
     setResult(null);
-    setSegResult(null);
     setHeatmapUrl(null);
     setAnalyticsResult(null);
     setAppliedNotice(null);
@@ -101,7 +89,6 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
       try {
         const res = await classifyImage(img, rasters);
         setResult(res);
-
         if (res.prediction === 'oil_spill') {
           const analytics = computeSpillAnalyticsFromDetection({
             confidence: res.confidence,
@@ -114,14 +101,6 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
         } else {
           setAnalyticsResult(null);
         }
-
-        // Run multi-class segmentation suite from d-elicio
-        try {
-          const segRes = await executeSegmentationMethod(img, activeSegMethod);
-          setSegResult(segRes);
-        } catch (segErr) {
-          console.warn('[DetectionView] Algorithm segmentation error:', segErr);
-        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -130,26 +109,6 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
     };
     img.onerror = () => setIsProcessing(false);
     img.src = url;
-  };
-
-  const handleSwitchAlgorithm = async (method: SegmentationMethod) => {
-    setActiveSegMethod(method);
-    if (!selectedImage) return;
-
-    setIsSegmentingAlgo(true);
-    const img = new Image();
-    img.crossOrigin = "Anonymous";
-    img.onload = async () => {
-      try {
-        const segRes = await executeSegmentationMethod(img, method);
-        setSegResult(segRes);
-      } catch (err) {
-        console.error('[DetectionView] Failed executing method:', method, err);
-      } finally {
-        setIsSegmentingAlgo(false);
-      }
-    };
-    img.src = selectedImage;
   };
 
   const handleGenerateHeatmap = async () => {
@@ -392,103 +351,6 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
             </div>
           )}
 
-          {/* d-elicio Algorithm Switcher & 5-Class Color Toggle Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)', flexWrap: 'wrap', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginRight: 4 }}>
-                Algorithm:
-              </span>
-              {[
-                { id: 'unet', label: '🧠 SpillSegNet U-Net' },
-                { id: 'otsu', label: "🎯 Otsu's Thresholding" },
-                { id: 'adaptive', label: '🔍 Adaptive Window' },
-                { id: 'kmeans', label: '🧩 K-Means (k=4)' },
-                { id: 'fuzzy', label: '🔮 Fuzzy C-Means' },
-                { id: 'superpixel', label: '🫧 Superpixel (SLIC)' },
-                { id: 'land_mask', label: '🏔️ Land Masking' },
-              ].map(algo => (
-                <button
-                  key={algo.id}
-                  onClick={() => handleSwitchAlgorithm(algo.id as SegmentationMethod)}
-                  disabled={isSegmentingAlgo}
-                  style={{
-                    padding: '4px 9px',
-                    fontSize: '0.75rem',
-                    borderRadius: 'var(--radius)',
-                    border: activeSegMethod === algo.id ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.12)',
-                    background: activeSegMethod === algo.id ? 'var(--accent)' : 'rgba(255,255,255,0.04)',
-                    color: activeSegMethod === algo.id ? '#fff' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontWeight: activeSegMethod === algo.id ? 700 : 500,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {algo.label}
-                </button>
-              ))}
-            </div>
-
-            {/* 5-Class Color Toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <button
-                onClick={() => setMaskDisplayMode('cyan')}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '0.75rem',
-                  borderRadius: 'var(--radius)',
-                  border: maskDisplayMode === 'cyan' ? '1px solid #00FFFF' : '1px solid rgba(255,255,255,0.1)',
-                  background: maskDisplayMode === 'cyan' ? 'rgba(0, 255, 255, 0.15)' : 'transparent',
-                  color: maskDisplayMode === 'cyan' ? '#00FFFF' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
-                🩵 Cyan Slick Mask
-              </button>
-              <button
-                onClick={() => setMaskDisplayMode('multiclass')}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '0.75rem',
-                  borderRadius: 'var(--radius)',
-                  border: maskDisplayMode === 'multiclass' ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
-                  background: maskDisplayMode === 'multiclass' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                  color: maskDisplayMode === 'multiclass' ? '#38bdf8' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
-                🎨 5-Class Multi-Color
-              </button>
-            </div>
-          </div>
-
-          {/* Standard 5-Class Semantic Legend Strip */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '7px 16px', background: 'rgba(0,0,0,0.25)', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: '0.75rem', flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Standard Ground-Truth Classes:</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: '#00FFFF', display: 'inline-block' }} />
-              <span style={{ color: '#00FFFF', fontWeight: 600 }}>Oil Spill (Cyan)</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: '#FF0000', display: 'inline-block' }} />
-              <span style={{ color: '#f87171' }}>Look-alike (Red)</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: '#B45309', display: 'inline-block' }} />
-              <span style={{ color: '#fbbf24' }}>Ship Target (Brown)</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: '#22C55E', display: 'inline-block' }} />
-              <span style={{ color: '#4ade80' }}>Land (Green)</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 2, background: '#334155', display: 'inline-block' }} />
-              <span style={{ color: 'var(--text-muted)' }}>Sea Surface (Black)</span>
-            </div>
-          </div>
-
-          {/* Diagnostic Inspection Panels */}
           <div style={{ display: 'flex', gap: '1px', background: 'rgba(255,255,255,0.1)' }}>
             <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
               <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem' }}>
@@ -497,36 +359,19 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
               <img src={selectedImage} alt="Selected" style={{ width: '100%', aspectRatio: '1/1', objectFit: 'contain', background: '#000' }} />
             </div>
 
-            {/* Segmentation Mask Panel (Multi-Color or Cyan) */}
-            <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
-              <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', color: maskDisplayMode === 'multiclass' ? '#38bdf8' : '#00FFFF' }}>
-                <span>🎯 {segResult?.methodName || 'SpillSegNet U-Net'}</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Coverage: {segResult ? segResult.oilSpillAreaPercent : (result.spillAreaPercent ?? 0)}% ({segResult ? segResult.oilSpillAreaKm2 : 0} km²)
-                </span>
+            {/* SpillSegNet Segmentation Panel */}
+            {result.segmentationMask && (
+              <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
+                <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
+                  <span>🎯 SpillSegNet U-Net Mask</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Coverage: {result.spillAreaPercent}%</span>
+                </div>
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#000' }}>
+                  <img src={selectedImage} alt="Original" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <img src={result.segmentationMask} alt="SpillSegNet Mask" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 1 }} />
+                </div>
               </div>
-              <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#000' }}>
-                <img src={selectedImage} alt="Original" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
-                {(() => {
-                  const maskSrc = maskDisplayMode === 'multiclass'
-                    ? (segResult?.multiClassColorMaskUrl || result.segmentationMask)
-                    : (segResult?.maskDataUrl || result.segmentationMask);
-
-                  return maskSrc ? (
-                    <img
-                      src={maskSrc}
-                      alt="Segmentation Mask"
-                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 1 }}
-                    />
-                  ) : null;
-                })()}
-                {isSegmentingAlgo && (
-                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', zIndex: 3 }}>
-                    <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite', fontSize: '2rem', color: 'var(--accent)' }}>autorenew</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
 
             <div style={{ flex: 1, padding: 'var(--sp-4)', background: 'var(--bg-dark)' }}>
               <div style={{ marginBottom: 'var(--sp-2)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
@@ -558,64 +403,6 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
               </div>
             </div>
           </div>
-
-          {/* Dark Spot Morphological Feature Extraction Table (from d-elicio repo) */}
-          {segResult && segResult.features.length > 0 && (
-            <div style={{ padding: '14px 16px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  🔬 Morphological Dark Spot Feature Extraction ({segResult.features.length} Blobs Isolated)
-                </div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Latency: {segResult.executionTimeMs} ms · Ground Sampling: 10m/pixel
-                </span>
-              </div>
-
-              <div style={{ overflowX: 'auto', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-                  <thead>
-                    <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'left' }}>
-                      <th style={{ padding: '6px 10px' }}>#</th>
-                      <th style={{ padding: '6px 10px' }}>Classification</th>
-                      <th style={{ padding: '6px 10px' }}>Area (km²)</th>
-                      <th style={{ padding: '6px 10px' }}>Area (px)</th>
-                      <th style={{ padding: '6px 10px' }}>Perimeter</th>
-                      <th style={{ padding: '6px 10px' }}>Complexity (P²/4πA)</th>
-                      <th style={{ padding: '6px 10px' }}>Contrast (ΔdB)</th>
-                      <th style={{ padding: '6px 10px' }}>Centroid</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {segResult.features.map(f => (
-                      <tr key={f.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td style={{ padding: '6px 10px', color: 'var(--text-muted)' }}>{f.id}</td>
-                        <td style={{ padding: '6px 10px' }}>
-                          <span style={{
-                            padding: '2px 6px',
-                            borderRadius: 4,
-                            background: f.label === 'Oil Spill' ? 'rgba(0,255,255,0.15)' : 'rgba(255,0,0,0.15)',
-                            color: f.colorHex,
-                            fontWeight: 700,
-                            fontSize: '0.72rem',
-                          }}>
-                            {f.label}
-                          </span>
-                        </td>
-                        <td style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--accent)' }}>{f.areaKm2} km²</td>
-                        <td style={{ padding: '6px 10px', fontFamily: 'monospace' }}>{f.areaPixels.toLocaleString()}</td>
-                        <td style={{ padding: '6px 10px' }}>{f.perimeterKm} km</td>
-                        <td style={{ padding: '6px 10px', fontFamily: 'monospace' }}>{f.complexity}</td>
-                        <td style={{ padding: '6px 10px', color: '#10b981' }}>+{f.meanContrastDb} dB</td>
-                        <td style={{ padding: '6px 10px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-                          [{f.centroid[0]}, {f.centroid[1]}]
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
           
           {/* LIVE SPILL ANALYTICS & MARPOL CLASSIFICATION PANEL (Computed on the basis of uploaded SAR image) */}
           {result.prediction === 'oil_spill' && analyticsResult && (
@@ -743,39 +530,45 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
           {/* Dynamic Action Controls */}
           {(() => {
             const sceneAreaKm2 = 25.0; // standard Sentinel-1 IW 5km x 5km scene cutout at 10m/pixel
-            const activeCoveragePercent = segResult
-              ? segResult.oilSpillAreaPercent
-              : (typeof result.spillAreaPercent === 'number' && result.spillAreaPercent > 0
-                ? result.spillAreaPercent
-                : +(result.confidence * 18.0).toFixed(1));
-
-            const activeAreaKm2 = segResult
-              ? segResult.oilSpillAreaKm2
-              : +(Math.max(0.15, (activeCoveragePercent / 100.0) * sceneAreaKm2)).toFixed(2);
+            const coveragePercent = typeof result.spillAreaPercent === 'number' && result.spillAreaPercent > 0
+              ? result.spillAreaPercent
+              : +(result.confidence * 18.0).toFixed(1);
+            const dynamicAreaKm2 = +(Math.max(0.15, (coveragePercent / 100.0) * sceneAreaKm2)).toFixed(2);
 
             const handleFeedDrift = () => {
               if (!result || result.prediction !== 'oil_spill' || !selectedImage) return;
 
-              const chosenMask = maskDisplayMode === 'multiclass' && segResult?.multiClassColorMaskUrl
-                ? segResult.multiClassColorMaskUrl
-                : (segResult?.maskDataUrl || result.segmentationMask);
-
               const payload: SarDriftPayload = {
                 imageSrc: selectedImage,
-                maskSrc: chosenMask,
+                maskSrc: result.segmentationMask,
                 fileName: currentFileName || (selectedImage.startsWith('data:') ? 'Uploaded GeoTIFF' : selectedImage.split('/').pop() || 'Sentinel-1 SAR Scene'),
                 prediction: result.prediction,
                 confidence: result.confidence,
-                spillAreaPercent: activeCoveragePercent,
-                estimatedAreaKm2: activeAreaKm2,
+                spillAreaPercent: coveragePercent,
+                estimatedAreaKm2: dynamicAreaKm2,
                 inferenceTimeMs: result.inferenceTimeMs,
-                segmentationTimeMs: segResult?.executionTimeMs ?? result.segmentationTimeMs,
+                segmentationTimeMs: result.segmentationTimeMs,
                 timestamp: new Date().toISOString(),
                 lat: currentScenario?.lat ?? 18.743,
                 lng: currentScenario?.lng ?? 71.218,
                 locationName: currentScenario?.title ?? 'Offshore Coastal Waters',
                 metrics: result.metrics,
               };
+
+              // Inject real-world coordinates if a benchmark is selected
+              if (currentFileName && currentFileName.includes('oil_00000')) {
+                payload.lat = 18.74;
+                payload.lng = 71.21;
+                payload.locationName = 'Mumbai High Basin';
+              } else if (currentFileName && currentFileName.includes('oil_00001')) {
+                payload.lat = 22.45;
+                payload.lng = 69.12;
+                payload.locationName = 'Gulf of Kutch Fairway';
+              } else if (currentFileName && currentFileName.includes('oil_00002')) {
+                payload.lat = 13.26;
+                payload.lng = 80.47;
+                payload.locationName = 'Chennai Port Anchorage';
+              }
 
               if (onFeedIntoDrift) {
                 onFeedIntoDrift(payload);
@@ -789,11 +582,10 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   {result.prediction === 'oil_spill' && (
                     <span>
-                      Dynamic Physical Slick Area: <strong style={{ color: '#00FFFF' }}>{activeAreaKm2} km²</strong> ({activeCoveragePercent}% SAR coverage) · <span className="mono">{currentFileName}</span>
+                      Dynamic Physical Slick Area: <strong style={{ color: '#ef4444' }}>{dynamicAreaKm2} km²</strong> ({coveragePercent}% SAR coverage) · <span className="mono">{currentFileName}</span>
                     </span>
                   )}
                 </div>
-
                 <div style={{ display: 'flex', gap: 'var(--sp-3)', flexWrap: 'wrap', alignItems: 'center' }}>
                   <button
                     className="btn"
@@ -842,7 +634,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
                     title="Feed this evaluated image and its specific computed slick area into the Lagrangian hydrodynamic drift model"
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>waves</span>
-                    <span>Feed into Drift Model ({activeAreaKm2} km²)</span>
+                    <span>Feed into Drift Model ({dynamicAreaKm2} km²)</span>
                   </button>
 
                   <button 

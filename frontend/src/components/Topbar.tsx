@@ -135,7 +135,7 @@ export const Topbar: React.FC<TopbarProps> = ({
 
   if (!isDashboard) {
     return (
-      <header className="topbar">
+      <header className="topbar topbar-compact">
         {/* BRAND LOGO ONLY */}
         <div
           className="topbar-logo"
