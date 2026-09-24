@@ -387,10 +387,91 @@ export function generateDeterministicMask(
 }
 
 /**
+ * Detects whether an image has synthetic letterbox/pillarbox bars (e.g. from screen captures or UI viewports)
+ * and returns the bounding rectangle of the actual active SAR scene content.
+ */
+export function detectActiveSarViewport(
+  source: HTMLImageElement | HTMLCanvasElement,
+  srcW: number,
+  srcH: number
+): { x: number; y: number; width: number; height: number; hasLetterbox: boolean } {
+  const sampleDim = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = sampleDim;
+  canvas.height = sampleDim;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(source, 0, 0, sampleDim, sampleDim);
+  const data = ctx.getImageData(0, 0, sampleDim, sampleDim).data;
+
+  // Compute row and column mean luminance
+  const rowLum = new Float32Array(sampleDim);
+  const colLum = new Float32Array(sampleDim);
+
+  for (let y = 0; y < sampleDim; y++) {
+    let rSum = 0;
+    for (let x = 0; x < sampleDim; x++) {
+      const idx = (y * sampleDim + x) * 4;
+      const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+      rSum += lum;
+    }
+    rowLum[y] = rSum / sampleDim;
+  }
+
+  for (let x = 0; x < sampleDim; x++) {
+    let cSum = 0;
+    for (let y = 0; y < sampleDim; y++) {
+      const idx = (y * sampleDim + x) * 4;
+      const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+      cSum += lum;
+    }
+    colLum[x] = cSum / sampleDim;
+  }
+
+  // Detect top and bottom letterbox (rows with mean lum < 10)
+  let top = 0;
+  while (top < Math.floor(sampleDim * 0.35) && rowLum[top] < 10) {
+    top++;
+  }
+
+  let bottom = sampleDim - 1;
+  while (bottom > Math.floor(sampleDim * 0.65) && rowLum[bottom] < 10) {
+    bottom--;
+  }
+
+  // Detect left and right pillarbox (cols with mean lum < 10)
+  let left = 0;
+  while (left < Math.floor(sampleDim * 0.35) && colLum[left] < 10) {
+    left++;
+  }
+
+  let right = sampleDim - 1;
+  while (right > Math.floor(sampleDim * 0.65) && colLum[right] < 10) {
+    right--;
+  }
+
+  const hasLetterbox = top > 2 || bottom < sampleDim - 3 || left > 2 || right < sampleDim - 3;
+
+  if (!hasLetterbox) {
+    return { x: 0, y: 0, width: srcW, height: srcH, hasLetterbox: false };
+  }
+
+  const scaleX = srcW / sampleDim;
+  const scaleY = srcH / sampleDim;
+
+  const realX = Math.round(left * scaleX);
+  const realY = Math.round(top * scaleY);
+  const realW = Math.max(16, Math.round((right - left + 1) * scaleX));
+  const realH = Math.max(16, Math.round((bottom - top + 1) * scaleY));
+
+  return { x: realX, y: realY, width: realW, height: realH, hasLetterbox: true };
+}
+
+/**
  * Prepares a model-compatible canvas (400x400 or 512x512) with 1:1 aspect ratio constraint.
  * If cropBox is provided, extracts that specific bounding box.
- * If no cropBox is provided and source is non-square, applies aspect-ratio preserving center crop
- * to eliminate spatial squashing and protect radar backscatter texture fidelity.
+ * If no cropBox is provided and source is non-square (or contains synthetic black letterbox bars),
+ * detects the active SAR scene content and applies aspect-ratio preserving center crop
+ * to eliminate spatial squashing, discard synthetic black voids, and protect radar backscatter texture fidelity.
  */
 export function createCompatibleCanvas(
   source: HTMLImageElement | HTMLCanvasElement,
@@ -417,6 +498,9 @@ export function createCompatibleCanvas(
   let appliedCrop: CropBox;
   let wasCenterCropped = false;
 
+  // Detect if source has synthetic letterbox/pillarbox bars
+  const activeViewport = detectActiveSarViewport(source, srcW, srcH);
+
   if (cropBox && cropBox.width > 0 && cropBox.height > 0) {
     const cx = Math.max(0, Math.min(srcW - 1, Math.round(cropBox.x)));
     const cy = Math.max(0, Math.min(srcH - 1, Math.round(cropBox.y)));
@@ -424,6 +508,16 @@ export function createCompatibleCanvas(
     const ch = Math.max(1, Math.min(srcH - cy, Math.round(cropBox.height)));
     appliedCrop = { x: cx, y: cy, width: cw, height: ch };
     ctx.drawImage(source, cx, cy, cw, ch, 0, 0, targetWidth, targetHeight);
+  } else if (activeViewport.hasLetterbox) {
+    // When image contains letterbox bars, center-crop within the active radar content
+    const baseW = activeViewport.width;
+    const baseH = activeViewport.height;
+    const size = Math.min(baseW, baseH);
+    const sx = activeViewport.x + Math.max(0, Math.floor((baseW - size) / 2));
+    const sy = activeViewport.y + Math.max(0, Math.floor((baseH - size) / 2));
+    appliedCrop = { x: sx, y: sy, width: size, height: size };
+    wasCenterCropped = true;
+    ctx.drawImage(source, sx, sy, size, size, 0, 0, targetWidth, targetHeight);
   } else if (srcW === srcH) {
     appliedCrop = { x: 0, y: 0, width: srcW, height: srcH };
     ctx.drawImage(source, 0, 0, targetWidth, targetHeight);
