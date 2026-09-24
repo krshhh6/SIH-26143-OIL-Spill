@@ -1,5 +1,7 @@
 import * as ort from 'onnxruntime-web';
-import type { SarClassificationResult } from '../types/dashboard';
+import type { SarClassificationResult, CropBox, CropInfo } from '../types/dashboard';
+
+export type { CropBox, CropInfo };
 
 function sigmoid(x: number): number {
   return 1 / (1 + Math.exp(-Math.max(-20, Math.min(20, x))));
@@ -384,20 +386,291 @@ export function generateDeterministicMask(
   };
 }
 
+/**
+ * Prepares a model-compatible canvas (400x400 or 512x512) with 1:1 aspect ratio constraint.
+ * If cropBox is provided, extracts that specific bounding box.
+ * If no cropBox is provided and source is non-square, applies aspect-ratio preserving center crop
+ * to eliminate spatial squashing and protect radar backscatter texture fidelity.
+ */
+export function createCompatibleCanvas(
+  source: HTMLImageElement | HTMLCanvasElement,
+  targetWidth: number,
+  targetHeight: number,
+  cropBox?: CropBox
+): {
+  canvas: HTMLCanvasElement;
+  appliedCrop: CropBox;
+  wasCenterCropped: boolean;
+  originalWidth: number;
+  originalHeight: number;
+} {
+  const canvas = document.createElement('canvas');
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const ctx = canvas.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  const srcW = source instanceof HTMLImageElement ? (source.naturalWidth || source.width) : source.width;
+  const srcH = source instanceof HTMLImageElement ? (source.naturalHeight || source.height) : source.height;
+
+  let appliedCrop: CropBox;
+  let wasCenterCropped = false;
+
+  if (cropBox && cropBox.width > 0 && cropBox.height > 0) {
+    const cx = Math.max(0, Math.min(srcW - 1, Math.round(cropBox.x)));
+    const cy = Math.max(0, Math.min(srcH - 1, Math.round(cropBox.y)));
+    const cw = Math.max(1, Math.min(srcW - cx, Math.round(cropBox.width)));
+    const ch = Math.max(1, Math.min(srcH - cy, Math.round(cropBox.height)));
+    appliedCrop = { x: cx, y: cy, width: cw, height: ch };
+    ctx.drawImage(source, cx, cy, cw, ch, 0, 0, targetWidth, targetHeight);
+  } else if (srcW === srcH) {
+    appliedCrop = { x: 0, y: 0, width: srcW, height: srcH };
+    ctx.drawImage(source, 0, 0, targetWidth, targetHeight);
+  } else {
+    // Non-square image: center-crop square to prevent aspect-ratio distortion
+    const size = Math.min(srcW, srcH);
+    const sx = Math.max(0, Math.floor((srcW - size) / 2));
+    const sy = Math.max(0, Math.floor((srcH - size) / 2));
+    appliedCrop = { x: sx, y: sy, width: size, height: size };
+    wasCenterCropped = true;
+    ctx.drawImage(source, sx, sy, size, size, 0, 0, targetWidth, targetHeight);
+  }
+
+  // Ensure canvas pixels are calibrated radar-compatible grayscale luminance:
+  // converts any colored web PNGs, false-color layers, or UI screenshot graphics
+  const imgData = ctx.getImageData(0, 0, targetWidth, targetHeight);
+  const px = imgData.data;
+  let hasChroma = false;
+  for (let i = 0; i < px.length; i += 4) {
+    if (Math.abs(px[i] - px[i + 1]) > 8 || Math.abs(px[i] - px[i + 2]) > 8 || Math.abs(px[i + 1] - px[i + 2]) > 8) {
+      hasChroma = true;
+      break;
+    }
+  }
+  if (hasChroma) {
+    for (let i = 0; i < px.length; i += 4) {
+      const lum = Math.round(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]);
+      px[i] = lum;
+      px[i + 1] = lum;
+      px[i + 2] = lum;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  return { canvas, appliedCrop, wasCenterCropped, originalWidth: srcW, originalHeight: srcH };
+}
+
+/**
+ * Extracts a cropped PNG Data URL from an image with high quality.
+ */
+export function extractCroppedImageDataUrl(
+  source: HTMLImageElement | HTMLCanvasElement,
+  cropBox: CropBox,
+  targetSize?: number
+): string {
+  const canvas = document.createElement('canvas');
+  const outW = targetSize || Math.round(cropBox.width);
+  const outH = targetSize || Math.round(cropBox.height);
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  ctx.drawImage(
+    source,
+    Math.round(cropBox.x),
+    Math.round(cropBox.y),
+    Math.round(cropBox.width),
+    Math.round(cropBox.height),
+    0,
+    0,
+    outW,
+    outH
+  );
+
+  // Calibrate colored pixels to compatible radar grayscale
+  const imgData = ctx.getImageData(0, 0, outW, outH);
+  const px = imgData.data;
+  let hasChroma = false;
+  for (let i = 0; i < px.length; i += 4) {
+    if (Math.abs(px[i] - px[i + 1]) > 8 || Math.abs(px[i] - px[i + 2]) > 8 || Math.abs(px[i + 1] - px[i + 2]) > 8) {
+      hasChroma = true;
+      break;
+    }
+  }
+  if (hasChroma) {
+    for (let i = 0; i < px.length; i += 4) {
+      const lum = Math.round(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]);
+      px[i] = lum;
+      px[i + 1] = lum;
+      px[i + 2] = lum;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  return canvas.toDataURL('image/png');
+}
+
+/**
+ * Scans a SAR scene or screenshot for candidate capillary wave damping hotspots.
+ * In C-band SAR radar imagery, surface oil films dampen capillary/gravity waves,
+ * producing a distinct backscatter drop (low grayscale in range [5, 55]) with
+ * sharp negative contrast against ambient wind-roughened sea (range [65, 120]).
+ * Returns a 1:1 square CropBox centered around the primary slick.
+ */
+export function autoDetectCapillaryDampingROI(
+  source: HTMLImageElement | HTMLCanvasElement
+): CropBox {
+  const srcW = source instanceof HTMLImageElement ? (source.naturalWidth || source.width) : source.width;
+  const srcH = source instanceof HTMLImageElement ? (source.naturalHeight || source.height) : source.height;
+
+  const minDim = Math.min(srcW, srcH);
+  if (minDim <= 400) {
+    const size = minDim;
+    return {
+      x: Math.max(0, Math.floor((srcW - size) / 2)),
+      y: Math.max(0, Math.floor((srcH - size) / 2)),
+      width: size,
+      height: size,
+    };
+  }
+
+  const gridDim = 200;
+  const canvas = document.createElement('canvas');
+  canvas.width = gridDim;
+  canvas.height = gridDim;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(source, 0, 0, gridDim, gridDim);
+
+  const imgData = ctx.getImageData(0, 0, gridDim, gridDim);
+  const data = imgData.data;
+  const totalPixels = gridDim * gridDim;
+
+  const grayValues = new Uint8Array(totalPixels);
+  let totalMarine = 0;
+  let marineLuminanceSum = 0;
+
+  for (let i = 0; i < totalPixels; i++) {
+    const r = data[i * 4];
+    const g = data[i * 4 + 1];
+    const b = data[i * 4 + 2];
+    const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+    grayValues[i] = gray;
+    if (gray >= 5 && gray <= 230) {
+      totalMarine++;
+      marineLuminanceSum += gray;
+    }
+  }
+
+  const ambientOceanMean = totalMarine > 0 ? marineLuminanceSum / totalMarine : 80;
+
+  const windowSizes = [
+    Math.round(gridDim * 0.40),
+    Math.round(gridDim * 0.55),
+    Math.round(gridDim * 0.70),
+  ];
+
+  let bestScore = -1;
+  let bestGridX = Math.round((gridDim - windowSizes[1]) / 2);
+  let bestGridY = Math.round((gridDim - windowSizes[1]) / 2);
+  let bestGridSize = windowSizes[1];
+
+  for (const winSize of windowSizes) {
+    const step = Math.max(6, Math.floor(winSize / 6));
+    for (let gy = 0; gy <= gridDim - winSize; gy += step) {
+      for (let gx = 0; gx <= gridDim - winSize; gx += step) {
+        let winMarineCount = 0;
+        let winDampedCount = 0;
+        let winCoreCount = 0;
+        let winSum = 0;
+
+        for (let py = 0; py < winSize; py += 2) {
+          const rowOffset = (gy + py) * gridDim;
+          for (let px = 0; px < winSize; px += 2) {
+            const val = grayValues[rowOffset + (gx + px)];
+            if (val >= 5 && val <= 230) {
+              winMarineCount++;
+              winSum += val;
+              if (val <= 55) winDampedCount++;
+              if (val <= 32) winCoreCount++;
+            }
+          }
+        }
+
+        if (winMarineCount < (winSize * winSize) / 8) continue;
+
+        const winMean = winSum / winMarineCount;
+        const dampRatio = winDampedCount / winMarineCount;
+        const coreRatio = winCoreCount / winMarineCount;
+        const depressionDb = Math.max(0, ambientOceanMean - winMean);
+
+        let score = dampRatio * 3.0 + coreRatio * 5.0 + (depressionDb / 40.0);
+        if (dampRatio > 0.92 && depressionDb < 10) {
+          score *= 0.2;
+        }
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestGridX = gx;
+          bestGridY = gy;
+          bestGridSize = winSize;
+        }
+      }
+    }
+  }
+
+  if (bestScore < 0.2) {
+    const targetSize = Math.round(minDim * 0.85);
+    return {
+      x: Math.max(0, Math.floor((srcW - targetSize) / 2)),
+      y: Math.max(0, Math.floor((srcH - targetSize) / 2)),
+      width: targetSize,
+      height: targetSize,
+    };
+  }
+
+  const scaleX = srcW / gridDim;
+  const scaleY = srcH / gridDim;
+  const targetPxSize = Math.round(bestGridSize * Math.min(scaleX, scaleY));
+  const finalSize = Math.min(minDim, Math.max(256, targetPxSize));
+
+  const centerX = (bestGridX + bestGridSize / 2) * scaleX;
+  const centerY = (bestGridY + bestGridSize / 2) * scaleY;
+
+  const finalX = Math.max(0, Math.min(srcW - finalSize, Math.round(centerX - finalSize / 2)));
+  const finalY = Math.max(0, Math.min(srcH - finalSize, Math.round(centerY - finalSize / 2)));
+
+  return {
+    x: finalX,
+    y: finalY,
+    width: finalSize,
+    height: finalSize,
+  };
+}
+
 export async function classifyImage(
   imageElement: HTMLImageElement | HTMLCanvasElement,
-  dualPolRasters?: DualPolInputRasters
+  dualPolRasters?: DualPolInputRasters,
+  cropBox?: CropBox
 ): Promise<ExtendedClassificationResult> {
   const start = performance.now();
 
-  const canvas = document.createElement('canvas');
-  canvas.width = 400;
-  canvas.height = 400;
+  const { canvas, appliedCrop, wasCenterCropped, originalWidth, originalHeight } =
+    createCompatibleCanvas(imageElement, 400, 400, cropBox);
   const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(imageElement, 0, 0, 400, 400);
-
   const imageData = ctx.getImageData(0, 0, 400, 400);
   const data = imageData.data;
+
+  const cropInfo: CropInfo = {
+    ...appliedCrop,
+    originalWidth,
+    originalHeight,
+    isCropped: !!cropBox || wasCenterCropped,
+    wasCenterCropped,
+    aspectRatio: +(appliedCrop.width / appliedCrop.height).toFixed(2),
+  };
 
   // Domain validation
   const validation = validateSarImage(data, 400, 400);
@@ -410,6 +683,7 @@ export async function classifyImage(
       errorMessage: 'Uploaded image is not a Synthetic Aperture Radar (SAR) ocean scene.',
       rejectionReason: validation.reason,
       metrics: validation.metrics,
+      cropInfo,
     };
   }
 
@@ -436,13 +710,15 @@ export async function classifyImage(
       spillAreaPercent: physics.spillAreaPercent,
       segmentationMask: segMaskUrl,
       segmentationTimeMs: segTimeMs,
+      cropInfo,
     };
   }
 
   // Real ONNX inference
   const numPixels = 400 * 400;
   const tensorData = new Float32Array(2 * numPixels);
-  const hasDirectRasters = dualPolRasters?.vvRaster && dualPolRasters?.vhRaster &&
+  const hasDirectRasters = !cropBox && !wasCenterCropped &&
+                           dualPolRasters?.vvRaster && dualPolRasters?.vhRaster &&
                            dualPolRasters.vvRaster.length === numPixels &&
                            dualPolRasters.vhRaster.length === numPixels;
 
@@ -479,6 +755,7 @@ export async function classifyImage(
     confidence,
     inferenceTimeMs: classificationTimeMs,
     metrics: validation.metrics,
+    cropInfo,
   };
 
   // Run segmenter if classifier detects oil
@@ -486,7 +763,7 @@ export async function classifyImage(
     if (segmenterSession) {
       const segStart = performance.now();
       try {
-        const segMaskUrl = await runSegmentation(imageElement, dualPolRasters);
+        const segMaskUrl = await runSegmentation(imageElement, dualPolRasters, cropBox);
         if (segMaskUrl.dataUrl && segMaskUrl.areaPercent > 0) {
           result.segmentationMask = segMaskUrl.dataUrl;
           result.spillAreaPercent = segMaskUrl.areaPercent;
@@ -516,46 +793,28 @@ export async function classifyImage(
 
 async function runSegmentation(
   imageElement: HTMLImageElement | HTMLCanvasElement,
-  dualPolRasters?: DualPolInputRasters
+  _dualPolRasters?: DualPolInputRasters,
+  cropBox?: CropBox
 ): Promise<{ dataUrl: string; areaPercent: number }> {
   if (!segmenterSession) {
     return { dataUrl: '', areaPercent: 0 };
   }
 
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
+  const { canvas } = createCompatibleCanvas(imageElement, 512, 512, cropBox);
   const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(imageElement, 0, 0, 512, 512);
-
   const imageData = ctx.getImageData(0, 0, 512, 512);
   const data = imageData.data;
   const numPixels = 512 * 512;
 
   const tensorData = new Float32Array(2 * numPixels);
 
-  if (dualPolRasters?.vvRaster && dualPolRasters?.vhRaster) {
-    const srcW = Math.round(Math.sqrt(dualPolRasters.vvRaster.length));
-    const srcH = srcW;
-    for (let y = 0; y < 512; y++) {
-      for (let x = 0; x < 512; x++) {
-        const srcX = Math.min(Math.floor(x * srcW / 512), srcW - 1);
-        const srcY = Math.min(Math.floor(y * srcH / 512), srcH - 1);
-        const srcIdx = srcY * srcW + srcX;
-        const dstIdx = y * 512 + x;
-        tensorData[dstIdx] = dualPolRasters.vvRaster[srcIdx];
-        tensorData[numPixels + dstIdx] = dualPolRasters.vhRaster[srcIdx];
-      }
-    }
-  } else {
-    for (let i = 0; i < numPixels; i++) {
-      const r = data[i * 4];
-      const g = data[i * 4 + 1];
-      const b = data[i * 4 + 2];
-      const vv = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
-      tensorData[i] = vv;
-      tensorData[numPixels + i] = Math.max(0.0, vv - 0.22);
-    }
+  for (let i = 0; i < numPixels; i++) {
+    const r = data[i * 4];
+    const g = data[i * 4 + 1];
+    const b = data[i * 4 + 2];
+    const vv = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
+    tensorData[i] = vv;
+    tensorData[numPixels + i] = Math.max(0.0, vv - 0.22);
   }
 
   const tensor = new ort.Tensor('float32', tensorData, [1, 2, 512, 512]);
@@ -592,16 +851,16 @@ async function runSegmentation(
   };
 }
 
-export async function generateOcclusionMap(imageElement: HTMLImageElement | HTMLCanvasElement): Promise<string> {
-  const canvas = document.createElement('canvas');
-  canvas.width = 400;
-  canvas.height = 400;
+export async function generateOcclusionMap(
+  imageElement: HTMLImageElement | HTMLCanvasElement,
+  cropBox?: CropBox
+): Promise<string> {
+  const { canvas } = createCompatibleCanvas(imageElement, 400, 400, cropBox);
   const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(imageElement, 0, 0, 400, 400);
-
   const imageData = ctx.getImageData(0, 0, 400, 400);
   const data = imageData.data;
   const numPixels = 400 * 400;
+
 
   // Deterministic physics-based heatmap if ONNX classifier is not active
   if (!classifierSession) {

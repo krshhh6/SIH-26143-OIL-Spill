@@ -37,7 +37,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   showSeamarks,
   showIndiaOutline = true,
   showEezBoundary = true,
-  selectedCopernicusLayer = 'true-color',
+  selectedCopernicusLayer = 'sar-vv',
   layerOpacity = 1.0,
   showAiMask = false,
   showOverlay = true,
@@ -503,10 +503,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         [centerLat + deltaLat, centerLng + deltaLng],
       ];
 
-      // Default to Photorealistic Optical True Color (Natural deep ocean with iridescent oil sheen)
-      let imageryFile = `/imagery/tc_${key}.png`;
-      let layerLabel = 'Sentinel-2A MSI Natural True Color with Surface Sheen';
-      let sensorDesc = 'Visible ocean surface showing specular sun-glint on spreading iridescent oil film.';
+      // Default to Sentinel-1 SAR Radar Backscatter (Microwave Capillary Damping)
+      let imageryFile = `/imagery/sar_${key}.png`;
+      let layerLabel = 'Sentinel-1A C-SAR IW GRD Calibrated Backscatter (VV Decibels)';
+      let sensorDesc = 'Capillary Wave Damping (Δσ0 = -8.40 dB). Dark slick crater against rough ocean speckle.';
 
       if (selectedCopernicusLayer === 'sar-vv') {
         imageryFile = `/imagery/sar_${key}.png`;

@@ -24,15 +24,6 @@ interface MapPanelProps {
 
 const COPERNICUS_LAYERS: CopernicusLayerInfo[] = [
   {
-    id: 'true-color',
-    name: 'True color',
-    bands: 'Based on bands B4, B3, B2',
-    desc: 'Photorealistic natural ocean satellite imagery (Copernicus Browser standard).',
-    badge: 'OPTICAL',
-    badgeColor: '#0284C7',
-    thumbBg: '#1e3a5f',
-  },
-  {
     id: 'sar-vv',
     name: 'SAR Decibel (VV Damping)',
     bands: 'Sentinel-1 C-SAR IW GRD',
@@ -40,6 +31,24 @@ const COPERNICUS_LAYERS: CopernicusLayerInfo[] = [
     badge: 'RADAR P0',
     badgeColor: '#0891B2',
     thumbBg: '#0f2b38',
+  },
+  {
+    id: 'sar-vh',
+    name: 'SAR Cross-Pol (VH Mode)',
+    bands: 'Sentinel-1C C-SAR IW GRD',
+    desc: 'Cross-polarized volume scattering and metallic vessel discrimination.',
+    badge: 'RADAR VH',
+    badgeColor: '#0EA5E9',
+    thumbBg: '#0f2738',
+  },
+  {
+    id: 'true-color',
+    name: 'True color',
+    bands: 'Based on bands B4, B3, B2',
+    desc: 'Photorealistic natural ocean satellite imagery (Copernicus Browser standard).',
+    badge: 'OPTICAL',
+    badgeColor: '#0284C7',
+    thumbBg: '#1e3a5f',
   },
   {
     id: 'swir-oil',
@@ -50,6 +59,7 @@ const COPERNICUS_LAYERS: CopernicusLayerInfo[] = [
     badgeColor: '#B45309',
     thumbBg: '#3d2508',
   },
+
   {
     id: 'false-color',
     name: 'False color (CIR)',
@@ -76,15 +86,6 @@ const COPERNICUS_LAYERS: CopernicusLayerInfo[] = [
     badge: 'THERMAL',
     badgeColor: '#7C3AED',
     thumbBg: '#2a144b',
-  },
-  {
-    id: 'sar-vh',
-    name: 'SAR Cross-Pol (VH Mode)',
-    bands: 'Sentinel-1C C-SAR IW GRD',
-    desc: 'Cross-polarized volume scattering and metallic vessel discrimination.',
-    badge: 'RADAR VH',
-    badgeColor: '#0EA5E9',
-    thumbBg: '#0f2738',
   },
   {
     id: 'nisar-ls',
@@ -115,8 +116,8 @@ export const MapPanel: React.FC<MapPanelProps> = ({
 }) => {
   const [baseLayer2D, setBaseLayer2D] = useState<BaseLayerType>('satellite');
   const [showSeamarks, setShowSeamarks] = useState<boolean>(true);
-  const [selectedCopernicusLayer, setSelectedCopernicusLayer] = useState<CopernicusLayerId>('true-color');
-  const [activeSatellite, setActiveSatellite] = useState<string>('Sentinel-2A');
+  const [selectedCopernicusLayer, setSelectedCopernicusLayer] = useState<CopernicusLayerId>('sar-vv');
+  const [activeSatellite, setActiveSatellite] = useState<string>('Sentinel-1A');
   const [showSpillOverlay, setShowSpillOverlay] = useState<boolean>(true);
   const [showIndiaOutline, setShowIndiaOutline] = useState<boolean>(true);
   const [showEezBoundary, setShowEezBoundary] = useState<boolean>(true);
@@ -130,7 +131,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({
     activeSatellite === 'Sentinel-2B' ? 'Sentinel-2B MSI (SWIR)' :
     activeSatellite === 'ISRO NISAR' ? 'ISRO NISAR (L+S)' :
     activeSatellite.includes('EOS-04') ? 'ISRO EOS-04 (Hybrid)' :
-    'Sentinel-2A MSI (Optical)';
+    'Sentinel-1A C-SAR (VV)';
 
   const [layerOpacity, setLayerOpacity] = useState<number>(0.92);
   const [showAiMask, setShowAiMask] = useState<boolean>(true);
@@ -170,7 +171,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({
     : 'INC-001'
     : 'INC-001';
 
-  let rawImageSrc = `/imagery/tc_${scenarioKey}.png`;
+  let rawImageSrc = `/imagery/sar_${scenarioKey}.png`;
   if (selectedCopernicusLayer === 'sar-vv') rawImageSrc = `/imagery/sar_${scenarioKey}.png`;
   else if (selectedCopernicusLayer === 'sar-vh') rawImageSrc = `/imagery/vh_${scenarioKey}.png`;
   else if (selectedCopernicusLayer === 'true-color') rawImageSrc = `/imagery/tc_${scenarioKey}.png`;
@@ -199,7 +200,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({
   const handleSelectBasemap = (layer: BaseLayerType) => {
     setBaseLayer2D(layer);
     if (layer === 'satellite') {
-      handleSelectCopernicusLayer('true-color');
+      handleSelectCopernicusLayer('sar-vv');
     } else if (layer === 'sar') {
       handleSelectCopernicusLayer('sar-vv');
     }

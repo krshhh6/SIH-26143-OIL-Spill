@@ -95,6 +95,21 @@ export interface DetectionResult {
   error?: string;
 }
 
+export interface CropBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface CropInfo extends CropBox {
+  originalWidth: number;
+  originalHeight: number;
+  isCropped: boolean;
+  aspectRatio: number;
+  wasCenterCropped?: boolean;
+}
+
 export interface SarClassificationResult {
   imageFile: string;
   prediction: 'oil_spill' | 'no_oil' | 'invalid_sar';
@@ -106,6 +121,7 @@ export interface SarClassificationResult {
   segmentationMask?: string;
   spillAreaPercent?: number;
   segmentationTimeMs?: number;
+  cropInfo?: CropInfo;
   metrics?: {
     meanBrightness: number;
     brightRatio: number;
@@ -128,6 +144,7 @@ export interface SarDriftPayload {
   lat: number;
   lng: number;
   locationName: string;
+  cropInfo?: CropInfo;
   metrics?: {
     meanBrightness?: number;
     brightRatio?: number;
@@ -135,4 +152,5 @@ export interface SarDriftPayload {
     isColor?: boolean;
   };
 }
+
 

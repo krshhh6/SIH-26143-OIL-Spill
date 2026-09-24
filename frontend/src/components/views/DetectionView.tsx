@@ -1,13 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { TabType, SarClassificationResult, SarDriftPayload, Scenario } from '../../types/dashboard';
+import type { TabType, SarClassificationResult, SarDriftPayload, Scenario, CropBox } from '../../types/dashboard';
 import type { LiveIncident } from '../../hooks/useIncidents';
-import { loadModel, isModelLoaded, getModelLoadError, classifyImage, generateOcclusionMap } from '../../services/sarClassifier';
+import {
+  loadModel,
+  isModelLoaded,
+  getModelLoadError,
+  classifyImage,
+  generateOcclusionMap,
+  autoDetectCapillaryDampingROI,
+  extractCroppedImageDataUrl,
+  type DualPolInputRasters,
+} from '../../services/sarClassifier';
 import { decodeTiffFile } from '../../utils/tiffDecoder';
 import {
   computeSpillAnalyticsFromDetection,
   analyticsToIncident,
   type CalculatedSpillAnalytics,
 } from '../../services/spillAnalyticsEngine';
+import { SarImageCropper } from '../common/SarImageCropper';
 
 interface DetectionViewProps {
   onSelectTab?: (tab: TabType) => void;
@@ -26,6 +36,13 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<SarClassificationResult | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [rawImage, setRawImage] = useState<string | null>(null);
+  const [activeCropBox, setActiveCropBox] = useState<CropBox | null>(null);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [isFullScenePreview, setIsFullScenePreview] = useState(false);
+  const [cropNotice, setCropNotice] = useState<string | null>(null);
+  const [imageNatSize, setImageNatSize] = useState<{ width: number; height: number } | null>(null);
+  const [currentRasters, setCurrentRasters] = useState<DualPolInputRasters | undefined>(undefined);
   const [currentFileName, setCurrentFileName] = useState<string>('Sentinel-1 SAR Scene');
   const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
   const [isGeneratingHeatmap, setIsGeneratingHeatmap] = useState(false);
@@ -131,33 +148,42 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
     }
   };
 
-  const handleImageSelect = (
-    url: string,
-    rasters?: { vvRaster?: Float32Array; vhRaster?: Float32Array },
-    customName?: string
+  const runEvaluation = (
+    imageSource: string,
+    rasters?: DualPolInputRasters,
+    cropBox?: CropBox,
+    resolvedName?: string
   ) => {
-    setSelectedImage(url);
-    const resolvedName = customName || (url.includes('/') ? url.split('/').pop()?.split('?')[0] : 'SAR Scene') || 'SAR Scene';
-    setCurrentFileName(resolvedName);
-    setUploadedFileName(resolvedName);
+    const finalName = resolvedName || currentFileName;
+    setIsProcessing(true);
     setResult(null);
     setHeatmapUrl(null);
     setAnalyticsResult(null);
     setAppliedNotice(null);
-    setIsProcessing(true);
-    
+
     const img = new Image();
-    img.crossOrigin = "Anonymous";
+    img.crossOrigin = 'Anonymous';
     img.onload = async () => {
       try {
-        const res = await classifyImage(img, rasters);
+        const origW = img.naturalWidth || img.width;
+        const origH = img.naturalHeight || img.height;
+        setImageNatSize({ width: origW, height: origH });
+
+        const res = await classifyImage(img, rasters, cropBox);
         setResult(res);
+
+        if (res.cropInfo?.isCropped) {
+          setCropNotice(`✂️ 1:1 Model Compatible Crop: ${res.cropInfo.width}×${res.cropInfo.height} px (Distort-Free Radar Backscatter)`);
+        } else if (res.cropInfo?.wasCenterCropped) {
+          setCropNotice(`📐 Non-Square Scene (${origW}×${origH}): Auto-centered 1:1 crop to protect microwave backscatter. Click '📐 Adjust Crop' to fine-tune.`);
+        }
+
         if (res.prediction === 'oil_spill') {
           const analytics = computeSpillAnalyticsFromDetection({
             confidence: res.confidence,
             spillAreaPercent: res.spillAreaPercent,
-            imageName: resolvedName,
-            imageUrl: url,
+            imageName: finalName,
+            imageUrl: imageSource,
             maskUrl: res.segmentationMask,
           });
           setAnalyticsResult(analytics);
@@ -165,23 +191,75 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
           setAnalyticsResult(null);
         }
       } catch (err) {
-        console.error(err);
+        console.error('Classification error:', err);
       } finally {
         setIsProcessing(false);
       }
     };
     img.onerror = () => setIsProcessing(false);
-    img.src = url;
+    img.src = imageSource;
+  };
+
+  const handleImageSelect = (
+    url: string,
+    rasters?: DualPolInputRasters,
+    customName?: string
+  ) => {
+    const resolvedName = customName || (url.includes('/') ? url.split('/').pop()?.split('?')[0] : 'SAR Scene') || 'SAR Scene';
+    setRawImage(url);
+    setSelectedImage(url);
+    setCurrentRasters(rasters);
+    setCurrentFileName(resolvedName);
+    setUploadedFileName(resolvedName);
+    setActiveCropBox(null);
+    setIsFullScenePreview(false);
+    setCropNotice(null);
+
+    runEvaluation(url, rasters, undefined, resolvedName);
+  };
+
+  const handleAutoDetectAndCrop = () => {
+    const src = rawImage || selectedImage;
+    if (!src) return;
+    setIsProcessing(true);
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      try {
+        const detected = autoDetectCapillaryDampingROI(img);
+        const croppedDataUrl = extractCroppedImageDataUrl(img, detected, 800);
+        setSelectedImage(croppedDataUrl);
+        setActiveCropBox(detected);
+        setIsFullScenePreview(false);
+        setCropNotice(`🎯 Auto-Detected Slick ROI: ${detected.width}×${detected.height} px (Capillary Damping Hotspot)`);
+        runEvaluation(src, currentRasters, detected, currentFileName);
+      } catch (err) {
+        console.error('Auto-detection error:', err);
+        setIsProcessing(false);
+      }
+    };
+    img.onerror = () => setIsProcessing(false);
+    img.src = src;
+  };
+
+  const handleResetToFullScene = () => {
+    if (!rawImage) return;
+    setSelectedImage(rawImage);
+    setActiveCropBox(null);
+    setIsFullScenePreview(false);
+    setCropNotice(null);
+    runEvaluation(rawImage, currentRasters, undefined, currentFileName);
   };
 
   const handleGenerateHeatmap = async () => {
-    if (!selectedImage) return;
+    const src = selectedImage || rawImage;
+    if (!src) return;
     setIsGeneratingHeatmap(true);
     const img = new Image();
     img.crossOrigin = "Anonymous";
     img.onload = async () => {
       try {
-        const url = await generateOcclusionMap(img);
+        const url = await generateOcclusionMap(img, activeCropBox || undefined);
         setHeatmapUrl(url);
       } catch (err) {
         console.error(err);
@@ -189,12 +267,11 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
         setIsGeneratingHeatmap(false);
       }
     };
-    img.src = selectedImage;
+    img.src = src;
   };
 
   // Benchmark Gallery Categories from authentic Zenodo Sentinel-1 SAR scenes
   const [galleryCategory, setGalleryCategory] = useState<'oil' | 'clean'>('oil');
-
   const galleryCategories: Record<'oil' | 'clean', { title: string; badge: string; images: string[] }> = {
     oil: {
       title: '🛢️ Oil Spill Benchmark (Zenodo)',
@@ -396,6 +473,158 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
         </div>
       </section>
 
+      {/* 2. ACTIVE SCENE & ROI CROPPING CONTROLS */}
+      {selectedImage && (
+        <div
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 14,
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 22, color: 'var(--accent)' }}>
+              {activeCropBox ? 'crop' : 'satellite_alt'}
+            </span>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <span>Active Target: </span>
+              <span className="mono" style={{ color: 'var(--accent)' }}>{currentFileName}</span>
+            </div>
+
+            <span
+              style={{
+                fontSize: 11,
+                padding: '3px 10px',
+                borderRadius: 12,
+                background: activeCropBox ? 'rgba(16, 185, 129, 0.12)' : 'rgba(37, 99, 235, 0.08)',
+                color: activeCropBox ? '#059669' : 'var(--accent)',
+                border: activeCropBox ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(37, 99, 235, 0.25)',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                {activeCropBox ? 'check_circle' : 'aspect_ratio'}
+              </span>
+              <span>
+                {activeCropBox
+                  ? `Cropped ROI: ${activeCropBox.width}×${activeCropBox.height} px (1:1 Model Compatible)`
+                  : imageNatSize
+                  ? `Full Scene: ${imageNatSize.width}×${imageNatSize.height} px`
+                  : 'Full SAR Scene'}
+              </span>
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Quick Auto-Detect Slick ROI */}
+            <button
+              onClick={handleAutoDetectAndCrop}
+              disabled={isProcessing}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 13px',
+                borderRadius: 8,
+                background: 'rgba(37, 99, 235, 0.08)',
+                border: '1px solid rgba(37, 99, 235, 0.35)',
+                color: 'var(--accent)',
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title="Automatically detect capillary wave damping hotspot and crop 1:1 ROI"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_fix_high</span>
+              <span>🎯 Auto-Detect Slick ROI</span>
+            </button>
+
+            {/* Open Precision Cropper Studio */}
+            <button
+              onClick={() => setIsCropperOpen(true)}
+              disabled={isProcessing}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 14px',
+                borderRadius: 8,
+                background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                border: '1px solid rgba(37, 99, 235, 0.5)',
+                color: '#FFFFFF',
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
+                transition: 'all 0.15s ease',
+              }}
+              title="Open interactive SAR Cropper Studio to adjust the 1:1 ROI for maximum model accuracy"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>crop</span>
+              <span>📐 {activeCropBox ? 'Adjust Crop / ROI' : 'Crop & Focus ROI'}</span>
+            </button>
+
+            {/* Reset to Full Scene if cropped */}
+            {activeCropBox && rawImage && (
+              <button
+                onClick={handleResetToFullScene}
+                disabled={isProcessing}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '6px 11px',
+                  borderRadius: 8,
+                  background: 'var(--bg-raised)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  cursor: isProcessing ? 'not-allowed' : 'pointer',
+                }}
+                title="Restore full uncropped SAR scene"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 15 }}>restart_alt</span>
+                <span>Reset Full Scene</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {cropNotice && (
+        <div
+          style={{
+            padding: '8px 18px',
+            borderRadius: 10,
+            background: 'rgba(16, 185, 129, 0.09)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            color: '#059669',
+            fontSize: 11.5,
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexShrink: 0,
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>verified</span>
+          <span>{cropNotice}</span>
+        </div>
+      )}
+
       {isProcessing && (
         <div style={{ textAlign: 'center', padding: '32px 0' }}>
           <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite', fontSize: '2rem', color: 'var(--accent)' }}>autorenew</span>
@@ -459,6 +688,9 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
                     {result.segmentationTimeMs !== undefined && (
                       <span>Segmenter: <strong style={{ color: 'var(--text-primary)' }}>{result.segmentationTimeMs}ms</strong></span>
                     )}
+                    {result.cropInfo?.isCropped && (
+                      <span style={{ color: '#059669', fontWeight: 600 }}>1:1 ROI Distort-Free ✓</span>
+                    )}
                   </>
                 )}
               </div>
@@ -480,15 +712,93 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
 
           {/* Diagnostic Image Frames */}
           <div style={{ display: 'grid', gridTemplateColumns: result.segmentationMask ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 14, padding: 16, background: 'var(--bg-surface)' }}>
-            {/* Panel 1: Original SAR Image */}
+            {/* Panel 1: Original SAR Image or Cropped ROI */}
             <div style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                {result.prediction === 'invalid_sar' ? 'Uploaded Non-Marine Image' : 'Original SAR Image'}
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>
+                    {result.prediction === 'invalid_sar'
+                      ? 'Uploaded Non-Marine Image'
+                      : activeCropBox
+                      ? '🎯 Cropped ROI'
+                      : '🛰️ Original SAR Image'}
+                  </span>
+                  {activeCropBox && (
+                    <span style={{ fontSize: 10, color: '#10B981', background: 'rgba(16, 185, 129, 0.12)', padding: '1px 6px', borderRadius: 6, fontWeight: 700 }}>
+                      1:1 Native
+                    </span>
+                  )}
+                </div>
+
+                {result.prediction !== 'invalid_sar' && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {activeCropBox && rawImage && (
+                      <button
+                        onClick={() => setIsFullScenePreview(!isFullScenePreview)}
+                        style={{
+                          background: isFullScenePreview ? 'var(--accent)' : 'rgba(37, 99, 235, 0.08)',
+                          color: isFullScenePreview ? '#FFFFFF' : 'var(--accent)',
+                          border: '1px solid rgba(37, 99, 235, 0.3)',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          padding: '2px 8px',
+                          fontSize: 10.5,
+                          fontWeight: 600,
+                        }}
+                        title="Toggle full scene view with crop bounding box"
+                      >
+                        {isFullScenePreview ? 'Show Crop' : 'Context In Full Scene'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setIsCropperOpen(true)}
+                      style={{
+                        background: 'rgba(37, 99, 235, 0.08)',
+                        border: '1px solid rgba(37, 99, 235, 0.3)',
+                        color: 'var(--accent)',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        padding: '2px 8px',
+                        fontSize: 10.5,
+                        fontWeight: 600,
+                      }}
+                      title="Adjust crop window"
+                    >
+                      📐 {activeCropBox ? 'Re-Crop' : 'Crop ROI'}
+                    </button>
+                  </div>
+                )}
               </div>
+
               <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', borderRadius: 8, overflow: 'hidden', background: '#0F172A', border: '1px solid var(--border-subtle)' }}>
-                <img src={selectedImage} alt="Selected" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                {isFullScenePreview && rawImage && activeCropBox && imageNatSize ? (
+                  <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                    <img src={rawImage} alt="Full Scene Context" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <svg
+                      viewBox={`0 0 ${imageNatSize.width} ${imageNatSize.height}`}
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                    >
+                      <rect
+                        x={activeCropBox.x}
+                        y={activeCropBox.y}
+                        width={activeCropBox.width}
+                        height={activeCropBox.height}
+                        fill="rgba(56, 189, 248, 0.2)"
+                        stroke="#38BDF8"
+                        strokeWidth={Math.max(2, Math.round(imageNatSize.width / 150))}
+                        strokeDasharray="4 2"
+                      />
+                    </svg>
+                    <div style={{ position: 'absolute', bottom: 6, left: 6, background: 'rgba(15, 23, 42, 0.85)', padding: '2px 6px', borderRadius: 4, color: '#38BDF8', fontSize: 10, fontWeight: 700 }}>
+                      Crop Bounding Box ({activeCropBox.width}×{activeCropBox.height})
+                    </div>
+                  </div>
+                ) : (
+                  <img src={selectedImage} alt="Selected" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                )}
               </div>
             </div>
+
 
             {/* Panel 2: SpillSegNet Segmentation Panel */}
             {result.segmentationMask && (
@@ -701,6 +1011,7 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
                 lat: currentScenario?.lat ?? 18.743,
                 lng: currentScenario?.lng ?? 71.218,
                 locationName: currentScenario?.title ?? 'Offshore Coastal Waters',
+                cropInfo: result.cropInfo,
                 metrics: result.metrics,
               };
 
@@ -829,6 +1140,29 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
           })()}
         </section>
       )}
+
+      {/* 3. SAR REGION OF INTEREST (ROI) PRECISION CROPPER MODAL */}
+      {isCropperOpen && (rawImage || selectedImage) && (
+        <SarImageCropper
+          imageSrc={rawImage || selectedImage!}
+          fileName={uploadedFileName}
+          initialCropBox={activeCropBox}
+          onApplyCrop={(croppedUrl, cropBox, isAuto) => {
+            setSelectedImage(croppedUrl);
+            setActiveCropBox(cropBox);
+            setIsFullScenePreview(false);
+            setIsCropperOpen(false);
+            setCropNotice(
+              isAuto
+                ? `🎯 Auto-Detected Slick ROI Applied: ${cropBox.width}×${cropBox.height} px (1:1 Model Compatible)`
+                : `✂️ Custom ROI Cropped: ${cropBox.width}×${cropBox.height} px (1:1 Model Compatible)`
+            );
+            runEvaluation(rawImage || selectedImage!, currentRasters, cropBox, uploadedFileName);
+          }}
+          onCancel={() => setIsCropperOpen(false)}
+        />
+      )}
     </div>
   );
 };
+
