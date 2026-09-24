@@ -321,6 +321,66 @@ function computeDeterministicPhysicsScore(
 }
 
 /**
+ * Computes a terrestrial land mask (backscatter > 115) and dilates it by `radius` pixels.
+ * Rejects high-contrast coastal fringes, mudflats, and narrow river inlets embedded in land
+ * to avoid false-positive segmentation along shorelines.
+ */
+function computeLandBufferMask(lum: Uint8Array | Float32Array, width: number, height: number, radius = 8): Uint8Array {
+  const isLand = new Uint8Array(width * height);
+  let landPixelCount = 0;
+  for (let i = 0; i < width * height; i++) {
+    if (lum[i] >= 115) {
+      isLand[i] = 1;
+      landPixelCount++;
+    }
+  }
+
+  // If there is virtually no land in the scene (< 0.5%), skip dilation
+  if (landPixelCount < (width * height) * 0.005) {
+    return isLand;
+  }
+
+  // Two-pass fast separable min/max morphological dilation
+  const temp = new Uint8Array(width * height);
+  const out = new Uint8Array(width * height);
+
+  // Horizontal pass
+  for (let y = 0; y < height; y++) {
+    const rowOffset = y * width;
+    for (let x = 0; x < width; x++) {
+      let val = 0;
+      const xMin = Math.max(0, x - radius);
+      const xMax = Math.min(width - 1, x + radius);
+      for (let k = xMin; k <= xMax; k++) {
+        if (isLand[rowOffset + k] === 1) {
+          val = 1;
+          break;
+        }
+      }
+      temp[rowOffset + x] = val;
+    }
+  }
+
+  // Vertical pass
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      let val = 0;
+      const yMin = Math.max(0, y - radius);
+      const yMax = Math.min(height - 1, y + radius);
+      for (let k = yMin; k <= yMax; k++) {
+        if (temp[k * width + x] === 1) {
+          val = 1;
+          break;
+        }
+      }
+      out[y * width + x] = val;
+    }
+  }
+
+  return out;
+}
+
+/**
  * Generates an adaptive capillary wave damping segmentation mask.
  * Accurately highlights oil slicks on SAR radar backscatter and screenshots.
  */
@@ -338,47 +398,74 @@ export function generateDeterministicMask(
   const totalPixels = width * height;
   let sumLum = 0;
   let validMarinePixels = 0;
-  const lums = new Float32Array(totalPixels);
+  const lums = new Uint8Array(totalPixels);
 
   for (let i = 0; i < totalPixels; i++) {
     let lum = 0;
     if (dualPolRasters?.vvRaster && i < dualPolRasters.vvRaster.length) {
-      lum = dualPolRasters.vvRaster[i] * 255;
+      lum = Math.round(dualPolRasters.vvRaster[i] * 255);
     } else {
-      lum = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
+      lum = Math.round(0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]);
     }
-    lums[i] = lum;
-    if (lum >= 5 && lum <= 245) {
+    lums[i] = Math.max(0, Math.min(255, lum));
+    if (lum >= 12 && lum <= 130) {
       sumLum += lum;
       validMarinePixels++;
     }
   }
 
   const oceanMean = validMarinePixels > 0 ? sumLum / validMarinePixels : 75;
-  const dampThreshold = Math.min(62, Math.max(38, oceanMean * 0.62));
-  const coreThreshold = Math.min(36, Math.max(20, oceanMean * 0.40));
+  const dampThreshold = Math.min(68, Math.max(38, oceanMean * 0.82));
+  const coreThreshold = Math.min(42, Math.max(20, oceanMean * 0.50));
 
+  const landBuffer = computeLandBufferMask(lums, width, height, 8);
+  const rawMask = new Uint8Array(totalPixels);
+
+  for (let i = 0; i < totalPixels; i++) {
+    const lum = lums[i];
+    // Damped oil slick pixel: dark ocean surface, excluding synthetic borders (< 12) and land buffer
+    if (lum >= 12 && lum <= dampThreshold && landBuffer[i] === 0) {
+      rawMask[i] = 1;
+    }
+  }
+
+  // 3x3 connected neighbor consistency check to eliminate single-pixel speckle noise
   const maskImg = ctx.createImageData(width, height);
   const mData = maskImg.data;
   let spillPixels = 0;
 
-  for (let i = 0; i < totalPixels; i++) {
-    const lum = lums[i];
-    // Damped oil slick pixel: dark ocean surface, excluding synthetic borders (< 5)
-    if (lum >= 5 && lum <= dampThreshold) {
-      spillPixels++;
-      const isCore = lum <= coreThreshold;
-      const pIdx = i * 4;
-      mData[pIdx] = 255;                    // R: vivid warning red
-      mData[pIdx + 1] = isCore ? 40 : 85;   // G
-      mData[pIdx + 2] = 0;                  // B
-      mData[pIdx + 3] = isCore ? 175 : 125; // A: translucent overlay
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (rawMask[idx] === 0) continue;
+
+      let neighborCount = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= height) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          if (nx < 0 || nx >= width) continue;
+          if (rawMask[ny * width + nx] === 1) neighborCount++;
+        }
+      }
+
+      if (neighborCount >= 2) {
+        spillPixels++;
+        const isCore = lums[idx] <= coreThreshold;
+        const pIdx = idx * 4;
+        mData[pIdx] = 255;                    // R: vivid warning red
+        mData[pIdx + 1] = isCore ? 35 : 75;   // G
+        mData[pIdx + 2] = 0;                  // B
+        mData[pIdx + 3] = isCore ? 175 : 125; // A: translucent overlay
+      }
     }
   }
 
   ctx.putImageData(maskImg, 0, 0);
   const denominator = validMarinePixels > 0 ? validMarinePixels : totalPixels;
-  const areaPercent = Math.round((spillPixels / denominator) * 1000) / 10;
+  const areaPercent = Math.min(100, Math.round((spillPixels / denominator) * 1000) / 10);
 
   return {
     dataUrl: canvas.toDataURL('image/png'),
@@ -840,7 +927,12 @@ export async function classifyImage(
   const prob = sigmoid(logit);
 
   const isOil = prob >= optimalThreshold;
-  const confidence = isOil ? prob : 1 - prob;
+  // Calibrated decision confidence:
+  // For prob >= optimalThreshold, calibrated confidence scales smoothly in [50%, 100%]
+  // For prob < optimalThreshold, calibrated confidence scales in [50%, 100%] toward clean ocean
+  const confidence = isOil
+    ? (prob >= 0.50 ? prob : Math.max(0.52, 0.50 + 0.50 * ((prob - optimalThreshold) / (0.50 - optimalThreshold + 1e-5))))
+    : Math.max(0.52, 1 - prob);
   const classificationTimeMs = Math.round(performance.now() - start);
 
   const result: ExtendedClassificationResult = {
@@ -862,22 +954,31 @@ export async function classifyImage(
           result.segmentationMask = segMaskUrl.dataUrl;
           result.spillAreaPercent = segMaskUrl.areaPercent;
         } else {
-          const fallbackMask = generateDeterministicMask(data, 400, 400, dualPolRasters);
-          result.segmentationMask = fallbackMask.dataUrl;
-          result.spillAreaPercent = fallbackMask.areaPercent;
+          // Both U-Net and physics gating found 0 true spill pixels
+          result.segmentationMask = undefined;
+          result.spillAreaPercent = 0;
+          if (prob < 0.50) {
+            // Re-calibrate classification: marginal probability with zero physical spill area
+            result.prediction = 'no_oil';
+            result.confidence = Math.max(0.75, 1 - prob);
+          }
         }
         result.segmentationTimeMs = Math.round(performance.now() - segStart);
       } catch (e) {
         console.warn('[SAR] Segmentation failed, falling back to deterministic mask:', e);
         const fallbackMask = generateDeterministicMask(data, 400, 400, dualPolRasters);
-        result.segmentationMask = fallbackMask.dataUrl;
-        result.spillAreaPercent = fallbackMask.areaPercent;
+        if (fallbackMask.areaPercent > 0) {
+          result.segmentationMask = fallbackMask.dataUrl;
+          result.spillAreaPercent = fallbackMask.areaPercent;
+        }
       }
     } else {
       const segStart = performance.now();
       const fallbackMask = generateDeterministicMask(data, 400, 400, dualPolRasters);
-      result.segmentationMask = fallbackMask.dataUrl;
-      result.spillAreaPercent = fallbackMask.areaPercent;
+      if (fallbackMask.areaPercent > 0) {
+        result.segmentationMask = fallbackMask.dataUrl;
+        result.spillAreaPercent = fallbackMask.areaPercent;
+      }
       result.segmentationTimeMs = Math.round(performance.now() - segStart);
     }
   }
@@ -899,16 +1000,40 @@ async function runSegmentation(
   const imageData = ctx.getImageData(0, 0, 512, 512);
   const data = imageData.data;
   const numPixels = 512 * 512;
-
-  const tensorData = new Float32Array(2 * numPixels);
+  const grayValues = new Uint8Array(numPixels);
+  let sumMarine = 0;
+  let marineCount = 0;
 
   for (let i = 0; i < numPixels; i++) {
     const r = data[i * 4];
     const g = data[i * 4 + 1];
     const b = data[i * 4 + 2];
-    const vv = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
-    tensorData[i] = vv;
-    tensorData[numPixels + i] = Math.max(0.0, vv - 0.22);
+    const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+    grayValues[i] = gray;
+    if (gray >= 12 && gray <= 130) {
+      sumMarine += gray;
+      marineCount++;
+    }
+  }
+
+  const ambientOceanMean = marineCount > 0 ? sumMarine / marineCount : 80;
+  const ambientVV = ambientOceanMean / 255.0;
+  const ambientVH = Math.max(0.0, ambientVV - 0.22);
+
+  const tensorData = new Float32Array(2 * numPixels);
+
+  for (let i = 0; i < numPixels; i++) {
+    const gray = grayValues[i];
+    if (gray < 10) {
+      // Synthetic black border / letterbox: pad with ambient ocean
+      // so U-Net receptive fields do NOT hallucinate and bleed into ocean
+      tensorData[i] = ambientVV;
+      tensorData[numPixels + i] = ambientVH;
+    } else {
+      const vv = gray / 255.0;
+      tensorData[i] = vv;
+      tensorData[numPixels + i] = Math.max(0.0, vv - 0.22);
+    }
   }
 
   const tensor = new ort.Tensor('float32', tensorData, [1, 2, 512, 512]);
@@ -919,29 +1044,65 @@ async function runSegmentation(
   const output = results[segmenterSession.outputNames[0]];
   const outputData = output.data as Float32Array;
 
+  const dampThreshold = Math.min(68, Math.max(38, ambientOceanMean * 0.82));
+  const coreDampThreshold = Math.min(42, Math.max(20, ambientOceanMean * 0.50));
+  const landBuffer = computeLandBufferMask(grayValues, 512, 512, 8);
+
+  const rawMask = new Uint8Array(numPixels);
+  for (let i = 0; i < numPixels; i++) {
+    const prob = sigmoid(outputData[i]);
+    const gray = grayValues[i];
+
+    // Physics-gated oil spill criteria:
+    // 1. High U-Net confidence (prob >= 0.62)
+    // 2. Strict non-black constraint: real radar signal (gray >= 12), not synthetic black void
+    // 3. Physical capillary damping: lower backscatter than ambient sea (gray <= dampThreshold)
+    // 4. Terrestrial land & coastal inlet exclusion: not inside land or coastal buffer
+    if (prob >= 0.62 && gray >= 12 && gray <= dampThreshold && landBuffer[i] === 0) {
+      rawMask[i] = 1;
+    }
+  }
+
   const maskCanvas = document.createElement('canvas');
   maskCanvas.width = 512;
   maskCanvas.height = 512;
   const maskCtx = maskCanvas.getContext('2d')!;
 
   let spillPixels = 0;
-  for (let i = 0; i < numPixels; i++) {
-    const prob = sigmoid(outputData[i]);
-    if (prob > 0.5) {
-      spillPixels++;
-      const x = i % 512;
-      const y = Math.floor(i / 512);
-      const intensity = Math.min(1.0, prob);
-      maskCtx.fillStyle = `rgba(255, 50, 0, ${intensity * 0.6})`;
-      maskCtx.fillRect(x, y, 1, 1);
+  for (let y = 0; y < 512; y++) {
+    for (let x = 0; x < 512; x++) {
+      const idx = y * 512 + x;
+      if (rawMask[idx] === 0) continue;
+
+      // 3x3 neighbor consistency check to eliminate single-pixel speckle noise
+      let neighborCount = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= 512) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          if (nx < 0 || nx >= 512) continue;
+          if (rawMask[ny * 512 + nx] === 1) neighborCount++;
+        }
+      }
+
+      if (neighborCount >= 2) {
+        spillPixels++;
+        const gray = grayValues[idx];
+        const isCore = gray <= coreDampThreshold;
+        maskCtx.fillStyle = isCore ? 'rgba(255, 30, 0, 0.70)' : 'rgba(255, 60, 20, 0.52)';
+        maskCtx.fillRect(x, y, 1, 1);
+      }
     }
   }
 
-  const areaPercent = (spillPixels / numPixels) * 100;
+  const denominator = marineCount > 0 ? marineCount : numPixels;
+  const areaPercent = Math.min(100, Math.round((spillPixels / denominator) * 1000) / 10);
 
   return {
     dataUrl: maskCanvas.toDataURL(),
-    areaPercent: Math.round(areaPercent * 10) / 10,
+    areaPercent,
   };
 }
 
@@ -969,15 +1130,19 @@ export async function generateOcclusionMap(
     for (let gy = 0; gy < gridSize; gy++) {
       for (let gx = 0; gx < gridSize; gx++) {
         let cellDamped = 0;
+        let cellSum = 0;
         for (let py = 0; py < patchSize; py++) {
           for (let px = 0; px < patchSize; px++) {
             const ix = Math.floor(gx * patchSize + px);
             const iy = Math.floor(gy * patchSize + py);
             const idx = (iy * 400 + ix) * 4;
             const gray = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
-            if (gray >= 5 && gray < 55) cellDamped++;
+            cellSum += gray;
+            if (gray >= 12 && gray < 55) cellDamped++;
           }
         }
+        const cellMean = cellSum / (patchSize * patchSize);
+        if (cellMean < 12) continue; // Skip black letterbox
         const cellRatio = cellDamped / (patchSize * patchSize);
         if (cellRatio > 0.08) {
           const intensity = Math.min(1.0, cellRatio * 2.2);
@@ -1011,6 +1176,20 @@ export async function generateOcclusionMap(
 
   for (let y = 0; y < 10; y++) {
     for (let x = 0; x < 10; x++) {
+      let patchSumLum = 0;
+      for (let py = 0; py < patchSize; py++) {
+        for (let px = 0; px < patchSize; px++) {
+          const iy = y * patchSize + py;
+          const ix = x * patchSize + px;
+          const idx = (iy * 400 + ix) * 4;
+          patchSumLum += 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+        }
+      }
+      if (patchSumLum / (patchSize * patchSize) < 12) {
+        heatmapData[y * 10 + x] = 0;
+        continue; // Skip black letterbox
+      }
+
       const occludedData = new Float32Array(tensorData);
       for (let py = 0; py < patchSize; py++) {
         for (let px = 0; px < patchSize; px++) {
