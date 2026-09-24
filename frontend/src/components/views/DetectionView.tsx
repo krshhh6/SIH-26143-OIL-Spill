@@ -668,7 +668,11 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
                 gap: 8,
                 fontWeight: 800,
               }}>
-                {result.prediction === 'oil_spill' && '🛢️ OIL SPILL DETECTED'}
+                {result.prediction === 'oil_spill' && (
+                  result.confidence < 0.65
+                    ? '⚠️ SUSPECTED OIL SLICK (Marginal Anomaly)'
+                    : '🛢️ OIL SPILL DETECTED'
+                )}
                 {result.prediction === 'no_oil' && '✅ CLEAN OCEAN'}
                 {result.prediction === 'invalid_sar' && '⚠️ INVALID INPUT: NOT AN OCEAN / SAR RADAR IMAGE'}
               </h2>
@@ -804,7 +808,12 @@ export const DetectionView: React.FC<DetectionViewProps> = ({
             {result.segmentationMask && (
               <div style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>🎯 SpillSegNet U-Net Mask</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>🎯 SpillSegNet U-Net Mask</span>
+                    <span style={{ fontSize: 10, color: '#10B981', background: 'rgba(16, 185, 129, 0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                      Physics-Gated ✓
+                    </span>
+                  </div>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Coverage: {result.spillAreaPercent}%</span>
                 </div>
                 <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', borderRadius: 8, overflow: 'hidden', background: '#0F172A', border: '1px solid var(--border-subtle)' }}>
