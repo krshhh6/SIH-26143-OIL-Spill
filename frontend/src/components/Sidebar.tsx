@@ -17,12 +17,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   currentScenarioKey = '',
   onSelectScenario,
-  onOpenSettings,
+  onOpenSettings: _onOpenSettings,
   incidents,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isTreeExpanded, setIsTreeExpanded] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Use live incidents when available, fall back to static SCENARIOS
   const allEntries: [string, { id: string; title: string; oilType: string }][] =
@@ -40,35 +39,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
 
   return (
-    <aside className={`secondary-drawer ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* Window Controls */}
-      <div className="drawer-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
-          {onOpenSettings && (
-            <button
-              className="drawer-collapse-btn"
-              onClick={onOpenSettings}
-              title="Forensic Configuration & Settings"
-              aria-label="Settings"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>settings</span>
-            </button>
-          )}
-          <button
-            className="drawer-collapse-btn"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            title={isCollapsed ? 'Expand Drawer' : 'Collapse Drawer'}
-            aria-label="Toggle Navigation Drawer"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-              {isCollapsed ? 'dock_to_left' : 'dock_to_right'}
-            </span>
-          </button>
-        </div>
-      </div>
-
+    <aside className="secondary-drawer">
       {/* User Profile Card */}
-      <div className="user-profile-card">
+      <div className="user-profile-card" style={{ marginTop: 14 }}>
         <div className="user-avatar">
           <span className="material-symbols-rounded">security</span>
           <span className="user-status-indicator" />
