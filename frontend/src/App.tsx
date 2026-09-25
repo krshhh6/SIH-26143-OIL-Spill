@@ -240,7 +240,7 @@ export const App: React.FC = () => {
           className="main"
           id="main-content"
           style={{
-            overflow: activeTab === 'dashboard' ? 'hidden' : 'auto',
+            overflow: activeTab === 'dashboard' || activeTab === 'attribution' ? 'hidden' : 'auto',
           }}
         >
           {activeTab === 'dashboard' && (

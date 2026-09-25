@@ -814,87 +814,213 @@ export const DriftView: React.FC<DriftViewProps> = ({
   return (
     <div id="tab-drift" className="tab-content visible modern-dashboard-root">
       {/* 1. EXECUTIVE HEADER */}
-      <div className="workspace-header-bar">
-        <div>
-          <h1 className="workspace-main-title">Lagrangian Hydrodynamic Drift Simulation</h1>
-          <p className="workspace-sub-title">
-            OpenDrift / OpenOil Framework · Bidirectional Monte Carlo Dispersion (N=1,000 Particles) · CMEMS &amp; ERA5 10m Forcing
+      <div
+        className="workspace-header-bar"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+          flexWrap: 'nowrap',
+          marginBottom: 18,
+        }}
+      >
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '2px 8px',
+                borderRadius: 6,
+                background: 'rgba(56, 189, 248, 0.12)',
+                border: '1px solid rgba(56, 189, 248, 0.28)',
+                color: 'var(--accent)',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>waves</span>
+              Lagrangian Tracker (N=1,000)
+            </span>
+          </div>
+          <h1 className="workspace-main-title" style={{ fontSize: 19, fontWeight: 800, margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+            Hydrodynamic Drift Simulation
+          </h1>
+          <p className="workspace-sub-title" style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+            OpenDrift &amp; OpenOil Framework · CMEMS Currents &amp; ERA5 Wind
           </p>
         </div>
 
-        <div className="workspace-header-actions">
-          <select
-            value={selectedKey}
-            onChange={(e) => {
-              const k = e.target.value;
-              setSelectedKey(k);
-              setSelectedStepIndex(2);
-              if (k !== 'SAR-DETECTION' && SCENARIOS[k]) {
-                onSelectScenario?.(k);
-              }
-            }}
-            className="action-pill-btn secondary"
-            style={{
-              padding: '6px 14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              appearance: 'auto',
-            }}
-          >
-            {activeSarPayload && (
-              <option value="SAR-DETECTION">
-                🛰️ Live SAR AI Detection · {activeSarPayload.fileName} ({(activeSarPayload.confidence * 100).toFixed(0)}% · {activeSarPayload.estimatedAreaKm2} km²)
-              </option>
-            )}
-            {Object.entries(SCENARIOS).map(([key, sc]) => (
-              <option key={key} value={key}>
-                {sc.id} · {sc.title}
-              </option>
-            ))}
-          </select>
+        {/* STREAMLINED ACTION CONTROLS */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            flexWrap: 'nowrap',
+            flexShrink: 0,
+            background: 'var(--bg-surface)',
+            padding: '4px 6px',
+            borderRadius: 12,
+            border: '1px solid var(--border-subtle)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+          }}
+        >
+          {/* Scenario Select */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span
+              className="material-symbols-outlined"
+              style={{
+                position: 'absolute',
+                left: 8,
+                fontSize: 15,
+                color: 'var(--accent)',
+                pointerEvents: 'none',
+              }}
+            >
+              emergency
+            </span>
+            <select
+              value={selectedKey}
+              onChange={(e) => {
+                const k = e.target.value;
+                setSelectedKey(k);
+                setSelectedStepIndex(2);
+                if (k !== 'SAR-DETECTION' && SCENARIOS[k]) {
+                  onSelectScenario?.(k);
+                }
+              }}
+              style={{
+                height: 32,
+                padding: '0 24px 0 28px',
+                borderRadius: 8,
+                fontSize: 11.5,
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                background: 'var(--bg-raised)',
+                border: '1px solid var(--border-default)',
+                cursor: 'pointer',
+                appearance: 'auto',
+                outline: 'none',
+                maxWidth: 200,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {activeSarPayload && (
+                <option value="SAR-DETECTION">
+                  🛰️ SAR AI · {activeSarPayload.fileName}
+                </option>
+              )}
+              {Object.entries(SCENARIOS).map(([key, sc]) => {
+                const shortId = sc.id.replace('2026-', '');
+                const cleanTitle = sc.title.split('(')[0].replace('Offshore Basin', '').replace('Shipping Channel', '').trim();
+                return (
+                  <option key={key} value={key}>
+                    {shortId} · {cleanTitle}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
 
+          <div style={{ width: 1, height: 18, background: 'var(--border-subtle)' }} />
+
+          {/* Sync Met-Ocean */}
           <button
-            className="action-pill-btn secondary"
             onClick={() => refreshLiveDriftData(selectedKey)}
             disabled={isLoadingLive}
             title="Fetch real-time ocean currents and wind from live Copernicus/Open-Meteo API"
+            style={{
+              height: 32,
+              padding: '0 10px',
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              whiteSpace: 'nowrap',
+              background: 'var(--bg-raised)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-primary)',
+              cursor: isLoadingLive ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
+            }}
           >
             <span
               className="material-symbols-outlined"
               style={{
-                fontSize: 16,
+                fontSize: 15,
                 color: '#38bdf8',
                 animation: isLoadingLive ? 'spin 1s linear infinite' : 'none',
               }}
             >
               satellite_alt
             </span>
-            <span>{isLoadingLive ? 'Syncing...' : 'Refresh Met-Ocean'}</span>
+            <span>{isLoadingLive ? 'Syncing...' : 'Sync Met-Ocean'}</span>
           </button>
 
+          {/* Run Drift */}
           <button
-            className="action-pill-btn secondary"
             onClick={handleRunSimulation}
             disabled={isSimulating}
+            style={{
+              height: 32,
+              padding: '0 10px',
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              whiteSpace: 'nowrap',
+              background: 'var(--bg-raised)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-primary)',
+              cursor: isSimulating ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
+            }}
           >
             <span
               className="material-symbols-outlined"
               style={{
-                fontSize: 16,
+                fontSize: 15,
+                color: 'var(--accent)',
                 animation: isSimulating ? 'spin 1s linear infinite' : 'none',
               }}
             >
               {isSimulating ? 'sync' : 'play_circle'}
             </span>
-            <span>{isSimulating ? `Calculating (${simProgress}%)` : 'Run OpenDrift'}</span>
+            <span>{isSimulating ? `${simProgress}%` : 'Run Drift'}</span>
           </button>
 
+          {/* Attribution */}
           <button
-            className="action-pill-btn primary"
             onClick={() => onSelectTab('attribution')}
+            style={{
+              height: 32,
+              padding: '0 12px',
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              whiteSpace: 'nowrap',
+              background: 'var(--accent)',
+              border: '1px solid transparent',
+              color: '#FFFFFF',
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
+              transition: 'all 0.15s ease',
+            }}
           >
-            <span>Vessel Attribution</span>
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_forward</span>
+            <span>Attribution</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_forward</span>
           </button>
         </div>
       </div>
@@ -921,7 +1047,7 @@ export const DriftView: React.FC<DriftViewProps> = ({
       )}
 
       {/* 2. EXECUTIVE METRIC CARDS */}
-      <div className="executive-metrics-grid">
+      <div className="executive-metrics-grid" style={{ marginBottom: 10 }}>
         <div className="metric-card-neumorphic">
           <div className="metric-card-header">
             <span className="metric-card-label">Origin Probability Core</span>
@@ -966,8 +1092,14 @@ export const DriftView: React.FC<DriftViewProps> = ({
             <span className="metric-card-label">Shoreline Landfall ETA</span>
           </div>
           <div className="metric-card-body">
-            <span className="metric-number" style={{ color: currentForecast.distanceToCoastKm < 15 ? '#ef4444' : 'inherit' }}>
-              {activeLandfallEta.split(' ')[0]} <span className="metric-unit">{activeLandfallEta.includes('h') ? 'h' : ''}</span>
+            <span
+              className="metric-number"
+              style={{
+                fontSize: 19,
+                color: currentForecast.distanceToCoastKm < 15 ? '#ef4444' : 'inherit',
+              }}
+            >
+              {activeLandfallEta.replace(/\(.*?\)/g, '').trim()}
             </span>
             <span className={`metric-trend-pill ${currentForecast.threatLevel === 'CRITICAL' ? 'positive' : 'neutral'}`} style={{ color: currentForecast.threatLevel === 'CRITICAL' ? '#ef4444' : undefined }}>
               {currentForecast.threatLevel} THREAT
@@ -999,43 +1131,68 @@ export const DriftView: React.FC<DriftViewProps> = ({
       </div>
 
       {/* 3. WORKFLOW NAV BAR */}
-      <div className="workflow-nav-bar">
-        <div className="workflow-title-area">
-          <h2 className="workflow-title">Hydrodynamic Simulation Scenarios</h2>
-          <span className="scenario-chip" style={{ borderColor: 'rgba(56, 189, 248, 0.4)', color: 'var(--accent)' }}>
+      <div
+        className="workflow-nav-bar"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 12,
+          marginBottom: 0,
+        }}
+      >
+        {/* Left: Title + Mode Tabs grouped together without gap */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <h2 className="workflow-title" style={{ margin: 0, whiteSpace: 'nowrap' }}>
+            Simulation Horizons
+          </h2>
+
+          <div className="workflow-tabs-strip">
+            <button
+              className={`workflow-tab-btn ${activeMode === 'forward' ? 'active' : ''}`}
+              onClick={() => setActiveMode('forward')}
+            >
+              Future Forecast (T0 → T+48h)
+            </button>
+            <button
+              className={`workflow-tab-btn ${activeMode === 'backward' ? 'active' : ''}`}
+              onClick={() => setActiveMode('backward')}
+            >
+              Origin Backtrack (T-24h → T0)
+            </button>
+            <button
+              className={`workflow-tab-btn ${activeMode === 'unified' ? 'active' : ''}`}
+              onClick={() => setActiveMode('unified')}
+            >
+              Unified Spatiotemporal
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Active Scenario Context Chip + Export Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <span
+            className="scenario-chip"
+            style={{
+              borderColor: 'rgba(56, 189, 248, 0.4)',
+              color: 'var(--accent)',
+              padding: '3px 9px',
+              fontSize: 10.5,
+              whiteSpace: 'nowrap',
+            }}
+          >
             {profile.incidentName} · {currentForecast.label}
           </span>
-        </div>
 
-        <div className="workflow-tabs-strip">
           <button
-            className={`workflow-tab-btn ${activeMode === 'forward' ? 'active' : ''}`}
-            onClick={() => setActiveMode('forward')}
+            className="action-pill-btn secondary"
+            onClick={handleExportGeoJSON}
+            style={{ fontSize: 11, padding: '4px 12px', height: 30, whiteSpace: 'nowrap' }}
           >
-            Future Forecast (T0 → T+48h)
-          </button>
-          <button
-            className={`workflow-tab-btn ${activeMode === 'backward' ? 'active' : ''}`}
-            onClick={() => setActiveMode('backward')}
-          >
-            Origin Backtrack (T-24h → T0)
-          </button>
-          <button
-            className={`workflow-tab-btn ${activeMode === 'unified' ? 'active' : ''}`}
-            onClick={() => setActiveMode('unified')}
-          >
-            Unified Spatiotemporal
+            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>download</span>
+            <span>Export GeoJSON</span>
           </button>
         </div>
-
-        <button
-          className="action-pill-btn secondary"
-          onClick={handleExportGeoJSON}
-          style={{ fontSize: 11, padding: '4px 12px' }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>download</span>
-          <span>Export GeoJSON</span>
-        </button>
       </div>
 
       {/* 3.5 DYNAMIC SAR AI DETECTION PROVENANCE CARD */}
@@ -1149,8 +1306,8 @@ export const DriftView: React.FC<DriftViewProps> = ({
       )}
 
       {/* 4. ROUNDED CANVAS CONTAINER */}
-      <div className="canvas-rounded-container">
-        <div className="canvas-two-column">
+      <div className="canvas-rounded-container" style={{ marginTop: 0 }}>
+        <div className="canvas-two-column" style={{ paddingTop: 6 }}>
           {/* LEFT PANE: ACTIVE HYDRODYNAMIC SIMULATION */}
           <div className="canvas-pane">
             {(activeMode === 'forward' || activeMode === 'unified') && (
@@ -1189,33 +1346,47 @@ export const DriftView: React.FC<DriftViewProps> = ({
                       marginBottom: 8,
                       display: 'flex',
                       justifyContent: 'space-between',
+                      alignItems: 'center',
                     }}
                   >
-                    <span>Forecast Horizon Timeline (Forward Hydrodynamic Steps)</span>
-                    <span style={{ color: 'var(--accent)' }}>Active: {currentForecast.label} ({currentForecast.timestamp})</span>
+                    <span style={{ letterSpacing: '0.04em' }}>Forecast Horizon Timeline (Forward Hydrodynamic Steps)</span>
+                    <span style={{ color: 'var(--accent)', fontWeight: 700 }}>
+                      Active: {currentForecast.label} ({currentForecast.timestamp})
+                    </span>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--sp-2)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
                     {activeForecasts.map((f, idx) => {
                       const isSelected = selectedStepIndex === idx;
+                      const threatBg = f.threatLevel === 'CRITICAL' ? '#ef4444' : f.threatLevel === 'HIGH' ? '#f97316' : f.threatLevel === 'MODERATE' ? '#f59e0b' : '#10b981';
                       return (
                         <button
                           key={f.label}
                           onClick={() => setSelectedStepIndex(idx)}
+                          className={`timeline-step-btn ${isSelected ? 'selected' : ''}`}
                           style={{
-                            padding: '8px 6px',
-                            borderRadius: 'var(--radius-sm)',
-                            border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border-subtle)',
-                            background: isSelected ? 'rgba(56, 189, 248, 0.12)' : 'var(--bg-raised)',
+                            padding: '10px 8px',
+                            borderRadius: 10,
+                            border: isSelected ? '1.5px solid var(--accent)' : '1px solid var(--border-subtle)',
+                            background: isSelected ? 'rgba(37, 99, 235, 0.12)' : 'var(--bg-raised)',
                             cursor: 'pointer',
                             textAlign: 'center',
-                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 3,
                           }}
                         >
-                          <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? 'var(--accent)' : 'var(--text-primary)' }}>
-                            {f.label}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span
+                              className={`timeline-pulse-dot ${isSelected ? 'pulsing' : ''}`}
+                              style={{ width: 7, height: 7, background: threatBg }}
+                            />
+                            <span style={{ fontSize: 11.5, fontWeight: isSelected ? 800 : 700, color: isSelected ? 'var(--accent)' : 'var(--text-primary)' }}>
+                              {f.label}
+                            </span>
                           </div>
-                          <div style={{ fontSize: 9.5, color: 'var(--text-muted)', marginTop: 2 }}>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                             {f.areaKm2} km² · {f.distanceToCoastKm > 0 ? `${f.distanceToCoastKm} km` : 'Coast'}
                           </div>
                         </button>
@@ -1225,64 +1396,68 @@ export const DriftView: React.FC<DriftViewProps> = ({
                 </div>
 
                 {/* CRITICAL FUTURE SUMMARY METRICS */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--sp-2)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                   <div
                     style={{
                       background: 'var(--bg-raised)',
-                      padding: 10,
-                      borderRadius: 10,
+                      padding: '12px 14px',
+                      borderRadius: 12,
                       border: '1px solid var(--border-subtle)',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
                     }}
                   >
-                    <div className="text-xs text-muted fw-600">Projected Centroid</div>
-                    <div className="text-sm fw-700" style={{ color: 'var(--accent)', marginTop: 2 }}>
+                    <div className="text-xs text-muted fw-600" style={{ letterSpacing: '0.03em' }}>Projected Centroid</div>
+                    <div className="mono fw-700" style={{ fontSize: 14, color: 'var(--accent)', marginTop: 4 }}>
                       {currentForecast.lat.toFixed(3)}°N, {currentForecast.lng.toFixed(3)}°E
                     </div>
-                    <div className="text-xs text-muted" style={{ marginTop: 2, fontSize: 10 }}>
-                      Drift: {currentForecast.driftSpeedKnots} kn @ {currentForecast.headingDeg}°
+                    <div className="text-xs text-muted" style={{ marginTop: 3, fontSize: 10.5 }}>
+                      Drift: <strong>{currentForecast.driftSpeedKnots} kn</strong> @ {currentForecast.headingDeg}°
                     </div>
                   </div>
 
                   <div
                     style={{
                       background: 'var(--bg-raised)',
-                      padding: 10,
-                      borderRadius: 10,
+                      padding: '12px 14px',
+                      borderRadius: 12,
                       border: '1px solid var(--border-subtle)',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
                     }}
                   >
-                    <div className="text-xs text-muted fw-600">Fay Spreading Area</div>
-                    <div className="text-sm fw-700" style={{ marginTop: 2 }}>
+                    <div className="text-xs text-muted fw-600" style={{ letterSpacing: '0.03em' }}>Fay Spreading Area</div>
+                    <div className="mono fw-700" style={{ fontSize: 14, marginTop: 4 }}>
                       {currentForecast.areaKm2} km²
-                      <span style={{ fontSize: 10, color: '#ef4444', marginLeft: 4, fontWeight: 600 }}>
+                      <span style={{ fontSize: 10.5, color: '#ef4444', marginLeft: 5, fontWeight: 700 }}>
                         (+{((currentForecast.areaKm2 / profile.initialAreaKm2 - 1) * 100).toFixed(0)}%)
                       </span>
                     </div>
-                    <div className="text-xs text-muted" style={{ marginTop: 2, fontSize: 10 }}>
-                      Radius: {currentForecast.slickRadiusKm} km
+                    <div className="text-xs text-muted" style={{ marginTop: 3, fontSize: 10.5 }}>
+                      Slick Radius: <strong>{currentForecast.slickRadiusKm} km</strong>
                     </div>
                   </div>
 
                   <div
                     style={{
                       background: 'var(--bg-raised)',
-                      padding: 10,
-                      borderRadius: 10,
+                      padding: '12px 14px',
+                      borderRadius: 12,
                       border: '1px solid var(--border-subtle)',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
                     }}
                   >
-                    <div className="text-xs text-muted fw-600">Shoreline Distance</div>
+                    <div className="text-xs text-muted fw-600" style={{ letterSpacing: '0.03em' }}>Shoreline Distance</div>
                     <div
-                      className="text-sm fw-700"
+                      className="mono fw-700"
                       style={{
-                        marginTop: 2,
+                        fontSize: 14,
+                        marginTop: 4,
                         color: currentForecast.distanceToCoastKm < 15 ? '#ef4444' : 'var(--text-primary)',
                       }}
                     >
-                      {currentForecast.distanceToCoastKm > 0 ? `${currentForecast.distanceToCoastKm} km to coast` : 'SHORELINE LANDFALL'}
+                      {currentForecast.distanceToCoastKm > 0 ? `${currentForecast.distanceToCoastKm} km to coast` : 'SHORELINE IMPACT'}
                     </div>
-                    <div className="text-xs text-muted" style={{ marginTop: 2, fontSize: 10 }}>
-                      Target: {profile.coastalZoneName}
+                    <div className="text-xs text-muted" style={{ marginTop: 3, fontSize: 10.5 }}>
+                      Zone: <strong>{profile.coastalZoneName.split('&')[0].trim()}</strong>
                     </div>
                   </div>
                 </div>
@@ -1290,8 +1465,8 @@ export const DriftView: React.FC<DriftViewProps> = ({
                 {/* COASTAL THREAT & HABITAT IMPACT BANNER */}
                 <div
                   style={{
-                    padding: '12px 14px',
-                    borderRadius: 10,
+                    padding: '14px 16px',
+                    borderRadius: 12,
                     background:
                       currentForecast.threatLevel === 'CRITICAL'
                         ? 'rgba(239, 68, 68, 0.08)'
@@ -1299,83 +1474,146 @@ export const DriftView: React.FC<DriftViewProps> = ({
                     borderLeft: `4px solid ${
                       currentForecast.threatLevel === 'CRITICAL' ? '#ef4444' : '#f59e0b'
                     }`,
+                    borderTop: '1px solid rgba(245, 158, 11, 0.2)',
+                    borderRight: '1px solid rgba(245, 158, 11, 0.2)',
+                    borderBottom: '1px solid rgba(245, 158, 11, 0.2)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Coastal Threat Assessment · Landfall ETA: {activeLandfallEta}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: currentForecast.threatLevel === 'CRITICAL' ? '#ef4444' : '#f59e0b',
-                      }}
-                    >
-                      COASTAL VULNERABILITY INDEX: HIGH
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="material-symbols-outlined" style={{ color: currentForecast.threatLevel === 'CRITICAL' ? '#ef4444' : '#f59e0b', fontSize: 18 }}>
+                        warning
+                      </span>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Coastal Threat Assessment
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: 8,
+                          background: currentForecast.threatLevel === 'CRITICAL' ? 'rgba(239, 68, 68, 0.18)' : 'rgba(245, 158, 11, 0.18)',
+                          color: currentForecast.threatLevel === 'CRITICAL' ? '#ef4444' : '#b45309',
+                        }}
+                      >
+                        ETA: {activeLandfallEta}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: 8,
+                          background: 'rgba(59, 130, 246, 0.12)',
+                          color: 'var(--accent)',
+                        }}
+                      >
+                        CVI: HIGH
+                      </span>
+                    </div>
                   </div>
 
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 6 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     Slick advection driven by combined CMEMS current ({profile.currentVector}) and ERA5 Stokes windage ({profile.windVector}).
-                    Targeting sensitive coastal shelf zone: <strong>{profile.coastalZoneName}</strong>.
+                    Projected trajectory targets the sensitive intertidal shelf zone: <strong>{profile.coastalZoneName}</strong>.
                   </div>
 
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-                    Vulnerable Marine Receptors in Projected Cone:
+                  <div>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Vulnerable Marine Receptors in Cone:
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {profile.vulnerableHabitats.map((hab, idx) => (
+                        <span
+                          key={idx}
+                          style={{
+                            fontSize: 10.5,
+                            background: 'var(--bg-surface)',
+                            border: '1px solid var(--border-subtle)',
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            color: 'var(--text-primary)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          <span style={{ color: 'var(--accent)', fontSize: 12 }}>•</span>
+                          {hab}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                    {profile.vulnerableHabitats.map((hab, idx) => (
-                      <li key={idx}>{hab}</li>
-                    ))}
-                  </ul>
                 </div>
 
                 {/* OIL WEATHERING & MASS BALANCE */}
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>OpenOil Weathering &amp; Mass Balance at {currentForecast.label}</span>
-                    <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)' }}>
-                      Viscosity: {currentForecast.viscosityCSt} cSt · Water Content: {currentForecast.waterContentPct}%
-                    </span>
+                <div style={{ background: 'var(--bg-raised)', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>water</span>
+                      <span>OpenOil Weathering &amp; Mass Balance at {currentForecast.label}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, fontSize: 10.5 }}>
+                      <span style={{ background: 'var(--bg-surface)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                        Viscosity: <strong className="mono">{currentForecast.viscosityCSt} cSt</strong>
+                      </span>
+                      <span style={{ background: 'var(--bg-surface)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                        Water Content: <strong className="mono">{currentForecast.waterContentPct}%</strong>
+                      </span>
+                    </div>
                   </div>
 
                   <div
                     style={{
-                      height: 16,
-                      borderRadius: 4,
+                      height: 18,
+                      borderRadius: 6,
                       overflow: 'hidden',
                       display: 'flex',
                       background: 'var(--bg-base)',
                       border: '1px solid var(--border-subtle)',
-                      marginBottom: 8,
+                      marginBottom: 10,
+                      boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)',
                     }}
                   >
-                    <div title="Evaporated" style={{ width: `${currentForecast.evaporatedPct}%`, background: '#38bdf8' }} />
-                    <div title="Emulsified Mousse" style={{ width: `${currentForecast.emulsifiedPct}%`, background: '#d97706' }} />
-                    <div title="Naturally Dispersed" style={{ width: `${currentForecast.dispersedPct}%`, background: '#10b981' }} />
-                    <div title="Persistent Surface Slick" style={{ width: `${currentForecast.remainingSurfacePct}%`, background: '#ef4444' }} />
+                    <div title="Evaporated" style={{ width: `${currentForecast.evaporatedPct}%`, background: '#38bdf8', transition: 'width 0.3s ease' }} />
+                    <div title="Emulsified Mousse" style={{ width: `${currentForecast.emulsifiedPct}%`, background: '#d97706', transition: 'width 0.3s ease' }} />
+                    <div title="Naturally Dispersed" style={{ width: `${currentForecast.dispersedPct}%`, background: '#10b981', transition: 'width 0.3s ease' }} />
+                    <div title="Persistent Surface Slick" style={{ width: `${currentForecast.remainingSurfacePct}%`, background: '#ef4444', transition: 'width 0.3s ease' }} />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, fontSize: 11 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 2, background: '#38bdf8', display: 'inline-block' }} />
-                      <span className="text-muted">Evaporated:</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, fontSize: 10.5 }}>
+                    <div style={{ background: 'var(--bg-surface)', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: '#38bdf8', flexShrink: 0 }} />
+                        <span className="text-muted" style={{ whiteSpace: 'nowrap' }}>Evaporated:</span>
+                      </div>
                       <strong className="mono">{currentForecast.evaporatedPct}%</strong>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 2, background: '#d97706', display: 'inline-block' }} />
-                      <span className="text-muted">Emulsified:</span>
+                    <div style={{ background: 'var(--bg-surface)', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: '#d97706', flexShrink: 0 }} />
+                        <span className="text-muted" style={{ whiteSpace: 'nowrap' }}>Emulsified:</span>
+                      </div>
                       <strong className="mono">{currentForecast.emulsifiedPct}%</strong>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 2, background: '#10b981', display: 'inline-block' }} />
-                      <span className="text-muted">Dispersed:</span>
+                    <div style={{ background: 'var(--bg-surface)', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: '#10b981', flexShrink: 0 }} />
+                        <span className="text-muted" style={{ whiteSpace: 'nowrap' }}>Dispersed:</span>
+                      </div>
                       <strong className="mono">{currentForecast.dispersedPct}%</strong>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} />
-                      <span className="text-muted">Surface:</span>
+                    <div style={{ background: 'var(--bg-surface)', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444', flexShrink: 0 }} />
+                        <span className="text-muted" style={{ whiteSpace: 'nowrap' }}>Surface Slick:</span>
+                      </div>
                       <strong className="mono">{currentForecast.remainingSurfacePct}%</strong>
                     </div>
                   </div>
@@ -1384,23 +1622,23 @@ export const DriftView: React.FC<DriftViewProps> = ({
                 {/* TACTICAL COUNTERMEASURE RECOMMENDATION */}
                 <div
                   style={{
-                    background: 'var(--bg-raised)',
-                    padding: '10px 12px',
+                    background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(16, 185, 129, 0.06) 100%)',
+                    padding: '12px 14px',
                     borderRadius: 10,
-                    border: '1px solid var(--border-subtle)',
+                    border: '1px solid rgba(37, 99, 235, 0.25)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 10,
+                    gap: 12,
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--accent)' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 24, color: 'var(--accent)' }}>
                     shield
                   </span>
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)' }}>
                       Tactical Containment Directive:
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
                       {currentForecast.containmentRecommendation}
                     </div>
                   </div>
@@ -1510,130 +1748,165 @@ export const DriftView: React.FC<DriftViewProps> = ({
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8 }}>
-                <div className="text-xs text-muted">Integration Time Step</div>
-                <div className="mono fw-700" style={{ fontSize: 13, marginTop: 2 }}>15 minutes</div>
+              <div style={{ background: 'var(--bg-raised)', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className="text-xs text-muted fw-600">Integration Step</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-muted)' }}>timer</span>
+                </div>
+                <div className="mono fw-700" style={{ fontSize: 14, marginTop: 4, color: 'var(--text-primary)' }}>15 minutes</div>
               </div>
-              <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8 }}>
-                <div className="text-xs text-muted">Wind Drag Coefficient</div>
-                <div className="mono fw-700" style={{ fontSize: 13, marginTop: 2 }}>3.5% (Stokes Drift)</div>
+              <div style={{ background: 'var(--bg-raised)', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className="text-xs text-muted fw-600">Wind Drag Coeff</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-muted)' }}>air</span>
+                </div>
+                <div className="mono fw-700" style={{ fontSize: 14, marginTop: 4, color: 'var(--text-primary)' }}>3.5% (Stokes Drift)</div>
               </div>
-              <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8 }}>
-                <div className="text-xs text-muted">Horizontal Diffusivity</div>
-                <div className="mono fw-700" style={{ fontSize: 13, marginTop: 2 }}>10 m²/s</div>
+              <div style={{ background: 'var(--bg-raised)', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className="text-xs text-muted fw-600">Horiz Diffusivity</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-muted)' }}>grain</span>
+                </div>
+                <div className="mono fw-700" style={{ fontSize: 14, marginTop: 4, color: 'var(--text-primary)' }}>10 m²/s</div>
               </div>
-              <div style={{ background: 'var(--bg-raised)', padding: 10, borderRadius: 8 }}>
-                <div className="text-xs text-muted">Current Layer Depth</div>
-                <div className="mono fw-700" style={{ fontSize: 13, marginTop: 2 }}>0.0 – 1.0 m (Ekman)</div>
+              <div style={{ background: 'var(--bg-raised)', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span className="text-xs text-muted fw-600">Current Depth</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--text-muted)' }}>waves</span>
+                </div>
+                <div className="mono fw-700" style={{ fontSize: 14, marginTop: 4, color: 'var(--text-primary)' }}>0.0 – 1.0 m (Ekman)</div>
               </div>
             </div>
 
             {/* ACTIVE ENVIRONMENTAL FORCING */}
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Active Environmental Forcing:
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>public</span>
+                  <span>Active Environmental Forcing:</span>
                 </div>
-                <span style={{ fontSize: 10, color: liveResult ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
+                <span style={{ fontSize: 10.5, color: liveResult ? '#10b981' : '#f59e0b', fontWeight: 700, background: liveResult ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: 12 }}>
                   {liveResult ? `🟢 Live API: ${liveResult.metOcean.source.split('(')[0].trim()}` : '🟡 Calibrated CMEMS'}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-muted">CMEMS Current:</span>
+              <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', fontSize: 11 }}>
+                  <span className="text-muted fw-600">CMEMS Current:</span>
                   <span className="mono fw-600">
                     {liveResult
                       ? `${liveResult.metOcean.currentSpeedMs} m/s (${liveResult.metOcean.currentSpeedKnots} kn) @ ${liveResult.metOcean.currentDirectionDeg}°`
                       : profile.currentVector}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-muted">ERA5 10m Wind:</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-raised)', borderBottom: '1px solid var(--border-subtle)', fontSize: 11 }}>
+                  <span className="text-muted fw-600">ERA5 10m Wind:</span>
                   <span className="mono fw-600">
                     {liveResult
                       ? `${liveResult.metOcean.windSpeedMs} m/s (${liveResult.metOcean.windSpeedKnots} kn) @ ${liveResult.metOcean.windDirectionDeg}°`
                       : profile.windVector}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-muted">Sea State &amp; Temp:</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', fontSize: 11 }}>
+                  <span className="text-muted fw-600">Sea State &amp; Temp:</span>
                   <span className="mono fw-600">
                     {liveResult
                       ? `${liveResult.metOcean.temperatureCelsius}°C · ${liveResult.metOcean.seaStateDescription}`
                       : `${profile.sstCelsius}°C (${profile.seaState})`}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-muted">Net Drift Vector:</span>
-                  <span className="mono fw-700" style={{ color: 'var(--accent)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(37, 99, 235, 0.06)', borderBottom: '1px solid var(--border-subtle)', fontSize: 11 }}>
+                  <span className="fw-700" style={{ color: 'var(--accent)' }}>Net Drift Vector:</span>
+                  <span className="mono fw-700" style={{ color: '#FFFFFF', background: 'var(--accent)', padding: '2px 8px', borderRadius: 6, fontSize: 11.5 }}>
                     {liveResult
                       ? `${liveResult.metOcean.netDriftSpeedKnots} kn @ ${liveResult.metOcean.netDriftHeadingDeg}°`
                       : `${profile.forecasts[0].driftSpeedKnots} kn @ ${profile.forecasts[0].headingDeg}°`}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="text-muted">Oil Grade:</span>
-                  <span className="mono fw-600">{profile.oilType} ({profile.apiGravity})</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-surface)', fontSize: 11 }}>
+                  <span className="text-muted fw-600">Oil Grade:</span>
+                  <span className="mono fw-600" style={{ color: 'var(--text-primary)' }}>{profile.oilType} ({profile.apiGravity})</span>
                 </div>
               </div>
             </div>
 
             {/* SIMULATION TRAJECTORY TABLE */}
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Simulation Trajectory Waypoints (5 Steps)
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--accent)' }}>route</span>
+                  <span>Simulation Trajectory Waypoints (5 Steps)</span>
                 </div>
-                <span className="text-xs text-muted">Click step to inspect</span>
+                <span className="text-xs text-muted" style={{ fontSize: 10.5 }}>Click any row to jump timestep</span>
               </div>
 
-              <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+              <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid var(--border-subtle)', boxShadow: '0 1px 4px rgba(0,0,0,0.02)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                   <thead>
                     <tr style={{ background: 'var(--bg-raised)', borderBottom: '1px solid var(--border-subtle)', textAlign: 'left' }}>
-                      <th style={{ padding: '6px 8px' }}>Step</th>
-                      <th style={{ padding: '6px 8px' }}>Coordinates</th>
-                      <th style={{ padding: '6px 8px' }}>Area</th>
-                      <th style={{ padding: '6px 8px' }}>Coast</th>
-                      <th style={{ padding: '6px 8px' }}>Threat</th>
+                      <th style={{ padding: '8px 10px', color: 'var(--text-muted)', fontWeight: 700, fontSize: 10, textTransform: 'uppercase' }}>Step</th>
+                      <th style={{ padding: '8px 10px', color: 'var(--text-muted)', fontWeight: 700, fontSize: 10, textTransform: 'uppercase' }}>Coordinates</th>
+                      <th style={{ padding: '8px 10px', color: 'var(--text-muted)', fontWeight: 700, fontSize: 10, textTransform: 'uppercase' }}>Area</th>
+                      <th style={{ padding: '8px 10px', color: 'var(--text-muted)', fontWeight: 700, fontSize: 10, textTransform: 'uppercase' }}>Coast</th>
+                      <th style={{ padding: '8px 10px', color: 'var(--text-muted)', fontWeight: 700, fontSize: 10, textTransform: 'uppercase' }}>Threat</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {activeForecasts.map((f, idx) => (
-                      <tr
-                        key={f.label}
-                        onClick={() => setSelectedStepIndex(idx)}
-                        style={{
-                          borderBottom: '1px solid var(--border-subtle)',
-                          cursor: 'pointer',
-                          background: selectedStepIndex === idx ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
-                        }}
-                      >
-                        <td style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--accent)' }}>{f.label}</td>
-                        <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>
-                          {f.lat.toFixed(2)}°, {f.lng.toFixed(2)}°
-                        </td>
-                        <td style={{ padding: '6px 8px' }}>{f.areaKm2} km²</td>
-                        <td style={{ padding: '6px 8px' }}>{f.distanceToCoastKm > 0 ? `${f.distanceToCoastKm} km` : '0 km'}</td>
-                        <td style={{ padding: '6px 8px' }}>
-                          <span
-                            className="metric-trend-pill"
-                            style={{
-                              fontSize: 9,
-                              padding: '1px 5px',
-                              background:
-                                f.threatLevel === 'CRITICAL'
-                                  ? 'rgba(239, 68, 68, 0.12)'
-                                  : 'rgba(245, 158, 11, 0.12)',
-                              color: f.threatLevel === 'CRITICAL' ? '#ef4444' : '#f59e0b',
-                            }}
-                          >
-                            {f.threatLevel}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {activeForecasts.map((f, idx) => {
+                      const isSelected = selectedStepIndex === idx;
+                      return (
+                        <tr
+                          key={f.label}
+                          onClick={() => setSelectedStepIndex(idx)}
+                          style={{
+                            borderBottom: idx < activeForecasts.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                            cursor: 'pointer',
+                            background: isSelected ? 'rgba(37, 99, 235, 0.12)' : idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-raised)',
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          <td style={{ padding: '8px 10px', fontWeight: isSelected ? 800 : 600, color: isSelected ? 'var(--accent)' : 'var(--text-primary)' }}>
+                            {f.label}
+                          </td>
+                          <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 10.5 }}>
+                            {f.lat.toFixed(2)}°, {f.lng.toFixed(2)}°
+                          </td>
+                          <td style={{ padding: '8px 10px', fontWeight: 600 }}>{f.areaKm2} km²</td>
+                          <td style={{ padding: '8px 10px', color: f.distanceToCoastKm < 15 ? '#ef4444' : 'inherit' }}>
+                            {f.distanceToCoastKm > 0 ? `${f.distanceToCoastKm} km` : '0 km'}
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span
+                              className="metric-trend-pill"
+                              style={{
+                                fontSize: 9.5,
+                                padding: '2px 6px',
+                                borderRadius: 6,
+                                fontWeight: 700,
+                                background:
+                                  f.threatLevel === 'CRITICAL'
+                                    ? 'rgba(239, 68, 68, 0.14)'
+                                    : f.threatLevel === 'HIGH'
+                                    ? 'rgba(249, 115, 22, 0.14)'
+                                    : f.threatLevel === 'MODERATE'
+                                    ? 'rgba(245, 158, 11, 0.14)'
+                                    : 'rgba(16, 185, 129, 0.14)',
+                                color:
+                                  f.threatLevel === 'CRITICAL'
+                                    ? '#ef4444'
+                                    : f.threatLevel === 'HIGH'
+                                    ? '#f97316'
+                                    : f.threatLevel === 'MODERATE'
+                                    ? '#d97706'
+                                    : '#10b981',
+                              }}
+                            >
+                              {f.threatLevel}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

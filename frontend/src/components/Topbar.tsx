@@ -38,6 +38,14 @@ export const Topbar: React.FC<TopbarProps> = ({
 }) => {
   const isDashboard = activeTab === 'dashboard';
 
+  const [utcClock, setUtcClock] = useState(() => new Date().toISOString().substring(11, 19));
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setUtcClock(new Date().toISOString().substring(11, 19));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const [searchInput, setSearchInput] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -135,21 +143,101 @@ export const Topbar: React.FC<TopbarProps> = ({
 
   if (!isDashboard) {
     return (
-      <header className="topbar topbar-compact">
-        {/* BRAND LOGO ONLY */}
-        <div
-          className="topbar-logo"
-          style={{ padding: 0, gap: '12px', cursor: onSelectTab ? 'pointer' : 'default' }}
+      <div
+        className="topbar-row-compact"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          width: '100%',
+          flexShrink: 0,
+        }}
+      >
+        {/* BRAND LOGO CAPSULE */}
+        <header
+          className="topbar topbar-compact"
           onClick={() => onSelectTab && onSelectTab('dashboard')}
           title="Return to Main Dashboard"
         >
-          <img src="/clean_raw_logo.png" alt="Spill Sense Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
-          <div>
-            <div className="logo-name">SPILL SENSE</div>
-            <div className="logo-sub">MARITIME C2 INTELLIGENCE</div>
+          <div className="topbar-logo" style={{ padding: 0, gap: '12px', cursor: onSelectTab ? 'pointer' : 'default' }}>
+            <img src="/clean_raw_logo.png" alt="Spill Sense Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
+            <div>
+              <div className="logo-name">SPILL SENSE</div>
+              <div className="logo-sub">MARITIME C2 INTELLIGENCE</div>
+            </div>
           </div>
+        </header>
+
+        {/* MISSION TELEMETRY STATUS CAPSULE (OPTION D) */}
+        <div
+          className="topbar topbar-compact"
+          style={{
+            cursor: 'default',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '0 16px',
+            fontSize: 11.5,
+          }}
+        >
+          {/* Live Sync Status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: '#10B981',
+                boxShadow: '0 0 8px #10B981',
+              }}
+            />
+            <span style={{ fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.04em' }}>
+              CMEMS &amp; AIS SYNC
+            </span>
+          </div>
+
+          <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
+
+          {/* Active Area of Interest */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--accent)' }}>
+              explore
+            </span>
+            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {currentScenario ? currentScenario.title.split('(')[0].trim() : 'Indian EEZ Surveillance'}
+            </span>
+          </div>
+
+          <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
+
+          {/* Operational UTC Clock */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 14, color: '#F59E0B' }}>
+              schedule
+            </span>
+            <span className="mono" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+              {utcClock} UTC
+            </span>
+          </div>
+
+          <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
+
+          {/* C2 Command Tag */}
+          <span
+            style={{
+              padding: '2px 8px',
+              borderRadius: 6,
+              background: 'rgba(56, 189, 248, 0.12)',
+              color: 'var(--accent)',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+            }}
+          >
+            C2 DEFENSE LINK
+          </span>
         </div>
-      </header>
+      </div>
     );
   }
 
