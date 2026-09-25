@@ -27,8 +27,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   currentScenarioKey,
   onSelectScenario,
   coordinates,
-  theme,
-  onToggleTheme,
+  theme: _theme,
+  onToggleTheme: _onToggleTheme,
   onOpenForensicModal,
   onOpenSentinelHubModal: _onOpenSentinelHubModal,
   onOpenBhoonidhiModal: _onOpenBhoonidhiModal,
@@ -348,13 +348,6 @@ export const Topbar: React.FC<TopbarProps> = ({
         >
           <span className="material-symbols-outlined" style={{ fontSize: 15, color: 'var(--accent)' }}>gavel</span>
           Dossier
-        </button>
-
-        {/* Theme Switcher */}
-        <button className="btn-icon" onClick={onToggleTheme} title="Switch Light / Dark Theme">
-          <span className="material-symbols-outlined" style={{ fontSize: 17 }}>
-            {theme === 'dark' ? 'light_mode' : 'dark_mode'}
-          </span>
         </button>
 
         {/* Alerts Notification */}
