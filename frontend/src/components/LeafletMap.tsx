@@ -87,6 +87,22 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     L.control.zoom({ position: 'topright' }).addTo(map);
     L.control.scale({ imperial: false, metric: true, position: 'bottomleft' }).addTo(map);
 
+    // 0. Official ISRO Bhuvan & Bhoonidhi Satellite Imagery (Govt of India / NRSC WMTS Server)
+    baseLayersRef.current.bhuvan = L.tileLayer(
+      'https://bhuvanmaps.nrsc.gov.in/bhuvan_ras3/server/rest/services/World_Imagery/MapServer/WMTS?service=WMTS&version=1.0.0&request=GetTile&layer=HYDImagery&style=default&tilematrixSet=GoogleMapsCompatible&tilematrix={z}&tilerow={y}&tilecol={x}&format=image/jpeg',
+      {
+        tileSize: 256,
+        minZoom: 3,
+        maxNativeZoom: 18,
+        maxZoom: 22,
+        attribution: '© ISRO NRSC Bhuvan / Bhoonidhi Satellite Imagery (Govt. of India)',
+        className: 'isro-bhuvan-satellite-tiles',
+        noWrap: true,
+        bounds: maxWorldBounds,
+      }
+    );
+    baseLayersRef.current['isro-bhuvan'] = baseLayersRef.current.bhuvan;
+
     // 1. Official ISRO Bhoonidhi / GEBCO Ocean Bathymetry & Indian EEZ Basemap (Primary Marine Basemap)
     // Exactly matches ISRO Bhoonidhi portal: persistent oceanic trenches, depth contours, and marine blue at all zoom levels
     baseLayersRef.current['bhuvan-satellite'] = L.tileLayer(
@@ -101,18 +117,20 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       }
     );
 
-    // 2. High-Resolution Optical Satellite (ESRI World Imagery - Valid Ocean & High-Res Coastal Imagery at all zoom levels 0-22)
+    // 2. High-Resolution Optical Satellite (ArcGIS / ESRI World Imagery - Sub-meter zoom up to 19 native, 22 max)
     baseLayersRef.current.satellite = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       {
-        maxNativeZoom: 18,
+        maxNativeZoom: 19,
         maxZoom: 22,
-        attribution: '© ESRI World Imagery / Maxar / Earthstar Geographics',
+        attribution: '© Esri ArcGIS World Imagery / Maxar / Earthstar Geographics',
         className: 'eo-satellite-tiles',
         noWrap: true,
         bounds: maxWorldBounds,
       }
     );
+    baseLayersRef.current.arcgis = baseLayersRef.current.satellite;
+    baseLayersRef.current['arcgis-satellite'] = baseLayersRef.current.satellite;
 
     // 3. Sentinel-1 SAR Radar Composite
     baseLayersRef.current.sar = L.tileLayer(

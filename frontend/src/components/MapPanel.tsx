@@ -114,7 +114,7 @@ export const MapPanel: React.FC<MapPanelProps> = ({
   scenarios,
   targetLocation,
 }) => {
-  const [baseLayer2D, setBaseLayer2D] = useState<BaseLayerType>('satellite');
+  const [baseLayer2D, setBaseLayer2D] = useState<BaseLayerType>('arcgis');
   const [showSeamarks, setShowSeamarks] = useState<boolean>(true);
   const [selectedCopernicusLayer, setSelectedCopernicusLayer] = useState<CopernicusLayerId>('sar-vv');
   const [activeSatellite, setActiveSatellite] = useState<string>('Sentinel-1A');
@@ -199,10 +199,19 @@ export const MapPanel: React.FC<MapPanelProps> = ({
 
   const handleSelectBasemap = (layer: BaseLayerType) => {
     setBaseLayer2D(layer);
-    if (layer === 'satellite') {
+    if (layer === 'bhuvan') {
       handleSelectCopernicusLayer('sar-vv');
+      setSatelliteToast('🇮🇳 ISRO Bhuvan / Bhoonidhi • Official Indian Government Satellite Map');
+      setTimeout(() => setSatelliteToast(null), 3500);
+    } else if (layer === 'satellite' || layer === 'arcgis') {
+      handleSelectCopernicusLayer('sar-vv');
+      setSatelliteToast('🛰️ ArcGIS World Imagery • High-Res Sub-Meter Satellite (Zoom 19+)');
+      setTimeout(() => setSatelliteToast(null), 3500);
     } else if (layer === 'sar') {
       handleSelectCopernicusLayer('sar-vv');
+    } else if (layer === 'bhuvan-satellite') {
+      setSatelliteToast('🌊 ArcGIS World Ocean Base • Bathymetry & Seabed Relief');
+      setTimeout(() => setSatelliteToast(null), 3500);
     }
   };
 
@@ -327,12 +336,20 @@ export const MapPanel: React.FC<MapPanelProps> = ({
           {/* Basemap Switcher */}
           <div className="map-base-selector" style={{ display: 'flex', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', borderRadius: 4, padding: 2 }}>
             <button
-              className={`base-btn ${baseLayer2D === 'satellite' ? 'active' : ''}`}
-              onClick={() => handleSelectBasemap('satellite')}
+              className={`base-btn ${baseLayer2D === 'bhuvan' ? 'active' : ''}`}
+              onClick={() => handleSelectBasemap('bhuvan')}
               style={{ fontSize: 11, padding: '3px 8px', borderRadius: 3 }}
-              title="ESRI World Imagery High-Resolution Satellite"
+              title="Official ISRO Bhuvan & Bhoonidhi Satellite Imagery (Govt. of India / NRSC)"
             >
-              Satellite
+              ISRO Bhuvan
+            </button>
+            <button
+              className={`base-btn ${baseLayer2D === 'satellite' || baseLayer2D === 'arcgis' ? 'active' : ''}`}
+              onClick={() => handleSelectBasemap('arcgis')}
+              style={{ fontSize: 11, padding: '3px 8px', borderRadius: 3 }}
+              title="ArcGIS World Imagery High-Resolution Sub-Meter Satellite (Zoom 19+)"
+            >
+              ArcGIS
             </button>
             <button
               className={`base-btn ${baseLayer2D === 'bhuvan-satellite' ? 'active' : ''}`}

@@ -32,7 +32,7 @@ export interface CandidateVessel {
 
 export type TabType = 'dashboard' | 'drift' | 'attribution' | 'evidence' | 'analytics' | 'detection';
 export type DimensionMode = '2D' | '3D';
-export type BaseLayerType = 'bhuvan-satellite' | 'satellite' | 'sar' | 'carto-voyager' | 'carto-dark' | 'sar-vh' | 'opensea' | 'msn' | 'day' | 'dark' | 'bhuvan-vector' | 'google-satellite';
+export type BaseLayerType = 'bhuvan-satellite' | 'satellite' | 'sar' | 'carto-voyager' | 'carto-dark' | 'sar-vh' | 'opensea' | 'msn' | 'day' | 'dark' | 'bhuvan-vector' | 'google-satellite' | 'arcgis' | 'bhuvan';
 
 export type CopernicusLayerId = 'true-color' | 'sar-vv' | 'sar-vh' | 'swir-oil' | 'false-color' | 'ndwi' | 'thermal' | 'nisar-ls' | 'eos-04';
 
