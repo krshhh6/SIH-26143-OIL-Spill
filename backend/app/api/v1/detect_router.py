@@ -8,18 +8,29 @@ Endpoints:
 
 import uuid
 import datetime
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+import os
+from pathlib import Path
+from fastapi import APIRouter, HTTPException, BackgroundTasks, File, UploadFile, Form
 from pydantic import BaseModel, Field
 from typing import Dict, List, Any, Optional
 
 from app.services.cdse_sar_service import CDSESARService
 from app.services.sar_preprocessing import SARPreprocessor
 from app.services.sar_segmentation_model import SARSPILLSegmentationEngine
+from app.services.image_intelligence import (
+    SARImageIntelligenceService,
+    GeoTIFFReader,
+    ImageIdentity,
+    ImageModality
+)
+from app.services.tiled_inference import TiledSARInferenceEngine
 
 router = APIRouter(tags=["Sentinel-1 SAR Detection Pipeline"])
 
-# Singleton engine instance
+# Singleton engine instances
 segmentation_engine = SARSPILLSegmentationEngine()
+tiled_engine = TiledSARInferenceEngine(segmentation_engine=segmentation_engine)
+
 
 # Asynchronous job store
 DETECTION_JOBS: Dict[str, Dict[str, Any]] = {}
@@ -163,3 +174,218 @@ async def get_detection_status(job_id: str):
     if job_id not in DETECTION_JOBS:
         raise HTTPException(status_code=404, detail="Detection job ID not found.")
     return DETECTION_JOBS[job_id]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW PRODUCTION ENDPOINTS: SAR IMAGE INTELLIGENCE & TILED DETECTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+class InspectPathRequest(BaseModel):
+    file_path: str = Field(..., description="Absolute or relative path to satellite raster or image")
+
+
+@router.post("/inspect-image")
+@router.post("/v1/inspect-image")
+@router.post("/detect/inspect")
+@router.post("/v1/detect/inspect")
+async def inspect_uploaded_image(
+    file: Optional[UploadFile] = File(None),
+    file_path: Optional[str] = Form(None)
+):
+    """
+    Inspects an uploaded GeoTIFF, TIFF, or preview image before inference:
+    - Extracts dimensions, band count, CRS, geotransform, bounding box, NoData.
+    - Computes exact SHA-256 and normalized-pixel decoding invariance hash.
+    - Evaluates radar quality indicators (speckle index, dynamic range, SNR).
+    - Classifies modality (SAR Grayscale, Colorized SAR, Optical RGB, Multispectral, Overlay).
+    - Generates high-contrast percentile-stretched web preview.
+    """
+    raw_bytes: bytes = b""
+    filename: str = "uploaded_scene.tif"
+
+    if file:
+        raw_bytes = await file.read()
+        filename = file.filename or filename
+    elif file_path:
+        p = Path(file_path)
+        if not p.exists():
+            raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+        raw_bytes = p.read_bytes()
+        filename = p.name
+    else:
+        raise HTTPException(status_code=400, detail="Must provide either multipart 'file' or 'file_path'.")
+
+    if len(raw_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Provided file content is empty.")
+
+    try:
+        report = SARImageIntelligenceService.inspect(raw_bytes, filename=filename)
+        return report
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Error inspecting raster: {str(ex)}")
+
+
+@router.post("/detect-raster")
+@router.post("/v1/detect-raster")
+@router.post("/detect/raster")
+@router.post("/v1/detect/raster")
+async def detect_spill_from_raster(
+    file: Optional[UploadFile] = File(None),
+    file_path: Optional[str] = Form(None),
+    sensitivity: float = Form(0.35),
+    min_area_km2: float = Form(0.05)
+):
+    """
+    End-to-end production SAR raster detection pipeline:
+    1. Validates and inspects uploaded raster (TIFF, GeoTIFF, or preview).
+    2. Enforces modality admission: blocks optical, annotated, or corrupt files from entering the SAR U-Net.
+    3. Preserves geospatial metadata (CRS, transform, WGS84 bounds).
+    4. Executes tiled overlapping inference with 2D Hann window blending to eliminate seam artifacts.
+    5. Returns vector polygons with geodesic area (km²), damping depression, and uncertainty metrics.
+    """
+    raw_bytes: bytes = b""
+    filename: str = "uploaded_scene.tif"
+
+    if file:
+        raw_bytes = await file.read()
+        filename = file.filename or filename
+    elif file_path:
+        p = Path(file_path)
+        if not p.exists():
+            raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+        raw_bytes = p.read_bytes()
+        filename = p.name
+    else:
+        raise HTTPException(status_code=400, detail="Must provide either multipart 'file' or 'file_path'.")
+
+    if len(raw_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Provided file content is empty.")
+
+    # 1. Inspect image and classify modality
+    try:
+        inspection = SARImageIntelligenceService.inspect(raw_bytes, filename=filename)
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Raster inspection failed: {str(ex)}")
+
+    classification = inspection["classification"]
+    meta = inspection["metadata"]
+
+    # 2. Enforce strict modality admission
+    if classification.get("blocked_from_inference", False):
+        return {
+            "status": "blocked_unsupported_modality",
+            "image_id": inspection["image_id"],
+            "filename": filename,
+            "category": classification["category"],
+            "confidence": classification["confidence"],
+            "evidence": classification["evidence"],
+            "suitable_for_sar_model": False,
+            "warnings": classification.get("warnings", []),
+            "message": (
+                f"Inference rejected: Image classified as {classification['category']}. "
+                "The Sentinel-1 SAR oil spill model strictly requires microwave radar backscatter."
+            ),
+            "preview_data_url": inspection["preview"]["data_url"],
+            "polygons": [],
+            "total_detected_area_km2": 0.0
+        }
+
+    # 3. Read raster array and geospatial parameters
+    try:
+        array, _ = GeoTIFFReader.read_array(raw_bytes)
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Failed to read raster array: {str(ex)}")
+
+    # 4. Run tiled overlapping inference
+    try:
+        tiled_result = tiled_engine.run_tiled_inference(
+            sar_raster=array,
+            transform=meta.get("transform"),
+            bounds=meta.get("bounds"),
+            sensitivity_threshold=sensitivity,
+            min_area_km2=min_area_km2
+        )
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Tiled inference failed: {str(ex)}")
+
+    # 5. Build unified production response
+    return {
+        "status": tiled_result["status"],
+        "image_id": inspection["image_id"],
+        "filename": filename,
+        "file_sha256": inspection["identity"]["file_sha256"],
+        "pixel_sha256": inspection["identity"]["pixel_sha256"],
+        "image_type": {
+            "category": classification["category"],
+            "confidence": classification["confidence"],
+            "suitable_for_sar_model": classification["suitable_for_sar_model"],
+            "evidence": classification["evidence"],
+            "uncertainty_status": classification["uncertainty_status"]
+        },
+        "raster_metadata": {
+            "width": meta.get("width"),
+            "height": meta.get("height"),
+            "bands": meta.get("bands"),
+            "is_georeferenced": meta.get("is_georeferenced"),
+            "crs": meta.get("crs"),
+            "bounds": meta.get("bounds"),
+            "nodata_value": meta.get("nodata_value")
+        },
+        "preprocessing_applied": classification.get("preprocessing_required", []),
+        "model_name": "SpillSense-UNet-SOS-Tiled",
+        "model_version": tiled_result["model_version"],
+        "polygons": tiled_result["polygons"],
+        "total_detected_area_km2": tiled_result["total_detected_area_km2"],
+        "ocean_mean_db": tiled_result["ocean_mean_db"],
+        "uncertainty": tiled_result["uncertainty"],
+        "preview_data_url": inspection["preview"]["data_url"],
+        "message": tiled_result["message"],
+        "warnings": classification.get("warnings", [])
+    }
+
+
+@router.post("/compare-identity")
+@router.post("/v1/compare-identity")
+@router.post("/detect/compare-identity")
+@router.post("/v1/detect/compare-identity")
+async def compare_image_identity(
+    file1: Optional[UploadFile] = File(None),
+    file2: Optional[UploadFile] = File(None),
+    path1: Optional[str] = Form(None),
+    path2: Optional[str] = Form(None)
+):
+    """
+    Compares two satellite images to distinguish:
+    1. Exact binary file duplicates (matching SHA-256).
+    2. Same decoded image with different file container/compression (matching pixel SHA-256).
+    3. Visually similar / resized images (dHash Hamming distance <= 5).
+    4. Structurally related / cropped images (Hamming distance <= 12).
+    5. Unrelated images.
+    """
+    def get_bytes_and_name(f: Optional[UploadFile], p: Optional[str], default_name: str) -> Tuple[bytes, str]:
+        if f:
+            return f.file.read(), f.filename or default_name
+        if p:
+            pth = Path(p)
+            if not pth.exists():
+                raise HTTPException(status_code=404, detail=f"File not found: {p}")
+            return pth.read_bytes(), pth.name
+        raise HTTPException(status_code=400, detail=f"Must provide image file or path for {default_name}.")
+
+    bytes1, name1 = get_bytes_and_name(file1, path1, "image1")
+    bytes2, name2 = get_bytes_and_name(file2, path2, "image2")
+
+    arr1, _ = GeoTIFFReader.read_array(bytes1)
+    arr2, _ = GeoTIFFReader.read_array(bytes2)
+
+    id1 = ImageIdentity.from_bytes_and_array(bytes1, arr1)
+    id2 = ImageIdentity.from_bytes_and_array(bytes2, arr2)
+
+    comparison = id1.compare(id2)
+
+    return {
+        "image_1": {"filename": name1, "identity": id1.to_dict()},
+        "image_2": {"filename": name2, "identity": id2.to_dict()},
+        "comparison": comparison
+    }
+
